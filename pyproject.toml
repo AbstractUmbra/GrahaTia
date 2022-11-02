@@ -1,0 +1,59 @@
+[tool.poetry]
+name = "Graha Tia"
+version = "0.0.1"
+description = "A helper bot for organizing your FFXIV needs."
+authors = ["Alex Nørgaard <Umbra@AbstractUmbra.dev>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+"discord.py" = {git = "https://github.com/Rapptz/discord.py.git", extras = ["speedup"], rev = "master"}
+discord-ext-menus = {git = "https://github.com/Rapptz/discord-ext-menus", rev = "master"}
+jishaku = {git = "https://github.com/Gorialis/jishaku.git", rev = "master"}
+"mystbin.py" = {git = "git@github.com:AbstractUmbra/mystbin.py.git", rev = "main"}
+asyncpg = "*"
+sentry-sdk = "*"
+lru-dict = "*"
+parsedatetime = "*"
+tomli = "*"
+python-dateutil = "*"
+psutil = "*"
+pygit2 = "*"
+
+[tool.poetry.group.dev.dependencies]
+black = "*"
+typing-extensions = "*"
+
+[tool.black]
+line-length = 125
+
+[tool.isort]
+profile = "black"
+lines_after_imports = 2
+line_length = 125
+combine_as_imports = true
+combine_star = true
+
+
+[tool.pyright]
+include = ["bot.py", "utilities/**/*.py", "extensions/**/*.py"]
+useLibraryCodeForTypes = true
+typeCheckingMode = "basic"
+pythonVersion = "3.10"
+strictListInference = true
+strictDictionaryInference = true
+strictSetInference = true
+strictParameterNoneValue = true
+reportMissingImports = "error"
+reportUnusedImport = "error"
+reportUnusedClass = "error"
+reportUnusedFunction = "error"
+reportUnusedVariable = "error"
+reportGeneralTypeIssues = "error"
+reportDuplicateImport = "error"
+reportUntypedFunctionDecorator = "error"
+reportUnnecessaryTypeIgnoreComment = "warning"
+
+
+[build-system]
+requires = ["poetry-core>=1.0.2b2"]
+build-backend = "poetry.core.masonry.api"

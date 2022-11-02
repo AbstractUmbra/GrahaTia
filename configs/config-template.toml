@@ -1,0 +1,12 @@
+[bot]
+token = "..."
+
+[database]
+dsn = "..."
+
+[logging]
+webhook_url = "..."
+sentry_dsn = "..."
+
+[misc]
+mystbin_token = "..."

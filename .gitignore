@@ -1,0 +1,7 @@
+*.ipynb
+**/*.log
+__pycache__/
+.vscode/
+configs/config.toml
+configs/*.json
+[!__]_*.py
