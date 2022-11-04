@@ -33,26 +33,6 @@ TZ_NAME_MAPPING = {
 
 
 class Misc(BaseCog):
-    def __init__(self, bot: Graha) -> None:
-        super().__init__(bot)
-
-    def _within_registration_window(self) -> datetime.datetime | None:
-        now = datetime.datetime.now(datetime.timezone.utc)
-
-        if now.hour % 2 == 0:
-            if now.minute < 15:
-                return now.replace(minute=15, second=0, microsecond=0)
-
-        return None
-
-    def _next_fishing_time(self) -> datetime.datetime:
-        now = datetime.datetime.now(datetime.timezone.utc)
-        offset = 2 if now.hour % 2 == 0 else 1
-
-        next = (now + datetime.timedelta(hours=offset)).replace(minute=0, second=0, microsecond=0)
-
-        return next
-
     def _clean_dt(self, dt: datetime.datetime) -> str:
         ord_ = ordinal(dt.day)
         fmt = dt.strftime(f"%H:%M on %A, {ord_} of %B %Y")
@@ -68,6 +48,7 @@ class Misc(BaseCog):
             prefixes = self.bot._get_guild_prefixes(guild=guild, raw=True)
 
             fmt = "Hey there, my prefixes in this server are:-\n\n"
+            fmt += f"{self.bot.user.mention} \n"
             fmt += to_codeblock("\n".join(prefixes), language="", escape_md=False)
             embed.description = fmt
 
@@ -115,29 +96,6 @@ class Misc(BaseCog):
         for tz, name in TZ_NAME_MAPPING.items():
             _local = utc.astimezone(zoneinfo.ZoneInfo(tz))
             embed.add_field(name=name, value=self._clean_dt(_local), inline=False)
-
-        await ctx.send(embed=embed)
-
-    @commands.command(name="oceanfishing", aliases=["of", "fishing"])
-    async def ocean_fishing_times(self, ctx: Context) -> None:
-        """Shows your local time against the current ocean fishing schedule windows."""
-        embed = discord.Embed(colour=discord.Colour.random(), title="Ocean Fishing availability")
-
-        fmt = ""
-
-        available = self._within_registration_window()
-
-        if available:
-            closes = discord.utils.format_dt(available)
-            closes_rel = discord.utils.format_dt(available, "R")
-            fmt += f"You can register for ocean fishing now, registration closes at {closes} ({closes_rel}).\n\n"
-
-        next = self._next_fishing_time()
-        next_fmt = discord.utils.format_dt(next)
-        next_fmt_rel = discord.utils.format_dt(next, "R")
-        fmt += f"Next available ocean fishing window is at {next_fmt} ({next_fmt_rel})"
-
-        embed.description = fmt
 
         await ctx.send(embed=embed)
 
