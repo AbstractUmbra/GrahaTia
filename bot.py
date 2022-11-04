@@ -233,8 +233,10 @@ class Graha(commands.Bot):
             clean = "".join(tb_fmt)
 
             if not isinstance(origin_, discord.HTTPException):
-                LOGGER.exception("in `%s`::\n%s", ctx.command.name, clean, exc_info=True)
-                return
+                LOGGER.exception("in `%s` with ray id: '%s' ::\n%s", ctx.command.name, ctx.ray_id, clean, exc_info=True)
+
+            fmt_to_send += "There was an error in that command. My developer has been notified."
+            return
 
         embed = discord.Embed(title="Command Error", colour=discord.Colour.red())
         error = getattr(error, "original", error)
@@ -253,7 +255,8 @@ class Graha(commands.Bot):
         embed.set_footer(text=f"Ray ID: {ctx.ray_id}")
 
         await self.logging_webhook.send(embed=embed, wait=False)
-        fmt_to_send += f"\nRay ID: {ctx.ray_id} (if contacting the developer)."
+        fmt_to_send += f"\nQuote 'Ray ID: {ctx.ray_id}' if contacting the developer."
+        await ctx.send(content=fmt)
 
     def _get_guild_prefixes(
         self,
