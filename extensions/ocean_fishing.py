@@ -23,7 +23,7 @@ class UpcomingVoyage(TypedDict):
 class Voyage:
     DESTINATION_MAPPING: ClassVar[dict[str, str]] = {
         "T": "Rothlyt Sound",
-        "N": "Northern Strait of Merithor",
+        "N": "Northern Strait of Merlthor",
         "B": "Bloodbrine Sea",
         "R": "Rhotano Sea",
     }
@@ -32,6 +32,19 @@ class Voyage:
         "D": "Day",
         "N": "Night",
         "S": "Sunset",
+    }
+
+    ROUTE_MAPPING: ClassVar[dict[str, list[str]]] = {
+        "T": ["The Cieldalaes", "Rhotano Sea", "The Rothlyt Sound"],
+        "N": ["The Southern Strait of Merlthor", "Galadion Bay", "The Northern Strait of Merlthor"],
+        "B": ["The Cieldalaes", "The Northern Strait of Merlthor", "The Bloodbrine Sea"],
+        "R": ["Galadion Bay", "The Southern Strait of Merlthor", "The Rhotano Sea"],
+    }
+
+    ROUTE_TIME_MAPPING: ClassVar[dict[str, list[str]]] = {
+        "D": ["\U0001F31E \U00002B07\U0000FE0F", "\U0001F31D", "\U0001F31E"],
+        "N": ["\U0001F31E", "\U0001F31E \U00002B07\U0000FE0F", "\U0001F31D"],
+        "S": ["\U0001F31D", "\U0001F31E", "\U0001F31E \U00002B07\U0000FE0F"],
     }
 
     __slots__ = (
@@ -53,14 +66,24 @@ class Voyage:
         return self.start_time - datetime.timedelta(minutes=15)
 
     def has_set_sail(self, dt: datetime.datetime, /) -> bool:
-        return self.start_time > dt
+        return self.start_time < dt
 
     def can_register(self, dt: datetime.datetime, /) -> bool:
         open = self.registration_opens()
-        if (open - dt).total_seconds() >= 900:
+        if (dt - open).total_seconds() >= 900:
             return False
 
         return True
+
+    def route(self) -> str:
+        routes: list[tuple[str, str]] = []
+
+        for route_destination, time in zip(
+            self.ROUTE_MAPPING[self._dest_time[0]], self.ROUTE_TIME_MAPPING[self._dest_time[1]]
+        ):
+            routes.append((route_destination, time))
+
+        return " -> ".join([f"{item[0]} ({item[1]})" for item in routes])
 
     @property
     def destination(self) -> str:
@@ -176,27 +199,26 @@ class OceanFishing(GrahaBaseCog):
         """Shows your local time against the current ocean fishing schedule windows."""
         embed = discord.Embed(colour=discord.Colour.random(), title="Ocean Fishing availability")
 
-        fmt = ""
-
         current, next_ = self.calculate_voyages(dt=datetime.datetime.now(datetime.timezone.utc), count=2, filter_=None)
         now = datetime.datetime.now(datetime.timezone.utc)
 
-        fmt += f"The current ocean fishing expedition is {current} {current.emoji}.\n"
+        fmt = f"The current ocean fishing expedition is {current} {current.emoji} with a route of:-\n{current.route()}.\n"
         if current.has_set_sail(now):
             fmt += "The registration window for this has closed and the voyage is underway.\n\n"
         elif current.can_register(now):
             closes = discord.utils.format_dt(current.start_time)
             closes_rel = discord.utils.format_dt(current.start_time, "R")
             fmt += f"The registration window for this voyage is currently open if you wish to join. Registration will close at {closes} ({closes_rel}).\n\n"
+        embed.add_field(name="This Route", value=fmt, inline=False)
 
+        fmt = ""
         next_fmt = discord.utils.format_dt(next_.start_time)
         next_fmt_rel = discord.utils.format_dt(next_.start_time, "R")
-        fmt += f"Next available ocean fishing expedition to {next_} {next_.emoji} is at {next_fmt} ({next_fmt_rel}).\n"
+        fmt += f"Next available ocean fishing expedition to {next_} {next_.emoji} is on the {next_fmt} ({next_fmt_rel}) with a route of:-\n{next_.route()}.\n"
         next_window_fmt = discord.utils.format_dt(next_.registration_opens())
         next_window_fmt_rel = discord.utils.format_dt(next_.registration_opens(), "R")
         fmt += f"Registration opens at {next_window_fmt} ({next_window_fmt_rel})."
-
-        embed.description = fmt
+        embed.add_field(name="Next Route", value=fmt, inline=False)
 
         await ctx.send(embed=embed)
 
