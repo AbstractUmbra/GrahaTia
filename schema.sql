@@ -1,4 +1,4 @@
-CREATE EXTENSION IS NOT EXISTS pg_tgrm;
+CREATE EXTENSION IF NOT EXISTS pg_tgrm;
 CREATE TABLE IF NOT EXISTS event_remind_subscription (
     guild_id BIGINT PRIMARY KEY,
     webhook_url TEXT NOT NULL,
