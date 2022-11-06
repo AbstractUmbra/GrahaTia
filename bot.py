@@ -140,7 +140,10 @@ class Graha(commands.Bot):
     session: aiohttp.ClientSession
     start_time: datetime.datetime
     command_stats: Counter[str]
+    socket_stats: Counter[str]
+    global_log: logging.Logger
     command_types_used: Counter[bool]
+    mb_client: mystbin.Client
     bot_app_info: discord.AppInfo
     _original_help_command: commands.HelpCommand | None  # for help command overriding
     _stats_cog_gateway_handler: logging.Handler
@@ -212,19 +215,19 @@ class Graha(commands.Bot):
             return
 
         assert ctx.command is not None  # type checking - disable assertions
-        fmt_to_send = ""
+        ret = ""
         if isinstance(error, commands.NoPrivateMessage):
             retry_period = self._error_handling_cooldown.update_rate_limit(ctx.message)
             if retry_period is None:
                 return
-            fmt_to_send = "Sorry, this command is not available in DMs."
+            ret += "Sorry, this command is not available in DMs."
             return
 
         elif isinstance(error, commands.DisabledCommand):
             retry_period = self._error_handling_cooldown.update_rate_limit(ctx.message)
             if retry_period is None:
                 return
-            fmt_to_send = "Sorry, this command has been disabled."
+            ret += "Sorry, this command has been disabled."
             return
 
         elif isinstance(error, commands.CommandInvokeError):
@@ -235,7 +238,7 @@ class Graha(commands.Bot):
             if not isinstance(origin_, discord.HTTPException):
                 LOGGER.exception("in `%s` with ray id: '%s' ::\n%s", ctx.command.name, ctx.ray_id, clean, exc_info=True)
 
-            fmt_to_send += "There was an error in that command. My developer has been notified."
+            ret += "There was an error in that command. My developer has been notified."
             return
 
         embed = discord.Embed(title="Command Error", colour=discord.Colour.red())
@@ -255,8 +258,8 @@ class Graha(commands.Bot):
         embed.set_footer(text=f"Ray ID: {ctx.ray_id}")
 
         await self.logging_webhook.send(embed=embed, wait=False)
-        fmt_to_send += f"\nQuote 'Ray ID: {ctx.ray_id}' if contacting the developer."
-        await ctx.send(content=fmt)
+        ret += f"\nQuote 'Ray ID: {ctx.ray_id}' if contacting the developer."
+        await ctx.send(content=ret)
 
     def _get_guild_prefixes(
         self,
@@ -392,10 +395,6 @@ class Graha(commands.Bot):
         record: SubscriptionEventRecord = await self.pool.fetchrow(query, ctx.guild.id)
         return record
 
-    async def close(self) -> None:
-        await asyncio.wait_for(self.pool.close(), timeout=None)
-        await super().close()
-
     async def start(self) -> None:
         try:
             await super().start(token=self.config["bot"]["token"], reconnect=True)
@@ -421,9 +420,6 @@ async def main():
     async with Graha() as bot, aiohttp.ClientSession() as session, asyncpg.create_pool(
         dsn=bot.config["database"]["dsn"], command_timeout=60, max_inactive_connection_lifetime=0, init=db_init
     ) as pool:
-        if pool is None:
-            # thanks asyncpg...
-            raise RuntimeError("Could not connect to database.")
         bot.pool = pool
 
         bot.session = session
