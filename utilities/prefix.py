@@ -21,7 +21,7 @@ def callable_prefix(bot: Graha, message: Message, /) -> list[str]:
         return commands.when_mentioned_or("gt ")(bot, message)
 
     guild_prefixes: Optional[list[str]] = bot._prefix_data.get(str(message.guild.id))
-    if guild_prefixes is None:
+    if not guild_prefixes:
         guild_prefixes = ["gt "]
 
     return commands.when_mentioned_or(*guild_prefixes)(bot, message)
