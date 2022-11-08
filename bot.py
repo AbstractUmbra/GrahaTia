@@ -416,7 +416,7 @@ class Graha(commands.Bot):
         self.owner_id = self.bot_app_info.owner.id
 
 
-async def main():
+async def main() -> None:
     async with Graha() as bot, aiohttp.ClientSession() as session, asyncpg.create_pool(
         dsn=bot.config["database"]["dsn"], command_timeout=60, max_inactive_connection_lifetime=0, init=db_init
     ) as pool:
@@ -426,14 +426,21 @@ async def main():
 
         with SetupLogging():
             await bot.load_extension("jishaku")
-            for file in pathlib.Path("extensions").glob("**/[!_]*.py"):
-                if file.name.startswith("_"):
-                    continue
+            path = pathlib.Path("extensions")
+            for file in path.rglob("[!ext_]*.py"):
                 ext = ".".join(file.parts).removesuffix(".py")
                 try:
                     await bot.load_extension(ext)
                 except Exception as error:
                     LOGGER.exception("Failed to load extension: %s\n\n%s", ext, error)
+            for directory in path.rglob("ext-*"):
+                if not directory.is_dir():
+                    return
+                module = ".".join(directory.parts)
+                try:
+                    await bot.load_extension(module)
+                except Exception as error:
+                    LOGGER.exception("Failed to load module extension: %s\n\n%s", module, error)
 
             await bot.start()
 
