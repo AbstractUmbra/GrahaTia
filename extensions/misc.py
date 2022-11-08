@@ -52,7 +52,10 @@ class Misc(BaseCog):
             fmt += to_codeblock("\n".join(prefixes), language="", escape_md=False)
             embed.description = fmt
 
-            embed.set_footer(text=f"{message.author} :: ({message.author.id})", icon_url=message.author.display_avatar)
+            embed.set_footer(
+                text=f"You can also use the first letter of your display name followed by a space.",
+                icon_url=message.author.display_avatar,
+            )
 
             await message.reply(embed=embed, mention_author=False)
 
