@@ -4,7 +4,13 @@ License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at http://mozilla.org/MPL/2.0/.
 """
 
-from typing import TypedDict
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, TypedDict
+
+
+if TYPE_CHECKING:
+    from typing_extensions import NotRequired
 
 
 __all__ = ("Config",)
@@ -20,7 +26,7 @@ class DatabaseConfig(TypedDict):
 
 class LoggingConfig(TypedDict):
     webhook_url: str
-    sentry_dsn: str
+    sentry_dsn: NotRequired[str]
 
 
 class MiscConfig(TypedDict):
