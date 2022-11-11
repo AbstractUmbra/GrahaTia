@@ -33,9 +33,10 @@ jobs:
           virtualenvs-in-project: false
 
       - name: "Setup Python @ ${{ matrix.python-version }}"
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: "${{ matrix.python-version }}"
+          cache: "poetry"
 
       - name: "Install Python deps @ ${{ matrix.python-version }}"
         env:
