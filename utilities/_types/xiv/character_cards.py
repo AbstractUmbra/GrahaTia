@@ -1,13 +1,16 @@
 from typing import Literal, TypedDict
 
-__all__: tuple[str, ...] = (
+
+__all__ = (
     "Error",
-    "PrepareResponse"
+    "PrepareResponse",
 )
+
 
 class Error(TypedDict):
     status: Literal["error"]
     reason: str
+
 
 class PrepareResponse(TypedDict):
     status: Literal["ok"]

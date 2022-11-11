@@ -2,18 +2,20 @@ from __future__ import annotations
 
 from io import BytesIO
 from typing import TYPE_CHECKING, Union
-import discord
 
+import discord
 import yarl
 from discord.ext import commands
+
 from utilities.cog import GrahaBaseCog as BaseCog
 from utilities.context import Context
+
 
 if TYPE_CHECKING:
     from typing import ClassVar
 
     from bot import Graha
-    from utilities._types.xiv.character_cards.character_cards import Error, PrepareResponse
+    from utilities._types.xiv.character_cards import Error, PrepareResponse
 
 
 class APIError(Exception):
@@ -31,12 +33,14 @@ class CharacterCards(BaseCog):
     async def get_card(self, *, world: str, name: str) -> str:
         """Fetches a character card from the api, returning the url to the final image.
 
-        Args:
-            world (str): The character's world.
-            name (str): The character's name, in First, Last format.
+        Parameters
+        -----------
+        world :class:`str`: The character's world.
+        name :class`str`: The character's name, in First, Last format.
 
-        Returns:
-            str: The prepared image url.
+        Returns
+        ---------
+        :class:`str`:  The prepared image url.
         """
         async with self.bot.session.get(self.URL / f"prepare/name/{world}/{name}") as r:
             res: Union[Error, PrepareResponse] = await r.json()
@@ -57,12 +61,16 @@ class CharacterCards(BaseCog):
             try:
                 img: str = await self.get_card(world=world, name=character)
             except APIError:
-                return await ctx.send(embed=discord.Embed(description="An error occurred with the api, this is likely due to an invalid name."))
+                return await ctx.send(
+                    embed=discord.Embed(description="An error occurred with the api, this is likely due to an invalid name.")
+                )
 
             async with self.bot.session.get(img) as res:
                 bytes: BytesIO = BytesIO(await res.read())
 
-            await ctx.send(f"Here is the card for {character}!", file=discord.File(fp=bytes, filename=f"{character}-card.png"))
+            await ctx.send(
+                f"Here is the card for {character}!", file=discord.File(fp=bytes, filename=f"{character}-card.png")
+            )
 
 
 async def setup(bot: Graha):
