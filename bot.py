@@ -106,8 +106,8 @@ class SetupLogging:
         logging.getLogger("discord").setLevel(logging.INFO)
         logging.getLogger("discord.http").setLevel(logging.INFO)
         logging.getLogger("discord.state").addFilter(RemoveNoise())
-        if CONFIG["logging"]["sentry_dsn"]:
-            sentry_sdk.init(dsn=CONFIG["logging"]["sentry_dsn"], integrations=[AioHttpIntegration()])
+        if sentry_dsn := CONFIG["logging"].get("sentry_dsn"):
+            sentry_sdk.init(dsn=sentry_dsn, integrations=[AioHttpIntegration()])
 
         self.log.setLevel(logging.INFO)
         handler = RotatingFileHandler(
@@ -419,7 +419,10 @@ class Graha(commands.Bot):
 
 async def main() -> None:
     async with Graha() as bot, aiohttp.ClientSession() as session, asyncpg.create_pool(
-        dsn=bot.config["database"]["dsn"], command_timeout=60, max_inactive_connection_lifetime=0, init=db_init
+        dsn=CONFIG["database"]["dsn"],
+        command_timeout=60,
+        max_inactive_connection_lifetime=0,
+        init=db_init,
     ) as pool:
         bot.pool = pool
 
