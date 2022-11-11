@@ -106,7 +106,8 @@ class SetupLogging:
         logging.getLogger("discord").setLevel(logging.INFO)
         logging.getLogger("discord.http").setLevel(logging.INFO)
         logging.getLogger("discord.state").addFilter(RemoveNoise())
-        sentry_sdk.init(dsn=CONFIG["logging"]["sentry_dsn"], integrations=[AioHttpIntegration()])
+        if CONFIG["logging"]["sentry_dsn"]:
+            sentry_sdk.init(dsn=CONFIG["logging"]["sentry_dsn"], integrations=[AioHttpIntegration()])
 
         self.log.setLevel(logging.INFO)
         handler = RotatingFileHandler(
