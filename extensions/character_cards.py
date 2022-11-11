@@ -54,7 +54,10 @@ class CharacterCards(BaseCog):
         Give the name in the format, `First, Last`.
         """
         async with ctx.typing():
-            img: str = await self.get_card(world=world, name=character)
+            try:
+                img: str = await self.get_card(world=world, name=character)
+            except APIError:
+                return await ctx.send(embed=discord.Embed(description="An error occurred with the api, this is likely due to an invalid name."))
 
             async with self.bot.session.get(img) as res:
                 bytes: BytesIO = BytesIO(await res.read())
