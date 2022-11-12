@@ -9,7 +9,7 @@ python = "^3.10"
 "discord.py" = {git = "https://github.com/Rapptz/discord.py.git", extras = ["speedup"], rev = "master"}
 discord-ext-menus = {git = "https://github.com/Rapptz/discord-ext-menus", rev = "master"}
 jishaku = {git = "https://github.com/Gorialis/jishaku.git", rev = "master"}
-"mystbin.py" = {git = "git@github.com:AbstractUmbra/mystbin.py.git", rev = "main"}
+"mystbin.py" = {git = "https://github.com/AbstractUmbra/mystbin.py.git", rev = "main"}
 asyncpg = "*"
 sentry-sdk = "*"
 lru-dict = "*"
