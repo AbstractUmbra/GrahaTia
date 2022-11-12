@@ -53,7 +53,6 @@ jobs:
       - name: "Type Coverage @ ${{ matrix.python-version }}"
         run: |
           poetry run pyright
-          poetry run pyright --ignoreexternal --lib --verifytypes hondana1
 
       - name: Lint
         uses: github/super-linter/slim@v4
