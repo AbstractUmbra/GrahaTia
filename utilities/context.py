@@ -26,7 +26,10 @@ if TYPE_CHECKING:
     from bot import Graha
 
 
-__all__ = ("Context",)
+__all__ = (
+    "Context",
+    "GuildContext",
+)
 
 T = TypeVar("T")
 
@@ -262,3 +265,11 @@ class Context(commands.Context["Graha"]):
             suppress_embeds=suppress_embeds,
             ephemeral=ephemeral,
         )
+
+
+class GuildContext(Context):
+    author: discord.Member
+    guild: discord.Guild
+    channel: discord.VoiceChannel | discord.TextChannel | discord.Thread
+    me: discord.Member
+    prefix: str
