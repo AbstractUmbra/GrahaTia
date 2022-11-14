@@ -23,6 +23,9 @@ pygit2 = "*"
 black = "*"
 typing-extensions = "*"
 
+[tool.poetry.group.speed.dependencies]
+orjson = "*"
+
 [tool.black]
 line-length = 125
 

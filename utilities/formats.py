@@ -207,5 +207,25 @@ def clean_triple_backtick(line: str) -> str:
     return clean_emojis(line)
 
 
-def to_json(obj: Any) -> str:
-    return json.dumps(obj, separators=(",", ":"), ensure_ascii=True)
+try:
+    import orjson
+except ImportError:
+    HAS_ORJSON = False
+else:
+    HAS_ORJSON = True
+
+if HAS_ORJSON:
+
+    def to_json(obj: Any) -> str:
+        return orjson.dumps(obj).decode()
+
+    def from_json(obj: str) -> Any:
+        return orjson.loads(obj)
+
+else:
+
+    def to_json(obj: Any) -> str:
+        return json.dumps(obj, separators=(",", "."), ensure_ascii=True)
+
+    def from_json(obj: str) -> Any:
+        return json.loads(obj)
