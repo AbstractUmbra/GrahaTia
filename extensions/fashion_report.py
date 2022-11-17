@@ -87,7 +87,9 @@ class FashionReport(BaseCog):
 
         return data
 
-    async def filter_submissions(self, now: datetime.datetime | None = None, /) -> tuple[str, str, str, discord.Colour]:
+    async def filter_submissions(
+        self, now: datetime.datetime | None = None, /
+    ) -> tuple[str, str, datetime.datetime, str, discord.Colour]:
         submissions = await self.get_kaiyoko_submissions()
 
         for submission in submissions["data"]["children"]:
@@ -116,6 +118,7 @@ class FashionReport(BaseCog):
                 return (
                     f"Fashion Report details for week of {match['date']} (Week {match['week_num']})",
                     reset_str,
+                    upcoming_event,
                     submission["data"]["url"],
                     colour,
                 )
@@ -123,10 +126,12 @@ class FashionReport(BaseCog):
         raise ValueError("Unabled to fetch the reddit post details.")
 
     async def _gen_fashion_embed(self, now: datetime.datetime | None = None, /) -> discord.Embed:
-        prose, reset, url, colour = await self.filter_submissions(now)
+        prose, reset, dt, url, colour = await self.filter_submissions(now)
 
         embed = discord.Embed(title=prose, url=url, colour=colour)
-        embed.description = reset
+        full_timestmap = discord.utils.format_dt(dt, "F")
+        relative_timestmap = discord.utils.format_dt(dt, "R")
+        embed.description = f"{reset}\n{full_timestmap} ({relative_timestmap})"
         embed.set_image(url=url)
 
         return embed
