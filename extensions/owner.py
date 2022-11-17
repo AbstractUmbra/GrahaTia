@@ -6,7 +6,11 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from __future__ import annotations
 
+import asyncio
 import io
+import pathlib
+import re
+import subprocess
 import time
 import traceback
 from typing import TYPE_CHECKING, Literal, Optional
@@ -25,6 +29,28 @@ if TYPE_CHECKING:
 
     from bot import Graha
 
+SANE_EXTENSION_REGEX = re.compile(r"(?P<prefix>extensions(?:\.|\\|\/))?(?P<extension>\w+)")
+
+
+class ModuleConverter(commands.Converter[str]):
+    async def convert(self, ctx: Context, argument: str, /) -> str:
+        match = SANE_EXTENSION_REGEX.search(argument)
+
+        if not match:
+            raise commands.ExtensionNotFound(argument)
+
+        if not match["prefix"]:
+            argument = "extensions/" + match["extension"]
+
+        extension_path = pathlib.Path(argument)
+        if not extension_path.is_dir():
+            extension_path = extension_path.with_suffix(".py")
+
+        if not extension_path.exists():
+            raise commands.ExtensionNotFound(argument)
+
+        return ".".join(extension_path.parts).removesuffix(".py")
+
 
 class Admin(BaseCog):
     """Admin-only commands that make the bot dynamic."""
@@ -40,12 +66,6 @@ class Admin(BaseCog):
     async def cog_check(self, ctx: Context) -> bool:
         return await self.bot.is_owner(ctx.author)
 
-    def get_syntax_error(self, err: SyntaxError) -> str:
-        """Grabs the syntax error."""
-        if err.text is None:
-            return f"```py\n{err.__class__.__name__}: {err}\n```"
-        return f'```py\n{err.text}{"^":>{err.offset}}\n{err.__class__.__name__}: {err}```'
-
     @commands.command()
     @commands.guild_only()
     async def leave(self, ctx: GuildContext) -> None:
@@ -53,10 +73,8 @@ class Admin(BaseCog):
         await ctx.guild.leave()
 
     @commands.command()
-    async def load(self, ctx: Context, *, module: str) -> None:
+    async def load(self, ctx: Context, *, module: str = commands.param(converter=ModuleConverter)) -> None:
         """Loads a module."""
-        module = f"extensions.{module}"
-
         try:
             await self.bot.load_extension(module)
         except commands.ExtensionError as err:
@@ -65,10 +83,8 @@ class Admin(BaseCog):
             await ctx.message.add_reaction(ctx.tick(True))
 
     @commands.command()
-    async def unload(self, ctx: Context, *, module: str) -> None:
+    async def unload(self, ctx: Context, *, module: str = commands.param(converter=ModuleConverter)) -> None:
         """Unloads a module."""
-        module = f"extensions.{module}"
-
         try:
             await self.bot.unload_extension(module)
         except commands.ExtensionError as err:
@@ -76,11 +92,9 @@ class Admin(BaseCog):
         else:
             await ctx.message.add_reaction(ctx.tick(True))
 
-    @commands.command(name="reload")
-    async def _reload(self, ctx: Context, *, module: str) -> None:
+    @commands.group(name="reload", invoke_without_command=True)
+    async def _reload(self, ctx: Context, *, module: str = commands.param(converter=ModuleConverter)) -> None:
         """Reloads a module."""
-        module = f"extensions.{module}"
-
         try:
             await self.bot.reload_extension(module)
         except commands.ExtensionNotLoaded:
@@ -91,6 +105,44 @@ class Admin(BaseCog):
             return
 
         await ctx.message.add_reaction(ctx.tick(True))
+
+    async def _git_pull(self) -> list[str]:
+        try:
+            process = await asyncio.create_subprocess_shell("git pull", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = await process.communicate()
+        except NotImplementedError:
+            process = subprocess.Popen("git pull", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = await self.bot.loop.run_in_executor(None, process.communicate)
+
+        return [output.decode() for output in result]
+
+    @_reload.command(name="all")
+    async def _reload_all(self, ctx: Context, update: bool = False) -> None:
+        """Reloads all loaded extensions whilst optionally pulling from git."""
+
+        if update:
+            async with ctx.typing():
+                _, _ = await self._git_pull()
+
+        sorted_exts = sorted(self.bot.extensions)
+
+        results: list[tuple[bool, str]] = []
+
+        for ext in sorted_exts:
+            try:
+                await self.bot.reload_extension(ext)
+            except commands.ExtensionError:
+                results.append((False, ext))
+            else:
+                results.append((True, ext))
+
+        failed_exts = [ext for failed, ext in results if failed is False]
+        if failed_exts:
+            await ctx.message.add_reaction(ctx.tick(False))
+            ret = "\n".join(failed_exts)
+            await ctx.send(f"These extensions failed to be reloaded:\n\n{ret}")
+        else:
+            await ctx.message.add_reaction(ctx.tick(True))
 
     @commands.group(invoke_without_command=True)
     async def sql(self, ctx: Context, *, query: str) -> None:
@@ -116,8 +168,6 @@ class Admin(BaseCog):
         if isinstance(results, str) or rows == 0:
             await ctx.send(f"`{dati:.2f}ms: {results}`")
             return
-
-        assert isinstance(results, list)
 
         headers = list(results[0].keys())
         table = formats.TabularData()
@@ -158,7 +208,7 @@ class Admin(BaseCog):
     @commands.command()
     @commands.guild_only()
     async def sync(
-        self, ctx: Context, guilds: Greedy[discord.Object], spec: Optional[Literal["~", "*", "^"]] = None
+        self, ctx: GuildContext, guilds: Greedy[discord.Object], spec: Optional[Literal["~", "*", "^"]] = None
     ) -> None:
         """
         Pass guild ids or pass a sync specification:-
@@ -167,8 +217,6 @@ class Admin(BaseCog):
         `*` -> Copies global to current guild.
         `^` -> Clears all guild commands.
         """
-        assert ctx.guild is not None
-
         if not guilds:
             if spec == "~":
                 fmt = await ctx.bot.tree.sync(guild=ctx.guild)
