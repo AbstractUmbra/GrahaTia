@@ -70,10 +70,10 @@ class Voyage:
 
     def can_register(self, dt: datetime.datetime, /) -> bool:
         open = self.registration_opens()
-        if (dt - open).total_seconds() >= 900:
-            return False
+        if 0 < (dt - open).total_seconds() <= 900:
+            return True
 
-        return True
+        return False
 
     def route(self) -> str:
         routes: list[tuple[str, str]] = []
@@ -120,7 +120,7 @@ class OceanFishing(GrahaBaseCog):
     def _from_epoch(self, day: int, hour: int) -> datetime.datetime:
         return (
             self.STARTING_EPOCH
-            + datetime.timedelta(seconds=day * 86400)
+            + datetime.timedelta(days=day)
             + datetime.timedelta(seconds=hour * 3600)
             - datetime.timedelta(seconds=32400)
         )
@@ -209,7 +209,12 @@ class OceanFishing(GrahaBaseCog):
             closes = discord.utils.format_dt(current.start_time)
             closes_rel = discord.utils.format_dt(current.start_time, "R")
             fmt += f"The registration window for this voyage is currently open if you wish to join. Registration will close at {closes} ({closes_rel}).\n\n"
-        embed.add_field(name="This Route", value=fmt, inline=False)
+        else:
+            registration_opens = current.registration_opens()
+            registration_opens_formatted = discord.utils.format_dt(registration_opens)
+            registration_opens_formatted_rel = discord.utils.format_dt(registration_opens, "R")
+            fmt += f"The registration window for this voyage will open at {registration_opens_formatted} ({registration_opens_formatted_rel})."
+        embed.add_field(name="Current Route", value=fmt, inline=False)
 
         fmt = ""
         next_fmt = discord.utils.format_dt(next_.start_time)
