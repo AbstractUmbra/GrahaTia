@@ -102,16 +102,24 @@ class FashionReport(BaseCog):
                 if (now - created) > datetime.timedelta(days=7):
                     continue
 
-                if 0 < now.weekday() < 4:
-                    delta = datetime.timedelta((4 - now.weekday()) % 7)
-                    fmt = "Available"
+                wd = now.isoweekday()
+                reset_time = datetime.time(hour=8, second=0)
+                is_available = (
+                    wd == 5 and now.time() > reset_time or wd == 1 or wd >= 6 or wd == 2 and now.time() < reset_time
+                )
+
+                if is_available:
+                    diff = 2 - wd  # next tuesday
+                    fmt = "Judging available"
                     colour = discord.Colour.green()
                 else:
-                    delta = datetime.timedelta((0 - now.weekday()) % 7)
-                    fmt = "Resets"
+                    diff = 5 - wd  # next friday
+                    fmt = "Planning available"
                     colour = discord.Colour.dark_orange()
 
-                upcoming_event = now + delta
+                days = diff + 7 if diff <= 0 else diff
+
+                upcoming_event = now + datetime.timedelta(days=days)
                 upcoming_event = upcoming_event.replace(hour=8, minute=0, second=0, microsecond=0)
                 reset_str = self.humanify_delta(td=(upcoming_event - now), format=fmt)
 
