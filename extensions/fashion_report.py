@@ -123,17 +123,8 @@ class FashionReport(BaseCog):
                     fmt = "Resets in"
                     colour = discord.Colour.dark_orange()
 
-                # days = diff + 7 if diff <= 0 else diff
-                if diff == 0:
-                    if now.time() < reset_time:
-                        days = 0
-                    else:
-                        days = diff + 7
-                elif diff == 5:
-                    if now.time() > reset_time:
-                        days = 0
-                    else:
-                        days = diff + 7
+                if (diff == 0 and now.time() < reset_time) or (diff == 5 and now.time() > reset_time):
+                    days = 0
                 else:
                     days = diff + 7 if diff <= 0 else diff
 
