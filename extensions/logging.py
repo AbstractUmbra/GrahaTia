@@ -31,6 +31,7 @@ from typing_extensions import Annotated
 
 from utilities import formats, time
 from utilities.context import Context
+from utilities.formats import to_codeblock
 from utilities.paginator import FieldPageSource, RoboPages
 
 
@@ -687,23 +688,24 @@ class Stats(commands.Cog):
         if isinstance(error, (discord.Forbidden, discord.NotFound, menus.MenuError)):
             return
 
-        e = discord.Embed(title="Command Error", colour=0xCC3366)
-        e.add_field(name="Name", value=ctx.command.qualified_name)
-        e.add_field(name="Author", value=f"{ctx.author} (ID: {ctx.author.id})")
+        embed = discord.Embed(title="Command Error", colour=discord.Colour.red())
+        error = getattr(error, "original", error)
+        tb_fmt = traceback.format_exception(type(error), error, error.__traceback__)
+        clean = "".join(tb_fmt)
 
+        embed.description = to_codeblock(clean, language="py", escape_md=False)
+        embed.add_field(name="Name", value=ctx.command.qualified_name)
+        embed.add_field(name="Author", value=f"{ctx.author} ({ctx.author.id})")
         fmt = f"Channel: {ctx.channel} (ID: {ctx.channel.id})"
         if ctx.guild:
-            fmt = f"{fmt}\nGuild: {ctx.guild} (ID: {ctx.guild.id})"
+            fmt += f"\nGuild: {ctx.guild} (ID: {ctx.guild.id})"
+        embed.add_field(name="Location", value=fmt, inline=False)
+        embed.add_field(name="Content", value=textwrap.shorten(ctx.message.content, width=512))
+        embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
+        embed.set_footer(text=f"Ray ID: {ctx.ray_id}")
 
-        e.add_field(name="Location", value=fmt, inline=False)
-        e.add_field(name="Content", value=textwrap.shorten(ctx.message.content, width=512))
-
-        exc = "".join(traceback.format_exception(type(error), error, error.__traceback__, chain=False))
-        e.description = f"```py\n{exc}\n```"
-        e.timestamp = discord.utils.utcnow()
-        e.set_footer(text=f"Ray ID: {ctx.ray_id}")
-        await self.webhook.send(embed=e)
-        await self.bot.owner.send(embed=e)
+        await self.webhook.send(embed=embed, wait=False)
+        await ctx.send(content=f"\nQuote 'Ray ID: {ctx.ray_id}' if contacting the developer.")
 
     def add_record(self, record: logging.LogRecord) -> None:
         # if self.bot.config.debug:

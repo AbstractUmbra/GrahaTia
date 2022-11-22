@@ -11,7 +11,6 @@ import datetime
 import json
 import logging
 import pathlib
-import textwrap
 import traceback
 from collections import Counter, deque
 from logging.handlers import RotatingFileHandler
@@ -34,7 +33,6 @@ from utilities._types.xiv.record_aliases.subscription import EventRecord as Subs
 from utilities.async_config import Config
 from utilities.context import Context
 from utilities.db import db_init
-from utilities.formats import to_codeblock
 from utilities.prefix import callable_prefix as _callable_prefix
 
 
@@ -219,17 +217,15 @@ class Graha(commands.Bot):
         ret = ""
         if isinstance(error, commands.NoPrivateMessage):
             retry_period = self._error_handling_cooldown.update_rate_limit(ctx.message)
-            if retry_period is None:
+            if retry_period:
                 return
             ret += "Sorry, this command is not available in DMs."
-            return
 
         elif isinstance(error, commands.DisabledCommand):
             retry_period = self._error_handling_cooldown.update_rate_limit(ctx.message)
-            if retry_period is None:
+            if retry_period:
                 return
             ret += "Sorry, this command has been disabled."
-            return
 
         elif isinstance(error, commands.CommandInvokeError):
             origin_ = error.original
@@ -240,26 +236,10 @@ class Graha(commands.Bot):
                 LOGGER.exception("in `%s` with ray id: '%s' ::\n%s", ctx.command.name, ctx.ray_id, clean, exc_info=True)
 
             ret += "There was an error in that command. My developer has been notified."
+
+        else:
             return
 
-        embed = discord.Embed(title="Command Error", colour=discord.Colour.red())
-        error = getattr(error, "original", error)
-        tb_fmt = traceback.format_exception(type(error), error, error.__traceback__)
-        clean = "".join(tb_fmt)
-
-        embed.description = to_codeblock(clean, language="py", escape_md=False)
-        embed.add_field(name="Name", value=ctx.command.qualified_name)
-        embed.add_field(name="Author", value=f"{ctx.author} ({ctx.author.id})")
-        fmt = f"Channel: {ctx.channel} (ID: {ctx.channel.id})"
-        if ctx.guild:
-            fmt += f"\nGuild: {ctx.guild} (ID: {ctx.guild.id})"
-        embed.add_field(name="Location", value=fmt, inline=False)
-        embed.add_field(name="Content", value=textwrap.shorten(ctx.message.content, width=512))
-        embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
-        embed.set_footer(text=f"Ray ID: {ctx.ray_id}")
-
-        await self.logging_webhook.send(embed=embed, wait=False)
-        ret += f"\nQuote 'Ray ID: {ctx.ray_id}' if contacting the developer."
         await ctx.send(content=ret)
 
     def _get_guild_prefixes(
