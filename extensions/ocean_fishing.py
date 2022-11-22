@@ -65,11 +65,13 @@ class Voyage:
     def registration_opens(self) -> datetime.datetime:
         return self.start_time - datetime.timedelta(minutes=15)
 
-    def has_set_sail(self, dt: datetime.datetime, /) -> bool:
+    def has_set_sail(self, dt: datetime.datetime | None = None, /) -> bool:
+        dt = dt or datetime.datetime.now(datetime.timezone.utc)
         return self.start_time < dt
 
-    def can_register(self, dt: datetime.datetime, /) -> bool:
+    def can_register(self, dt: datetime.datetime | None = None, /) -> bool:
         open = self.registration_opens()
+        dt = dt or datetime.datetime.now(datetime.timezone.utc)
         if 0 < (dt - open).total_seconds() <= 900:
             return True
 
