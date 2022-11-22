@@ -71,14 +71,20 @@ class FashionReport(BaseCog):
 
         return weeks
 
-    def humanify_delta(self, *, td: datetime.timedelta, format: str) -> str:
+    def humanify_delta(self, *, td: datetime.timedelta, format_: str, is_available: bool) -> str:
         seconds = round(td.total_seconds())
 
         days, seconds = divmod(seconds, 60 * 60 * 24)
         hours, seconds = divmod(seconds, 60 * 60)
         minutes, seconds = divmod(seconds, 60)
 
-        return f"{format.title()} in {plural(days):day}, {plural(hours):hour}, {plural(minutes):minute} and {plural(seconds):second}."
+        fmt = f"{format_} for " if is_available else " in "
+        if days:
+            fmt += f"{plural(days):day}, "
+
+        fmt += f"{plural(hours):hour}, {plural(minutes):minute} and {plural(seconds):second}."
+
+        return fmt
 
     async def get_kaiyoko_submissions(self) -> TopLevelListingResponse:
         headers = {"User-Agent": "Graha Discord Bot (by /u/AbstractUmbra)"}
@@ -103,25 +109,37 @@ class FashionReport(BaseCog):
                     continue
 
                 wd = now.isoweekday()
-                reset_time = datetime.time(hour=8, second=0)
+                reset_time = datetime.time(hour=8, minute=0, second=0)
                 is_available = (
-                    wd == 5 and now.time() > reset_time or wd == 1 or wd >= 6 or wd == 2 and now.time() < reset_time
+                    (wd == 5 and now.time() > reset_time) or wd == 1 or wd >= 6 or (wd == 2 and now.time() < reset_time)
                 )
 
                 if is_available:
                     diff = 2 - wd  # next tuesday
-                    fmt = "Judging available"
+                    fmt = "Judging is available"
                     colour = discord.Colour.green()
                 else:
                     diff = 5 - wd  # next friday
-                    fmt = "Planning available"
+                    fmt = "Resets in"
                     colour = discord.Colour.dark_orange()
 
-                days = diff + 7 if diff <= 0 else diff
+                # days = diff + 7 if diff <= 0 else diff
+                if diff == 0:
+                    if now.time() < reset_time:
+                        days = 0
+                    else:
+                        days = diff + 7
+                elif diff == 5:
+                    if now.time() > reset_time:
+                        days = 0
+                    else:
+                        days = diff + 7
+                else:
+                    days = diff + 7 if diff <= 0 else diff
 
                 upcoming_event = now + datetime.timedelta(days=days)
                 upcoming_event = upcoming_event.replace(hour=8, minute=0, second=0, microsecond=0)
-                reset_str = self.humanify_delta(td=(upcoming_event - now), format=fmt)
+                reset_str = self.humanify_delta(td=(upcoming_event - now), format_=fmt, is_available=is_available)
 
                 return (
                     f"Fashion Report details for week of {match['date']} (Week {match['week_num']})",
@@ -139,7 +157,7 @@ class FashionReport(BaseCog):
         embed = discord.Embed(title=prose, url=url, colour=colour)
         full_timestmap = discord.utils.format_dt(dt, "F")
         relative_timestmap = discord.utils.format_dt(dt, "R")
-        embed.description = f"{reset}\n{full_timestmap} ({relative_timestmap})"
+        embed.description = f"{reset}\nThis switches at {full_timestmap} ({relative_timestmap})."
         embed.set_image(url=url)
 
         return embed
