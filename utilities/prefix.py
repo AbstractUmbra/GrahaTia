@@ -20,7 +20,7 @@ def callable_prefix(bot: Graha, message: Message, /) -> list[str]:
     prefixes = ["gt "]
     character = message.author.display_name[0]
     if character.isalpha():
-        prefixes.append(character.casefold())
+        prefixes.append(character.casefold() + " ")
 
     if message.guild is None:
         return commands.when_mentioned_or(*prefixes)(bot, message)
@@ -29,7 +29,4 @@ def callable_prefix(bot: Graha, message: Message, /) -> list[str]:
     if not guild_prefixes:
         guild_prefixes = ["gt "]
 
-    if character.isalpha():
-        guild_prefixes.append(character.casefold())
-
-    return commands.when_mentioned_or(*guild_prefixes)(bot, message)
+    return commands.when_mentioned_or(*guild_prefixes + prefixes)(bot, message)
