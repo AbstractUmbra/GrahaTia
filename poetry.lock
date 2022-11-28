@@ -89,7 +89,6 @@ click = ">=8.0.0"
 mypy-extensions = ">=0.4.3"
 pathspec = ">=0.9.0"
 platformdirs = ">=2"
-tomli = {version = ">=1.1.0", markers = "python_full_version < \"3.11.0a7\""}
 
 [package.extras]
 colorama = ["colorama (>=0.4.3)"]
@@ -174,7 +173,7 @@ resolved_reference = "8686b5d1bbc1d3c862292eb436ab630d6e9c9b53"
 
 [[package]]
 name = "discord.py"
-version = "2.2.0"
+version = "2.2.0a4646+ga098867a"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
@@ -194,7 +193,7 @@ voice = ["PyNaCl (>=1.3.0,<1.6)"]
 type = "git"
 url = "https://github.com/Rapptz/discord.py.git"
 reference = "master"
-resolved_reference = "24bdb44d54686448a336ea6d72b1bf8600ef7220"
+resolved_reference = "a098867a4d9fe005d399f42bb4aec23a73f76cb7"
 
 [[package]]
 name = "frozenlist"
@@ -228,7 +227,7 @@ test = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "jishaku"
-version = "2.5.1a460+g7777777.master"
+version = "2.5.1a461+g167b9ca.master"
 description = "A discord.py extension including useful tools for bot development and debugging."
 category = "main"
 optional = false
@@ -238,7 +237,7 @@ develop = false
 [package.dependencies]
 braceexpand = ">=0.1.7"
 click = ">=8.0.1"
-import_expression = ">=1.0.0,<2.0.0"
+import-expression = ">=1.0.0,<2.0.0"
 tabulate = ">=0.8.10"
 
 [package.extras]
@@ -254,7 +253,7 @@ voice = ["yt-dlp (>=2022.3.8)"]
 type = "git"
 url = "https://github.com/Gorialis/jishaku.git"
 reference = "master"
-resolved_reference = "7777777945f6ce26c037c51e384ac6123eeeba06"
+resolved_reference = "167b9ca281e7ddbf2f9bf2a1784c522967259b9f"
 
 [[package]]
 name = "lru-dict"
@@ -309,7 +308,7 @@ resolved_reference = "76b4406053d5842b196ea841aa1a9abfc07f70b5"
 name = "orjson"
 version = "3.8.1"
 description = "Fast, correct Python JSON library supporting dataclasses, datetimes, and numpy"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 
@@ -384,7 +383,7 @@ six = ">=1.5"
 
 [[package]]
 name = "sentry-sdk"
-version = "1.11.0"
+version = "1.11.1"
 description = "Python client for Sentry (https://sentry.io)"
 category = "main"
 optional = false
@@ -488,8 +487,8 @@ multidict = ">=4.0"
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.10"
-content-hash = "fa2d98b3fdea577ef36a28ed0c38c38acd64e6ae5fc95450e6ab519c970d8f86"
+python-versions = "~3.11"
+content-hash = "f295527d0733f1005a27a30db0131358fd7551dd88972ff22d7890f22d5c816a"
 
 [metadata.files]
 aiohttp = [
@@ -1068,8 +1067,8 @@ python-dateutil = [
     {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
 ]
 sentry-sdk = [
-    {file = "sentry-sdk-1.11.0.tar.gz", hash = "sha256:e7b78a1ddf97a5f715a50ab8c3f7a93f78b114c67307785ee828ef67a5d6f117"},
-    {file = "sentry_sdk-1.11.0-py2.py3-none-any.whl", hash = "sha256:f467e6c7fac23d4d42bc83eb049c400f756cd2d65ab44f0cc1165d0c7c3d40bc"},
+    {file = "sentry-sdk-1.11.1.tar.gz", hash = "sha256:675f6279b6bb1fea09fd61751061f9a90dca3b5929ef631dd50dc8b3aeb245e9"},
+    {file = "sentry_sdk-1.11.1-py2.py3-none-any.whl", hash = "sha256:8b4ff696c0bdcceb3f70bbb87a57ba84fd3168b1332d493fcd16c137f709578c"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
