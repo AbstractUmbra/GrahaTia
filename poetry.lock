@@ -89,6 +89,7 @@ click = ">=8.0.0"
 mypy-extensions = ">=0.4.3"
 pathspec = ">=0.9.0"
 platformdirs = ">=2"
+tomli = {version = ">=1.1.0", markers = "python_full_version < \"3.11.0a7\""}
 
 [package.extras]
 colorama = ["colorama (>=0.4.3)"]
@@ -106,7 +107,7 @@ python-versions = "*"
 
 [[package]]
 name = "certifi"
-version = "2022.9.24"
+version = "2022.12.7"
 description = "Python package for providing Mozilla's CA Bundle."
 category = "main"
 optional = false
@@ -173,7 +174,7 @@ resolved_reference = "8686b5d1bbc1d3c862292eb436ab630d6e9c9b53"
 
 [[package]]
 name = "discord.py"
-version = "2.2.0a4646+ga098867a"
+version = "2.2.0a4650+g799e3c5b"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
@@ -184,7 +185,7 @@ develop = false
 aiohttp = ">=3.7.4,<4"
 
 [package.extras]
-docs = ["sphinx (==4.4.0)", "sphinxcontrib-trio (==1.1.2)", "sphinxcontrib-websupport", "typing-extensions (>=4.3,<5)"]
+docs = ["sphinx (==4.4.0)", "sphinxcontrib-websupport", "sphinxcontrib_trio (==1.1.2)", "typing-extensions (>=4.3,<5)"]
 speed = ["Brotli", "aiodns (>=1.1)", "cchardet (==2.1.7)", "orjson (>=3.5.4)"]
 test = ["coverage[toml]", "pytest", "pytest-asyncio", "pytest-cov", "pytest-mock", "typing-extensions (>=4.3,<5)"]
 voice = ["PyNaCl (>=1.3.0,<1.6)"]
@@ -193,7 +194,7 @@ voice = ["PyNaCl (>=1.3.0,<1.6)"]
 type = "git"
 url = "https://github.com/Rapptz/discord.py.git"
 reference = "master"
-resolved_reference = "a098867a4d9fe005d399f42bb4aec23a73f76cb7"
+resolved_reference = "799e3c5bf09cedcd9b7e2b83df733910fa11532a"
 
 [[package]]
 name = "frozenlist"
@@ -302,7 +303,7 @@ requests = ["requests (>=2.24.0,<3.0.0)"]
 type = "git"
 url = "https://github.com/AbstractUmbra/mystbin.py.git"
 reference = "main"
-resolved_reference = "76b4406053d5842b196ea841aa1a9abfc07f70b5"
+resolved_reference = "b389525bbd02423290eb5956cae74d1d679bc7b2"
 
 [[package]]
 name = "orjson"
@@ -487,7 +488,7 @@ multidict = ">=4.0"
 
 [metadata]
 lock-version = "1.1"
-python-versions = "~3.11"
+python-versions = "^3.10"
 content-hash = "f295527d0733f1005a27a30db0131358fd7551dd88972ff22d7890f22d5c816a"
 
 [metadata.files]
@@ -662,8 +663,8 @@ braceexpand = [
     {file = "braceexpand-0.1.7.tar.gz", hash = "sha256:e6e539bd20eaea53547472ff94f4fb5c3d3bf9d0a89388c4b56663aba765f705"},
 ]
 certifi = [
-    {file = "certifi-2022.9.24-py3-none-any.whl", hash = "sha256:90c1a32f1d68f940488354e36370f6cca89f0f106db09518524c88d6ed83f382"},
-    {file = "certifi-2022.9.24.tar.gz", hash = "sha256:0d9c601124e5a6ba9712dbc60d9c53c21e34f5f641fe83002317394311bdce14"},
+    {file = "certifi-2022.12.7-py3-none-any.whl", hash = "sha256:4ad3232f5e926d6718ec31cfc1fcadfde020920e278684144551c91769c7bc18"},
+    {file = "certifi-2022.12.7.tar.gz", hash = "sha256:35824b4c3a97115964b408844d64aa14db1cc518f6562e8d7261699d1350a9e3"},
 ]
 cffi = [
     {file = "cffi-1.15.1-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:a66d3508133af6e8548451b25058d5812812ec3798c886bf38ed24a98216fab2"},
