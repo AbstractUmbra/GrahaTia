@@ -128,6 +128,9 @@ class Stats(commands.Cog):
         self.bulk_insert_loop.stop()
         self.logging_worker.cancel()
 
+    async def cog_check(self, ctx: Context) -> bool:
+        return await ctx.bot.is_owner(ctx.author)
+
     @tasks.loop(seconds=10.0)
     async def bulk_insert_loop(self) -> None:
         async with self._batch_lock:
