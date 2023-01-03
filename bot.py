@@ -93,9 +93,9 @@ class RemoveNoise(logging.Filter):
 
 
 class SetupLogging:
-    def __init__(self, *, stream: bool = True) -> None:
+    def __init__(self, *, log_max_size: int = 8 * 1024 * 1024, stream: bool = True) -> None:
         self.log: logging.Logger = logging.getLogger()
-        self.max_bytes: int = 32 * 1024 * 1024
+        self.max_bytes: int = log_max_size
         self.logging_path = pathlib.Path("./logs/")
         self.logging_path.mkdir(exist_ok=True)
         self.stream: bool = stream
@@ -340,6 +340,12 @@ class Graha(commands.Bot):
     async def on_message(self, message: discord.Message, /) -> None:
         if message.author.bot:
             return
+
+        conditional_acces = CONFIG.get("conditional_access")
+        if conditional_acces:
+            if message.guild and (access := conditional_acces.get(str(message.guild.id))):
+                if message.channel.id not in access:
+                    return
 
         await self.process_commands(message)
 
