@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Union
 import discord
 import yarl
 from discord import app_commands
+from discord.app_commands.commands import _populate_choices
 
 from utilities import fuzzy
 from utilities._types.xiv.worlds import WorldsData
@@ -44,6 +45,7 @@ class CharacterCards(BaseCog):
     def __init__(self, bot: Graha, /) -> None:
         super().__init__(bot)
         self._cache_data()
+        _populate_choices(self.character_card._params, {"datacenter": self.datacenters})
 
     def _cache_data(self) -> None:
         datacenters: list[app_commands.Choice[str]] = []
@@ -115,7 +117,7 @@ class CharacterCards(BaseCog):
             f"Here is the card for {character}!", file=discord.File(fp=buffer, filename=f"{character}-card.png")
         )
 
-    @character_card.autocomplete("datacenter")
+    # @character_card.autocomplete("datacenter")
     async def datacenter_autocomplete(
         self, interaction: discord.Interaction, current: str
     ) -> list[app_commands.Choice[str]]:
