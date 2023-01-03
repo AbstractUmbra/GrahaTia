@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import datetime
 import re
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from utilities._types.xiv.reddit.kaiyoko import TopLevelListingResponse
 from utilities.cache import cache
@@ -33,6 +33,14 @@ class Context(BaseContext):
     subscription_config: EventSubConfig
 
 
+class KaiyokoSubmission(NamedTuple):
+    prose: str
+    reset: str
+    dt: datetime.datetime
+    url: str
+    colour: discord.Colour
+
+
 class FashionReport(BaseCog):
     FASHION_REPORT_START: ClassVar[datetime.datetime] = datetime.datetime(
         year=2018,
@@ -47,21 +55,23 @@ class FashionReport(BaseCog):
 
     def __init__(self, bot: Graha) -> None:
         super().__init__(bot)
+        self.reset_cache.start()
+
+    def __repr__(self) -> str:
+        return "<FashionReport>"
 
     async def cog_before_invoke(self, ctx: Context) -> None:
-        config: EventSubConfig = await self._get_subscription_config(ctx)  # type: ignore # gay with instance bindings
+        config: EventSubConfig = await self._get_subscription_config(ctx)
         ctx.subscription_config = config
 
     @cache()
     async def _get_subscription_config(self, ctx: Context) -> EventSubConfig:
-        assert ctx.guild
-
         record = await self.bot.get_sub_config(ctx)
 
         if record:
             return EventSubConfig.from_record(self.bot, record=record)
 
-        return EventSubConfig(self.bot, guild_id=ctx.guild.id)
+        return EventSubConfig(self.bot, guild_id=ctx.guild and ctx.guild.id)
 
     def weeks_since_start(self, dt: datetime.datetime) -> int:
         td = dt - self.FASHION_REPORT_START
@@ -93,14 +103,13 @@ class FashionReport(BaseCog):
 
         return data
 
-    async def filter_submissions(
-        self, now: datetime.datetime | None = None, /
-    ) -> tuple[str, str, datetime.datetime, str, discord.Colour]:
+    @cache()
+    async def filter_submissions(self) -> KaiyokoSubmission:
         submissions = await self.get_kaiyoko_submissions()
 
         for submission in submissions["data"]["children"]:
             if match := FASHION_REPORT_PATTERN.search(submission["data"]["title"]):
-                now = now or datetime.datetime.now(datetime.timezone.utc)
+                now = datetime.datetime.now(datetime.timezone.utc)
                 if not self.weeks_since_start(now) == int(match["week_num"]):
                     continue
 
@@ -132,7 +141,7 @@ class FashionReport(BaseCog):
                 upcoming_event = upcoming_event.replace(hour=8, minute=0, second=0, microsecond=0)
                 reset_str = self.humanify_delta(td=(upcoming_event - now), format_=fmt, is_available=is_available)
 
-                return (
+                return KaiyokoSubmission(
                     f"Fashion Report details for week of {match['date']} (Week {match['week_num']})",
                     reset_str,
                     upcoming_event,
@@ -142,14 +151,14 @@ class FashionReport(BaseCog):
 
         raise ValueError("Unabled to fetch the reddit post details.")
 
-    async def _gen_fashion_embed(self, now: datetime.datetime | None = None, /) -> discord.Embed:
-        prose, reset, dt, url, colour = await self.filter_submissions(now)
+    async def _gen_fashion_embed(self) -> discord.Embed:
+        submission: KaiyokoSubmission = await self.filter_submissions()
 
-        embed = discord.Embed(title=prose, url=url, colour=colour)
-        full_timestmap = discord.utils.format_dt(dt, "F")
-        relative_timestmap = discord.utils.format_dt(dt, "R")
-        embed.description = f"{reset}\nThis switches at {full_timestmap} ({relative_timestmap})."
-        embed.set_image(url=url)
+        embed = discord.Embed(title=submission.prose, url=submission.url, colour=submission.colour)
+        full_timestmap = discord.utils.format_dt(submission.dt, "F")
+        relative_timestmap = discord.utils.format_dt(submission.dt, "R")
+        embed.description = f"{submission.reset}\nThis switches at {full_timestmap} ({relative_timestmap})."
+        embed.set_image(url=submission.url)
 
         return embed
 
@@ -160,8 +169,13 @@ class FashionReport(BaseCog):
             embed = await self._gen_fashion_embed()
         except ValueError:
             embed = discord.Embed(description="Seems the post for this week isn't up yet.")
+            self.filter_submissions.invalidate(self)
 
         await ctx.send(embed=embed)
+
+    @tasks.loop(time=datetime.time(hour=15, tzinfo=datetime.timezone.utc))
+    async def reset_cache(self) -> None:
+        self.filter_submissions.invalidate(self)
 
 
 async def setup(bot: Graha) -> None:
