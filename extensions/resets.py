@@ -57,6 +57,7 @@ class Resets(BaseCog, name="Reset Information"):
 
     @commands.command(name="reset", aliases=["resets", "r"])
     async def resets_summary(self, ctx: Context) -> None:
+        """Sends a reset information summary!"""
         next_daily = self._get_daily_reset_time()
         next_weekly = self._get_weekly_reset_time()
 
