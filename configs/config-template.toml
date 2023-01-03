@@ -10,3 +10,7 @@ sentry_dsn = "..."
 
 [misc]
 mystbin_token = "..."
+
+[conditional_access]
+# this key is removable
+server_id = [123, 456]

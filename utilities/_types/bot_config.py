@@ -38,3 +38,4 @@ class Config(TypedDict):
     database: DatabaseConfig
     logging: LoggingConfig
     misc: MiscConfig
+    conditional_access: NotRequired[dict[str, list[int]]]
