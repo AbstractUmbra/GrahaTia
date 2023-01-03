@@ -78,7 +78,7 @@ class FashionReport(BaseCog):
         hours, seconds = divmod(seconds, 60 * 60)
         minutes, seconds = divmod(seconds, 60)
 
-        fmt = f"{format_} for " if is_available else " in "
+        fmt = f"{format_} for " if is_available else f"{format_} in "
         if days:
             fmt += f"{plural(days):day}, "
 
@@ -120,7 +120,7 @@ class FashionReport(BaseCog):
                     colour = discord.Colour.green()
                 else:
                     diff = 5 - wd  # next friday
-                    fmt = "Resets in"
+                    fmt = "Resets"
                     colour = discord.Colour.dark_orange()
 
                 if (diff == 0 and now.time() < reset_time) or (diff == 5 and now.time() > reset_time):
@@ -162,29 +162,6 @@ class FashionReport(BaseCog):
             embed = discord.Embed(description="Seems the post for this week isn't up yet.")
 
         await ctx.send(embed=embed)
-
-    async def _add_subscription(self, ctx: Context, /) -> None:
-        current_config = ctx.subscription_config
-        if current_config.webhook_url is None:
-            # create webhook
-            pass
-        # TODO: add record, create webhook if not exists.
-
-    async def _remove_subscription(self) -> None:
-        current_config: EventSubConfig = await self._get_subscription_config(ctx=ctx)  # type: ignore # typing is bad with instance bindings
-        # TODO: delete record
-
-    @commands.command()
-    async def fashion_report_subscribe(self, ctx: Context, channel: discord.TextChannel | None) -> None:
-        current_config = ctx.subscription_config
-
-        if current_config.subscriptions.fashion_report:
-            await self._remove_subscription()
-            await ctx.send("You have now unsubscribed from fashion report notifications for this server.")
-            return
-
-        await self._add_subscription(ctx)
-        await ctx.send("You have now subscribed to fashion report notifications for this server, in this channel.")
 
 
 async def setup(bot: Graha) -> None:
