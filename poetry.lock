@@ -107,7 +107,7 @@ python-versions = "*"
 
 [[package]]
 name = "certifi"
-version = "2022.9.24"
+version = "2022.12.7"
 description = "Python package for providing Mozilla's CA Bundle."
 category = "main"
 optional = false
@@ -174,7 +174,7 @@ resolved_reference = "8686b5d1bbc1d3c862292eb436ab630d6e9c9b53"
 
 [[package]]
 name = "discord.py"
-version = "2.2.0"
+version = "2.2.0a4659+g7cf3cd51"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
@@ -194,7 +194,7 @@ voice = ["PyNaCl (>=1.3.0,<1.6)"]
 type = "git"
 url = "https://github.com/Rapptz/discord.py.git"
 reference = "master"
-resolved_reference = "24bdb44d54686448a336ea6d72b1bf8600ef7220"
+resolved_reference = "7cf3cd51a5d463ae5633ec2dd43d3e397b081876"
 
 [[package]]
 name = "frozenlist"
@@ -228,7 +228,7 @@ test = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "jishaku"
-version = "2.5.1a460+g7777777.master"
+version = "2.5.1a462+gd5ee79d.master"
 description = "A discord.py extension including useful tools for bot development and debugging."
 category = "main"
 optional = false
@@ -238,7 +238,7 @@ develop = false
 [package.dependencies]
 braceexpand = ">=0.1.7"
 click = ">=8.0.1"
-import_expression = ">=1.0.0,<2.0.0"
+import-expression = ">=1.0.0,<2.0.0"
 tabulate = ">=0.8.10"
 
 [package.extras]
@@ -254,7 +254,7 @@ voice = ["yt-dlp (>=2022.3.8)"]
 type = "git"
 url = "https://github.com/Gorialis/jishaku.git"
 reference = "master"
-resolved_reference = "7777777945f6ce26c037c51e384ac6123eeeba06"
+resolved_reference = "d5ee79d01b2f95d52713cd189e72964050089d63"
 
 [[package]]
 name = "lru-dict"
@@ -285,7 +285,7 @@ python-versions = "*"
 
 [[package]]
 name = "mystbin-py"
-version = "5.0.3"
+version = "5.1.0"
 description = "A small simple wrapper around the mystb.in API."
 category = "main"
 optional = false
@@ -303,13 +303,13 @@ requests = ["requests (>=2.24.0,<3.0.0)"]
 type = "git"
 url = "https://github.com/AbstractUmbra/mystbin.py.git"
 reference = "main"
-resolved_reference = "76b4406053d5842b196ea841aa1a9abfc07f70b5"
+resolved_reference = "70c0b8db0f0b65c3d7ffec3a83f49670e8a192c3"
 
 [[package]]
 name = "orjson"
 version = "3.8.1"
 description = "Fast, correct Python JSON library supporting dataclasses, datetimes, and numpy"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 
@@ -384,7 +384,7 @@ six = ">=1.5"
 
 [[package]]
 name = "sentry-sdk"
-version = "1.11.0"
+version = "1.12.1"
 description = "Python client for Sentry (https://sentry.io)"
 category = "main"
 optional = false
@@ -405,6 +405,7 @@ falcon = ["falcon (>=1.4)"]
 fastapi = ["fastapi (>=0.79.0)"]
 flask = ["blinker (>=1.1)", "flask (>=0.11)"]
 httpx = ["httpx (>=0.16.0)"]
+opentelemetry = ["opentelemetry-distro (>=0.350b0)"]
 pure-eval = ["asttokens", "executing", "pure-eval"]
 pymongo = ["pymongo (>=3.1)"]
 pyspark = ["pyspark (>=2.4.4)"]
@@ -489,7 +490,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "fa2d98b3fdea577ef36a28ed0c38c38acd64e6ae5fc95450e6ab519c970d8f86"
+content-hash = "f295527d0733f1005a27a30db0131358fd7551dd88972ff22d7890f22d5c816a"
 
 [metadata.files]
 aiohttp = [
@@ -663,8 +664,8 @@ braceexpand = [
     {file = "braceexpand-0.1.7.tar.gz", hash = "sha256:e6e539bd20eaea53547472ff94f4fb5c3d3bf9d0a89388c4b56663aba765f705"},
 ]
 certifi = [
-    {file = "certifi-2022.9.24-py3-none-any.whl", hash = "sha256:90c1a32f1d68f940488354e36370f6cca89f0f106db09518524c88d6ed83f382"},
-    {file = "certifi-2022.9.24.tar.gz", hash = "sha256:0d9c601124e5a6ba9712dbc60d9c53c21e34f5f641fe83002317394311bdce14"},
+    {file = "certifi-2022.12.7-py3-none-any.whl", hash = "sha256:4ad3232f5e926d6718ec31cfc1fcadfde020920e278684144551c91769c7bc18"},
+    {file = "certifi-2022.12.7.tar.gz", hash = "sha256:35824b4c3a97115964b408844d64aa14db1cc518f6562e8d7261699d1350a9e3"},
 ]
 cffi = [
     {file = "cffi-1.15.1-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:a66d3508133af6e8548451b25058d5812812ec3798c886bf38ed24a98216fab2"},
@@ -1068,8 +1069,8 @@ python-dateutil = [
     {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
 ]
 sentry-sdk = [
-    {file = "sentry-sdk-1.11.0.tar.gz", hash = "sha256:e7b78a1ddf97a5f715a50ab8c3f7a93f78b114c67307785ee828ef67a5d6f117"},
-    {file = "sentry_sdk-1.11.0-py2.py3-none-any.whl", hash = "sha256:f467e6c7fac23d4d42bc83eb049c400f756cd2d65ab44f0cc1165d0c7c3d40bc"},
+    {file = "sentry-sdk-1.12.1.tar.gz", hash = "sha256:5bbe4b72de22f9ac1e67f2a4e6efe8fbd595bb59b7b223443f50fe5802a5551c"},
+    {file = "sentry_sdk-1.12.1-py2.py3-none-any.whl", hash = "sha256:9f0b960694e2d8bb04db4ba6ac2a645040caef4e762c65937998ff06064f10d6"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
