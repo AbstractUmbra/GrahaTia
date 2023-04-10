@@ -37,7 +37,7 @@ class EventSubConfig:
         bot: Graha,
         /,
         *,
-        guild_id: int,
+        guild_id: int | None,
         subscriptions: int = 0,
         webhook_url: str | None = None,
         daily_role_id: int | None = None,
@@ -45,7 +45,7 @@ class EventSubConfig:
         fashion_report_role_id: int | None = None,
     ) -> None:
         self._bot: Graha = bot
-        self.guild_id: int = guild_id
+        self.guild_id: int | None = guild_id
         self.webhook_url: str | None = webhook_url
         self.subscriptions: SubscriptionFlags = SubscriptionFlags._from_value(subscriptions)
         self.daily_role_id: int | None = daily_role_id
@@ -66,7 +66,8 @@ class EventSubConfig:
 
     @property
     def guild(self) -> Guild | None:
-        return self._bot.get_guild(self.guild_id)
+        if self.guild_id:
+            return self._bot.get_guild(self.guild_id)
 
     @property
     def daily_role(self) -> Role | None:
