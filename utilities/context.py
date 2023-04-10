@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime
 import secrets
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Generic, Protocol, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Protocol, Sequence, TypeAlias, TypeVar
 
 import discord
 from discord.ext import commands
@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 __all__ = (
     "Context",
     "GuildContext",
+    "Interaction",
 )
 
 T = TypeVar("T")
@@ -38,6 +39,8 @@ T = TypeVar("T")
 # that allows us to properly type the return values via narrowing
 # Right now, asyncpg is untyped so this is better than the current status quo
 # To actually receive the regular Pool type `Context.pool` can be used instead.
+
+Interaction: TypeAlias = discord.Interaction[Graha]
 
 
 class ConnectionContextManager(Protocol):
@@ -248,7 +251,7 @@ class Context(commands.Context["Graha"]):
             assert paste.expires
             content = f"Sorry, the output was too large but I posted it to mystb.in for you here: https://mystb.in/{paste.id}\n\nThe password is `{password}` and it expires at {discord.utils.format_dt(paste.expires)}"
 
-        return await super().send(
+        return await super().send(  # type: ignore # this is due to the overloads only taking file or files, embed or embeds, since this is a straight passthrough it doesn't matter
             content=content,
             tts=tts,
             embed=embed,
