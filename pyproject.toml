@@ -5,7 +5,7 @@ description = "A helper bot for organizing your FFXIV needs."
 authors = ["Alex Nørgaard <Umbra@AbstractUmbra.dev>"]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 "discord.py" = {git = "https://github.com/Rapptz/discord.py.git", extras = ["speedup"], rev = "master"}
 discord-ext-menus = {git = "https://github.com/Rapptz/discord-ext-menus", rev = "master"}
 jishaku = {git = "https://github.com/Gorialis/jishaku.git", rev = "master"}
