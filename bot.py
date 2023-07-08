@@ -28,8 +28,7 @@ from discord.ext import commands
 from discord.utils import _ColourFormatter as ColourFormatter, stream_supports_colour
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
-from utilities._types.bot_config import Config as BotConfig
-from utilities._types.xiv.record_aliases.subscription import EventRecord as SubscriptionEventRecord
+from extensions import EXTENSIONS
 from utilities.async_config import Config
 from utilities.context import Context
 from utilities.db import db_init
@@ -40,6 +39,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from extensions.reminders import Reminder
+    from utilities._types.bot_config import Config as BotConfig
+    from utilities._types.xiv.record_aliases.subscription import EventRecord as SubscriptionEventRecord
 
 LOGGER = logging.getLogger("root.graha")
 jishaku.Flags.HIDE = True
@@ -92,29 +93,39 @@ class RemoveNoise(logging.Filter):
         return True
 
 
-class SetupLogging:
-    def __init__(self, *, log_max_size: int = 8 * 1024 * 1024, stream: bool = True) -> None:
+class LogHandler:
+    def __init__(self, *, stream: bool = True) -> None:
         self.log: logging.Logger = logging.getLogger()
-        self.max_bytes: int = log_max_size
+        self.max_bytes: int = 32 * 1024 * 1024
         self.logging_path = pathlib.Path("./logs/")
         self.logging_path.mkdir(exist_ok=True)
         self.stream: bool = stream
 
+        # patches
+        self.info = self.log.info
+        self.warning = self.log.warning
+        self.error = self.log.error
+        self.debug = self.log.debug
+
+    async def __aenter__(self) -> Self:
+        return self.__enter__()
+
     def __enter__(self: Self) -> Self:
         logging.getLogger("discord").setLevel(logging.INFO)
         logging.getLogger("discord.http").setLevel(logging.INFO)
+        logging.getLogger("hondana.http").setLevel(logging.INFO)
         logging.getLogger("discord.state").addFilter(RemoveNoise())
-        if sentry_dsn := CONFIG["logging"].get("sentry_dsn"):
-            sentry_sdk.init(dsn=sentry_dsn, integrations=[AioHttpIntegration()])
 
         self.log.setLevel(logging.INFO)
         handler = RotatingFileHandler(
-            filename=self.logging_path / "Graha.log", encoding="utf-8", mode="w", maxBytes=self.max_bytes, backupCount=5
+            filename=self.logging_path / "Mipha.log", encoding="utf-8", mode="w", maxBytes=self.max_bytes, backupCount=5
         )
         dt_fmt = "%Y-%m-%d %H:%M:%S"
         fmt = logging.Formatter("[{asctime}] [{levelname:<7}] {name}: {message}", dt_fmt, style="{")
         handler.setFormatter(fmt)
         self.log.addHandler(handler)
+        if dsn := CONFIG["logging"].get("sentry_dsn"):
+            sentry_sdk.init(dsn=dsn, integrations=[AioHttpIntegration()])
 
         if self.stream:
             stream_handler = logging.StreamHandler()
@@ -123,6 +134,9 @@ class SetupLogging:
             self.log.addHandler(stream_handler)
 
         return self
+
+    async def __aexit__(self, *args: Any) -> None:
+        return self.__exit__(*args)
 
     def __exit__(self, *args: Any) -> None:
         handlers = self.log.handlers[:]
@@ -134,8 +148,9 @@ class SetupLogging:
 class Graha(commands.Bot):
     """G'raha Tia, the best catboy."""
 
-    pool: asyncpg.Pool
+    pool: asyncpg.Pool[asyncpg.Record]
     user: discord.ClientUser
+    log_handler: LogHandler
     session: aiohttp.ClientSession
     start_time: datetime.datetime
     command_stats: Counter[str]
@@ -404,41 +419,23 @@ class Graha(commands.Bot):
 
 
 async def main() -> None:
-    async with Graha() as bot, aiohttp.ClientSession() as session, asyncpg.create_pool(
+    async with Graha() as bot, aiohttp.ClientSession() as session, LogHandler() as log_handler, asyncpg.create_pool(
         dsn=CONFIG["database"]["dsn"],
         command_timeout=60,
         max_inactive_connection_lifetime=0,
         init=db_init,
     ) as pool:
         bot.pool = pool
+        bot.log_handler = log_handler
 
         bot.session = session
 
-        with SetupLogging():
-            await bot.load_extension("jishaku")
-            path = pathlib.Path("extensions")
-            for file in path.rglob("[!_]*.py"):
-                if (file.is_dir() and file.name.startswith("ext-")) or (
-                    file.parent.is_dir() and file.parent.name.startswith("ext-")
-                ):
-                    continue
-                ext = ".".join(file.parts).removesuffix(".py")
-                try:
-                    await bot.load_extension(ext)
-                    LOGGER.info("Loaded extension: %s", ext)
-                except Exception as error:
-                    LOGGER.exception("Failed to load extension: %s\n\n%s", ext, error)
-            for directory in path.rglob("ext-*"):
-                if not directory.is_dir():
-                    return
-                module = ".".join(directory.parts)
-                try:
-                    await bot.load_extension(module)
-                    LOGGER.info("Loaded module extension: %s", module)
-                except Exception as error:
-                    LOGGER.exception("Failed to load module extension: %s\n\n%s", module, error)
+        await bot.load_extension("jishaku")
+        for extension in EXTENSIONS:
+            await bot.load_extension(extension.name)
+            bot.log_handler.info("Loaded %sextension: %s", "module " if extension.ispkg else "", extension.name)
 
-            await bot.start()
+        await bot.start()
 
 
 if __name__ == "__main__":
