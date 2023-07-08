@@ -1,0 +1,12 @@
+extensions/private/*
+configs/**/*
+static/
+*.log*
+_pyright/
+buffer/
+*.ipynb
+[!__]_*.py
+duckling/
+LICENSE
+README.md
+_bot_config.py

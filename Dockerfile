@@ -1,4 +1,8 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
+
+LABEL org.opencontainers.image.source=https://github.com/abstractumbra/graha
+LABEL org.opencontainers.image.description="G'raha Tia Discord Bot"
+LABEL org.opencontainers.image.licenses=MIT
 
 ENV PYTHONUNBUFFERED=1 \
     # prevents python creating .pyc files
@@ -11,7 +15,6 @@ ENV PYTHONUNBUFFERED=1 \
     \
     # poetry
     # https://python-poetry.org/docs/configuration/#using-environment-variables
-    POETRY_VERSION=1.2.0b2 \
     # make poetry install to this location
     POETRY_HOME="/opt/poetry" \
     # make poetry create the virtual environment in the project's root
@@ -38,7 +41,7 @@ RUN apt-get update \
     gnutls-dev \
     libmagic-dev
 
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python -
+RUN curl -sSL https://install.python-poetry.org | python -
 
 # copy project requirement files here to ensure they will be cached.
 WORKDIR /app
@@ -48,4 +51,4 @@ COPY poetry.lock pyproject.toml ./
 RUN poetry install --without=dev
 
 COPY . /app/
-ENTRYPOINT poetry run python bot.py
+ENTRYPOINT poetry run python -O bot.py
