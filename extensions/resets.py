@@ -21,7 +21,13 @@ if TYPE_CHECKING:
 
 
 class Resets(BaseCog, name="Reset Information"):
-    DAILIES: ClassVar[list[str]] = ["Beast Tribe", "Duty Roulettes", "Hunt Marks", "Mini Cactpot", "Levequests"]
+    DAILIES: ClassVar[list[str]] = [
+        "Beast Tribe",
+        "Duty Roulettes",
+        "Hunt Marks",
+        "Mini Cactpot",
+        "Levequests",
+    ]
     WEEKLIES: ClassVar[list[str]] = [
         "Custom Delivery",
         "Doman Enclave",
@@ -42,18 +48,23 @@ class Resets(BaseCog, name="Reset Information"):
         if now.hour >= 15:
             next_reset = now + datetime.timedelta(days=1)
         else:
-            next_reset = now.replace(hour=15, minute=0, second=0, microsecond=0)
+            next_reset = now
 
         return next_reset.replace(hour=15, minute=0, second=0, microsecond=0)
 
     def _get_weekly_reset_time(self) -> datetime.datetime:
-        now = datetime.datetime.now(datetime.timezone.utc)
-        if now.weekday() >= 1:
-            next_reset = now + datetime.timedelta(days=(1 - now.weekday()) % 7)
-        else:
-            next_reset = now + datetime.timedelta(days=1)
+        now = datetime.datetime.now(datetime.timezone.utc).date()
+        diff = 1 - now.weekday()
+        days = diff + 7 if diff <= 0 else diff
 
-        return next_reset.replace(hour=8, minute=0, second=0, microsecond=0)
+        if days == 0:  # today is Tuesday
+            days = 7
+
+        next_reset = now + datetime.timedelta(days=days)  # 1 is Tuesday
+
+        return datetime.datetime.combine(
+            next_reset, datetime.time(hour=8, minute=0, second=0, microsecond=0), tzinfo=datetime.timezone.utc
+        )
 
     @commands.command(name="reset", aliases=["resets", "r"])
     async def resets_summary(self, ctx: Context) -> None:

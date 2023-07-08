@@ -12,25 +12,33 @@ from typing import Any
 import asyncpg
 
 
-__all__ = ("MaybeAcquire", "db_init")
+__all__ = (
+    "MaybeAcquire",
+    "db_init",
+)
 
 
 class MaybeAcquire:
-    def __init__(self, connection: asyncpg.Connection | None, *, pool: asyncpg.Pool) -> None:
-        self.connection: asyncpg.Connection | None = connection
-        self.pool: asyncpg.Pool = pool
+    __slots__ = (
+        "pool",
+        "_cleanup",
+        "_connection",
+    )
+
+    def __init__(self, connection: asyncpg.Connection[asyncpg.Record] | None, *, pool: asyncpg.Pool[asyncpg.Record]) -> None:
+        self.pool: asyncpg.Pool[asyncpg.Record] = pool
+        self._connection: asyncpg.Connection[asyncpg.Record] | None = connection
         self._cleanup: bool = False
 
-    async def __aenter__(self) -> asyncpg.Connection:
-        if self.connection is None:
+    async def __aenter__(self) -> asyncpg.Connection[asyncpg.Record]:
+        if self._connection is None:
             self._cleanup = True
-            self.connection = c = await self.pool.acquire()
-            return c
-        return self.connection
+            self._connection = await self.pool.acquire()
+        return self._connection
 
     async def __aexit__(self, *args: Any) -> None:
         if self._cleanup:
-            await self.pool.release(self.connection)
+            await self.pool.release(self._connection)
 
 
 def _encode_jsonb(value: Any) -> str:

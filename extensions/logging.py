@@ -537,7 +537,7 @@ class Stats(commands.Cog):
 
         records = await ctx.db.fetch(query)
         value = []
-        for (index, (guild_id, uses)) in enumerate(records):
+        for index, (guild_id, uses) in enumerate(records):
             if guild_id is None:
                 guild = "Private Message"
             else:
@@ -557,7 +557,7 @@ class Stats(commands.Cog):
 
         records = await ctx.db.fetch(query)
         value = []
-        for (index, (author_id, uses)) in enumerate(records):
+        for index, (author_id, uses) in enumerate(records):
             user = self.censor_object(self.bot.get_user(author_id) or f"<Unknown {author_id}>")
             emoji = lookup[index]
             value.append(f"{emoji}: {user} ({uses} uses)")
@@ -619,7 +619,7 @@ class Stats(commands.Cog):
 
         records = await ctx.db.fetch(query)
         value = []
-        for (index, (guild_id, uses)) in enumerate(records):
+        for index, (guild_id, uses) in enumerate(records):
             if guild_id is None:
                 guild = "Private Message"
             else:
@@ -639,7 +639,7 @@ class Stats(commands.Cog):
 
         records = await ctx.db.fetch(query)
         value = []
-        for (index, (author_id, uses)) in enumerate(records):
+        for index, (author_id, uses) in enumerate(records):
             user = self.censor_object(self.bot.get_user(author_id) or f"<Unknown {author_id}>")
             emoji = lookup[index]
             value.append(f"{emoji}: {user} ({uses} uses)")

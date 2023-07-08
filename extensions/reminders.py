@@ -113,7 +113,7 @@ class Timer:
 
     @classmethod
     def temporary(
-        cls: type[Self],
+        cls,
         *,
         expires: datetime.datetime,
         created: datetime.datetime,

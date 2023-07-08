@@ -33,14 +33,13 @@ __all__ = (
 )
 
 T = TypeVar("T")
+Interaction: TypeAlias = discord.Interaction["Graha"]
 
 
 # For typing purposes, `Context.db` returns a Protocol type
 # that allows us to properly type the return values via narrowing
 # Right now, asyncpg is untyped so this is better than the current status quo
 # To actually receive the regular Pool type `Context.pool` can be used instead.
-
-Interaction: TypeAlias = discord.Interaction[Graha]
 
 
 class ConnectionContextManager(Protocol):

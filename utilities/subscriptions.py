@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 
 from discord import TextChannel
 
+from utilities.flags import SubscribedEventsFlags
+
 
 if TYPE_CHECKING:
     from bot import Graha
@@ -21,13 +23,20 @@ class EventSubConfig:
     valid: bool
     channel: TextChannel | None
 
-    __slots__ = ("_bot", "guild_id", "channel_id", "event_types", "valid", "channel")
+    __slots__ = (
+        "_bot",
+        "guild_id",
+        "channel_id",
+        "subscription_flags",
+        "valid",
+        "channel",
+    )
 
-    def __init__(self, bot: Graha, guild_id: int, channel_id: int, event_types: list[str]) -> None:
+    def __init__(self, bot: Graha, guild_id: int, channel_id: int, subscription_value: int) -> None:
         self._bot: Graha = bot
         self.guild_id: int = guild_id
         self.channel_id: int = channel_id
-        self.event_types: list[str] = event_types
+        self.subscription_flags: SubscribedEventsFlags = SubscribedEventsFlags(subscription_value)
         self.channel: TextChannel | None = None
         self.resolve()
 
