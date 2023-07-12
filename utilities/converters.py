@@ -112,7 +112,6 @@ class DatetimeConverter(commands.Converter[datetime.datetime]):
 
     @classmethod
     async def convert(cls, ctx: Context, argument: str) -> datetime.datetime:
-
         timezone = await cls.get_timezone(ctx)
         now = ctx.message.created_at.astimezone(tz=timezone)
 

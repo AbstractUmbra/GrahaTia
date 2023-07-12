@@ -23,6 +23,7 @@ pygit2 = "*"
 black = "*"
 typing-extensions = "*"
 asyncpg-stubs = "*"
+ipykernel = "^6.24.0"
 
 [tool.poetry.group.speed.dependencies]
 orjson = "*"

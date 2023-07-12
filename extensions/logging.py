@@ -753,13 +753,13 @@ class Stats(commands.Cog):
 
         # Check the connection pool health.
         pool = self.bot.pool
-        total_waiting = len(pool._queue._getters)  # type: ignore
+        total_waiting = len(pool._queue._getters)
         current_generation = pool._generation
 
         description = [
             f"Total `Pool.acquire` Waiters: {total_waiting}",
             f"Current Pool Generation: {current_generation}",
-            f"Connections In Use: {len(pool._holders) - pool._queue.qsize()}",  # type: ignore
+            f"Connections In Use: {len(pool._holders) - pool._queue.qsize()}",
         ]
 
         questionable_connections = 0

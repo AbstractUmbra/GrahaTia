@@ -30,6 +30,7 @@ from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
 from extensions import EXTENSIONS
 from utilities.async_config import Config
+from utilities.containers.event_subscription import EventSubConfig
 from utilities.context import Context
 from utilities.db import db_init
 from utilities.prefix import callable_prefix as _callable_prefix
@@ -38,7 +39,6 @@ from utilities.prefix import callable_prefix as _callable_prefix
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from extensions.reminders import Reminder
     from utilities._types.bot_config import Config as BotConfig
     from utilities._types.xiv.record_aliases.subscription import EventRecord as SubscriptionEventRecord
 
@@ -61,12 +61,10 @@ class GrahaCommandTree(app_commands.CommandTree):
         interaction: discord.Interaction,
         error: app_commands.AppCommandError,
     ) -> None:
-        assert interaction.command is not None  # typechecking # disable assertions
-
         LOGGER.exception("Exception occurred in the CommandTree:\n%s", error)
 
         e = discord.Embed(title="Command Error", colour=0xA32952)
-        e.add_field(name="Command", value=interaction.command.name)
+        e.add_field(name="Command", value=(interaction.command and interaction.command.name) or "No command.")
         e.add_field(name="Author", value=interaction.user, inline=False)
         channel = interaction.channel
         guild = interaction.guild
@@ -105,6 +103,7 @@ class LogHandler:
         self.info = self.log.info
         self.warning = self.log.warning
         self.error = self.log.error
+        self.exception = self.log.exception
         self.debug = self.log.debug
 
     async def __aenter__(self) -> Self:
@@ -204,10 +203,6 @@ class Graha(commands.Bot):
     @property
     def config(self) -> BotConfig:
         return CONFIG
-
-    @property
-    def reminder(self) -> Reminder | None:
-        return self.get_cog("Reminder")  # type: ignore # can't narrow this legally.
 
     @discord.utils.cached_property
     def logging_webhook(self) -> discord.Webhook:
@@ -376,26 +371,19 @@ class Graha(commands.Bot):
         if guild.id in self._blacklist_data:
             await guild.leave()
 
-    async def get_event_sub_data(self, event_type: str) -> list[SubscriptionEventRecord]:
-        query = """
-                SELECT guild_id, channel_id
-                FROM event_remind_subscription
-                WHERE event_type = $1;
-                """
-
-        return await self.pool.fetch(query, event_type)
-
-    async def get_sub_config(self, ctx: Context) -> SubscriptionEventRecord:
-        assert ctx.guild
-
+    async def get_sub_config(self, guild_id: int) -> EventSubConfig:
         query = """
                 SELECT *
-                FROM event_remind_subscription
+                FROM event_remind_subscriptions
                 WHERE guild_id = $1;
                 """
 
-        record: SubscriptionEventRecord = await self.pool.fetchrow(query, ctx.guild.id)
-        return record
+        record: SubscriptionEventRecord | None = await self.pool.fetchrow(query, guild_id)  # type: ignore # wish I knew how to make a Record subclass
+
+        if not record:
+            return EventSubConfig(self, guild_id=guild_id)
+
+        return EventSubConfig.from_record(self, record=record)
 
     async def start(self) -> None:
         try:

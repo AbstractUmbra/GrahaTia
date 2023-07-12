@@ -16,6 +16,8 @@ class EventRecord(TypedDict):
     """
 
     guild_id: int
+    channel_id: int | None
+    thread_id: int | None
     webhook_url: str
     subscriptions: int
     daily_role_id: int | None

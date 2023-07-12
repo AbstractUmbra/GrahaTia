@@ -38,16 +38,20 @@ class SubscribedEventsFlags(BaseFlags):
 
     @flag_value
     def daily_resets(self) -> int:
-        return 1 << 1
+        return 1 << 0
 
     @flag_value
     def weekly_resets(self) -> int:
-        return 1 << 2
+        return 1 << 1
 
     @flag_value
     def fashion_report(self) -> int:
-        return 1 << 3
+        return 1 << 2
 
     @flag_value
     def ocean_fishing(self) -> int:
+        return 1 << 3
+
+    @flag_value
+    def jumbo_cactpot(self) -> int:
         return 1 << 4

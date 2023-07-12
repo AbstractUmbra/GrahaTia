@@ -112,7 +112,6 @@ class CharacterCards(BaseCog):
         async with self.bot.session.get(img) as resp:
             data = await resp.read()
             buffer: BytesIO = BytesIO(data)
-
         await interaction.followup.send(
             f"Here is the card for {character}!", file=discord.File(fp=buffer, filename=f"{character}-card.png")
         )

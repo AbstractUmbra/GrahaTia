@@ -6,10 +6,71 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from __future__ import annotations
 
+import datetime
+import secrets
+import traceback
+from typing import TYPE_CHECKING
+
 import discord
 
 
-class ConfirmationView(discord.ui.View):
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
+    from utilities.context import Interaction
+
+
+__all__ = (
+    "GrahaBaseView",
+    "ConfirmationView",
+)
+
+
+class GrahaBaseView(discord.ui.View):
+    message: discord.Message | discord.PartialMessage
+
+    async def on_error(self, interaction: Interaction, error: Exception, item: discord.ui.Item[Self], /) -> None:
+        view_name = self.__class__.__name__
+        interaction.client.log_handler.error("Exception occurred in View %r:\n%s", view_name, error)
+
+        embed = discord.Embed(title=f"{view_name} View Error", colour=0xA32952)
+        embed.add_field(name="Author", value=interaction.user, inline=False)
+        channel = interaction.channel
+        guild = interaction.guild
+        location_fmt = f"Channel: {channel.name} ({channel.id})"  # type: ignore
+
+        if guild:
+            location_fmt += f"\nGuild: {guild.name} ({guild.id})"
+            embed.add_field(name="Location", value=location_fmt, inline=True)
+
+        (exc_type, exc, tb) = type(error), error, error.__traceback__
+        trace = traceback.format_exception(exc_type, exc, tb)
+        clean = "".join(trace)
+        if len(clean) >= 2000:
+            password = secrets.token_urlsafe(16)
+            paste = await interaction.client.mb_client.create_paste(filename="error.py", content=clean, password=password)
+            embed.description = (
+                f"Error was too long to send in a codeblock, so I have pasted it [here]({paste.url})."
+                f"\nThe password is `{password}`."
+            )
+        else:
+            embed.description = f"```py\n{clean}\n```"
+
+        embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
+        await interaction.client.logging_webhook.send(embed=embed)
+        await interaction.client.owner.send(embed=embed)
+
+    def _disable_all_buttons(self) -> None:
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+
+    async def on_timeout(self) -> None:
+        self._disable_all_buttons()
+        await self.message.edit(view=self)
+
+
+class ConfirmationView(GrahaBaseView):
     def __init__(self, *, timeout: float, author_id: int, delete_after: bool) -> None:
         super().__init__(timeout=timeout)
         self.value: bool | None = None

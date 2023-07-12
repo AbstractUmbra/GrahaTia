@@ -57,22 +57,6 @@ class FashionReport(BaseCog):
         super().__init__(bot)
         self.reset_cache.start()
 
-    def __repr__(self) -> str:
-        return "<FashionReport>"
-
-    async def cog_before_invoke(self, ctx: Context) -> None:
-        config: EventSubConfig = await self._get_subscription_config(ctx)
-        ctx.subscription_config = config
-
-    @cache()
-    async def _get_subscription_config(self, ctx: Context) -> EventSubConfig:
-        record = await self.bot.get_sub_config(ctx)
-
-        if record:
-            return EventSubConfig.from_record(self.bot, record=record)
-
-        return EventSubConfig(self.bot, guild_id=ctx.guild and ctx.guild.id)
-
     def weeks_since_start(self, dt: datetime.datetime) -> int:
         td = dt - self.FASHION_REPORT_START
 
