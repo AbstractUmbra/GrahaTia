@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 LABEL org.opencontainers.image.source=https://github.com/abstractumbra/grahatia
 LABEL org.opencontainers.image.description="G'raha Tia Discord Bot"
-LABEL org.opencontainers.image.licenses=MIT
+LABEL org.opencontainers.image.licenses=MPL-2.0
 
 ENV PYTHONUNBUFFERED=1 \
     # prevents python creating .pyc files
