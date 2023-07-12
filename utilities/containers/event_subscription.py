@@ -10,13 +10,13 @@ from typing import TYPE_CHECKING
 
 import discord
 from discord import Guild, Role
-from typing_extensions import Self
 
 from utilities.flags import SubscribedEventsFlags
 
 
 if TYPE_CHECKING:
     from _types.xiv.record_aliases.subscription import EventRecord
+    from typing_extensions import Self
 
     from bot import Graha
 
