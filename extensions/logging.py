@@ -19,7 +19,7 @@ import sys
 import textwrap
 import traceback
 from collections import Counter, defaultdict
-from typing import TYPE_CHECKING, Any, Optional, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, Optional, TypedDict
 
 import asyncpg
 import discord
@@ -27,7 +27,6 @@ import pkg_resources
 import psutil
 import pygit2
 from discord.ext import commands, menus, tasks
-from typing_extensions import Annotated
 
 from utilities import formats, time
 from utilities.context import Context

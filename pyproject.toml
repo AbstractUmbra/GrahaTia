@@ -18,6 +18,7 @@ tomli = "*"
 python-dateutil = "*"
 psutil = "*"
 pygit2 = "*"
+pendulum = "*"
 
 [tool.poetry.group.dev.dependencies]
 black = "*"

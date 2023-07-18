@@ -30,7 +30,6 @@ from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
 from extensions import EXTENSIONS
 from utilities.async_config import Config
-from utilities.containers.event_subscription import EventSubConfig
 from utilities.context import Context
 from utilities.db import db_init
 from utilities.prefix import callable_prefix as _callable_prefix
@@ -40,7 +39,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from utilities._types.bot_config import Config as BotConfig
-    from utilities._types.xiv.record_aliases.subscription import EventRecord as SubscriptionEventRecord
 
 LOGGER = logging.getLogger("root.graha")
 jishaku.Flags.HIDE = True
@@ -370,20 +368,6 @@ class Graha(commands.Bot):
         """When the bot joins a guild."""
         if guild.id in self._blacklist_data:
             await guild.leave()
-
-    async def get_sub_config(self, guild_id: int) -> EventSubConfig:
-        query = """
-                SELECT *
-                FROM event_remind_subscriptions
-                WHERE guild_id = $1;
-                """
-
-        record: SubscriptionEventRecord | None = await self.pool.fetchrow(query, guild_id)  # type: ignore # wish I knew how to make a Record subclass
-
-        if not record:
-            return EventSubConfig(self, guild_id=guild_id)
-
-        return EventSubConfig.from_record(self, record=record)
 
     async def start(self) -> None:
         try:

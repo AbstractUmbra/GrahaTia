@@ -10,17 +10,28 @@ from typing import TYPE_CHECKING
 
 import discord
 from discord import Guild, Role
+from discord.utils import MISSING
 
+from utilities.cache import cache
 from utilities.flags import SubscribedEventsFlags
 
 
 if TYPE_CHECKING:
     from _types.xiv.record_aliases.subscription import EventRecord
+    from _types.xiv.record_aliases.webhooks import WebhooksRecord
     from typing_extensions import Self
 
     from bot import Graha
 
 __all__ = ("EventSubConfig",)
+
+
+class MisconfiguredSubscription(Exception):
+    __slots__ = ("subscription_config",)
+
+    def __init__(self, subscription_config: EventSubConfig, *args, **kwargs) -> None:
+        super().__init__()
+        self.subscription_config = subscription_config
 
 
 class EventSubConfig:
@@ -29,11 +40,11 @@ class EventSubConfig:
         "guild_id",
         "channel_id",
         "thread_id",
-        "webhook_url",
         "subscriptions",
         "daily_role_id",
         "weekly_role_id",
         "fashion_report_role_id",
+        "webhook_id",
     )
 
     def __init__(
@@ -41,24 +52,27 @@ class EventSubConfig:
         bot: Graha,
         /,
         *,
-        guild_id: int | None,
+        guild_id: int,
         channel_id: int | None = None,
         thread_id: int | None = None,
         subscriptions: int = 0,
-        webhook_url: str | None = None,
         daily_role_id: int | None = None,
         weekly_role_id: int | None = None,
         fashion_report_role_id: int | None = None,
+        webhook_id: int | None = None,
     ) -> None:
         self._bot: Graha = bot
-        self.guild_id: int | None = guild_id
+        self.guild_id: int = guild_id
         self.channel_id: int | None = channel_id
         self.thread_id: int | None = thread_id
-        self.webhook_url: str | None = webhook_url
         self.subscriptions: SubscribedEventsFlags = SubscribedEventsFlags._from_value(subscriptions)
         self.daily_role_id: int | None = daily_role_id
         self.weekly_role_id: int | None = weekly_role_id
         self.fashion_report_role_id: int | None = fashion_report_role_id
+        self.webhook_id: int | None = webhook_id
+
+    def __repr__(self) -> str:
+        return f"<EventSubConfig guild_id={self.guild_id}>"
 
     @classmethod
     def from_record(cls, bot: Graha, /, *, record: EventRecord) -> Self:
@@ -67,11 +81,11 @@ class EventSubConfig:
             guild_id=record["guild_id"],
             channel_id=record["channel_id"],
             thread_id=record["thread_id"],
-            webhook_url=record["webhook_url"],
-            subscriptions=record["subscriptions"],
+            subscriptions=record["subscriptions"].to_int(),
             daily_role_id=record["daily_role_id"],
             weekly_role_id=record["weekly_role_id"],
             fashion_report_role_id=record["fashion_report_role_id"],
+            webhook_id=record["webhook_id"],
         )
 
     @property
@@ -93,13 +107,13 @@ class EventSubConfig:
             return self._bot.get_channel(self.channel_id)  # type: ignore # ? TODO: This is slow.
 
     @property
-    def thread(self) -> discord.Thread | None:
+    def thread(self) -> discord.Thread:
         if not self.channel_id or not self.thread_id:
-            return None
+            return MISSING
 
         assert self.channel  # guarded above
 
-        return self.channel.get_thread(self.thread_id)
+        return self.channel.get_thread(self.thread_id) or MISSING
 
     @property
     def daily_role(self) -> Role | None:
@@ -116,7 +130,52 @@ class EventSubConfig:
         if self.guild and self.weekly_role_id:
             return self.guild.get_role(self.weekly_role_id)
 
-    @property
-    def webhook(self) -> discord.Webhook | None:
-        if self.webhook_url:
-            return discord.Webhook.from_url(self.webhook_url, session=self._bot.session, client=self._bot)
+    async def _resolve_webhook(self, *, force: bool) -> discord.Webhook:
+        webhook = await self.get_webhook()
+        if not webhook:
+            return await self._create_or_replace_webhook(force=force, existing_webhook=webhook)
+
+        return webhook
+
+    async def _create_or_replace_webhook(
+        self, *, force: bool = False, existing_webhook: discord.Webhook | None = None
+    ) -> discord.Webhook:
+        if not self.channel:
+            raise MisconfiguredSubscription(self)
+
+        if force:
+            # we just delete the old and create the new
+            webhook = existing_webhook or await self.get_webhook()
+            if webhook:
+                try:
+                    await webhook.delete(reason="Forced deletion by G'raha Tia. Re-creating.")
+                except discord.HTTPException:
+                    pass
+
+        webhook = await self.channel.create_webhook(name="XIV Timers", reason="Created via G'raha Tia subscriptions!")
+        query = """
+                UPDATE event_remind_subscriptions
+                SET webhook_url = $2
+                WHERE guild_id = $1;
+                """
+        await self._bot.pool.execute(query, self.guild_id, webhook.url)
+
+        return webhook
+
+    @cache()
+    async def get_webhook(self) -> discord.Webhook:
+        if self.guild_id or self.webhook_id:
+            query = "SELECT * FROM webhooks WHERE guild_id = $1 OR webhook_id = $2;"
+            record: WebhooksRecord = await self._bot.pool.fetchrow(query, self.guild_id, self.webhook_id)  # type: ignore # stubs
+            if not record:
+                return await self._create_or_replace_webhook(force=True)
+
+            url = (
+                record["webhook_url"]
+                or (f"https://discord.com/api/webhooks/{record['webhook_id']}" + record["webhook_token"])
+                if record["webhook_token"]
+                else ""
+            )
+
+            return discord.Webhook.from_url(url)
+        return await self._create_or_replace_webhook(force=True)

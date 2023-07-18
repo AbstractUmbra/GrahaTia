@@ -1,12 +1,21 @@
 from __future__ import annotations
 
+import datetime
+import logging
 from typing import TYPE_CHECKING, ClassVar
 
 import discord
+import pendulum
+from asyncpg import BitString
 from discord import SelectOption, app_commands
+from discord.ext import tasks
+from discord.utils import MISSING
 
+from utilities.cache import cache
 from utilities.cog import GrahaBaseCog
+from utilities.containers.event_subscription import EventSubConfig, MisconfiguredSubscription
 from utilities.context import Interaction
+from utilities.formats import format_dt
 from utilities.ui import GrahaBaseView
 
 
@@ -14,7 +23,14 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from bot import Graha
-    from utilities.containers.event_subscription import EventSubConfig
+    from extensions.fashion_report import FashionReport as FashionReportCog
+    from utilities._types.xiv.record_aliases.subscription import EventRecord as SubscriptionEventRecord
+
+LOGGER = logging.getLogger(__name__)
+
+
+class NoKaiyokoPost(Exception):
+    pass
 
 
 class EventSubView(GrahaBaseView):
@@ -64,33 +80,18 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
     def __init__(self, bot: Graha, /) -> None:
         self.bot: Graha = bot
+        # self.daily_reset_loop.start()
+        # self.weekly_reset_loop.start()
+        self.fashion_report_loop.start()
+        # self.ocean_fishing_loop.start()
+        self.jumbo_cactpot_loop.start()
 
-    async def _resolve_webhook(self, config: EventSubConfig, *, force: bool) -> discord.Webhook:
-        webhook = config.webhook
-        if not webhook:
-            return await self._create_or_replace_webhook(config, force=force)
-
-        return webhook
-
-    async def _create_or_replace_webhook(self, config: EventSubConfig, *, force: bool = False) -> discord.Webhook:
-        if force:
-            # we just delete the old and create the new
-            if config.webhook:
-                try:
-                    await config.webhook.delete(reason="Forced deletion by G'raha Tia. Re-creating.")
-                except discord.HTTPException:
-                    pass
-
-        assert config.channel  # guarded before getting here.
-        webhook = await config.channel.create_webhook(name="XIV Timers", reason="Created via G'raha Tia subscriptions!")
-        query = """
-                UPDATE event_remind_subscriptions
-                SET webhook_url = $2
-                WHERE guild_id = $1;
-                """
-        await self.bot.pool.execute(query, config.guild_id, webhook.url)
-
-        return webhook
+    async def cog_unload(self) -> None:
+        # self.daily_reset_loop.stop()
+        # self.weekly_reset_loop.stop()
+        self.fashion_report_loop.stop()
+        # self.ocean_fishing_loop.stop()
+        self.jumbo_cactpot_loop.stop()
 
     async def _set_subscriptions(
         self,
@@ -111,7 +112,35 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                     thread_id = EXCLUDED.thread_id;
                 """
 
-        await self.bot.pool.execute(query, guild_id, webhook_url, subscription_value, channel_id, thread_id)
+        subscription_bits = BitString.from_int(subscription_value, length=10)
+        await self.bot.pool.execute(query, guild_id, webhook_url, subscription_bits, channel_id, thread_id)
+        self.get_sub_config.invalidate(self, guild_id)
+
+    async def _delete_subscription(self, config: EventSubConfig) -> None:
+        query = """
+                DELETE FROM event_remind_subscriptions
+                WHERE guild_id = $1
+                CASCADE;
+                """
+
+        await self.bot.pool.execute(query, config.guild_id)
+
+        self.get_sub_config.invalidate(self, config.guild_id)
+
+    @cache()
+    async def get_sub_config(self, guild_id: int) -> EventSubConfig:
+        query = """
+                SELECT *
+                FROM event_remind_subscriptions
+                WHERE guild_id = $1;
+                """
+
+        record: SubscriptionEventRecord | None = await self.pool.fetchrow(query, guild_id)  # type: ignore # wish I knew how to make a Record subclass
+
+        if not record:
+            return EventSubConfig(self.bot, guild_id=guild_id)
+
+        return EventSubConfig.from_record(self.bot, record=record)
 
     @app_commands.command(name="select")
     @app_commands.guild_only()
@@ -126,7 +155,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         await interaction.response.defer()
 
-        config = await interaction.client.get_sub_config(interaction.guild.id)
+        config = await self.get_sub_config(interaction.guild.id)
 
         options = self.POSSIBLE_SUBSCRIPTIONS[:]
 
@@ -151,7 +180,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         assert current_channel  # this should never happen
 
         try:
-            webhook = await self._resolve_webhook(config, force=False)
+            webhook = await config._resolve_webhook(force=False)
         except discord.HTTPException:
             await interaction.followup.send(
                 "I was not able to create the necessary webhook. Can you please correct my permissions and try again?"
@@ -170,6 +199,156 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             await interaction.response.defer(ephemeral=True, thinking=False)
 
         await interaction.followup.send("Sorry, there was an error processing this command!")
+
+    @tasks.loop(time=datetime.time(hour=14, minute=45, tzinfo=datetime.timezone.utc))
+    async def daily_reset_loop(self) -> None:
+        ...
+
+    @daily_reset_loop.before_loop
+    async def daily_reset_before_loop(self) -> None:
+        now = pendulum.now()
+        if now.hour > 7:
+            if now.minute > 45:
+                then = now.next()
+        then = now
+
+        sleep_until = datetime.datetime.combine(
+            then, datetime.time(hour=7, minute=45, second=0, microsecond=0), tzinfo=datetime.timezone.utc
+        )
+
+        LOGGER.info("[Subscriptions] :: Daily Reset sleeping until %s", sleep_until)
+
+        await discord.utils.sleep_until(sleep_until)
+
+    @tasks.loop(time=datetime.time(hour=7, minute=45, tzinfo=datetime.timezone.utc))
+    async def weekly_reset_loop(self) -> None:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        if now.weekday() != 1:  # tuesday
+            return
+
+        ...
+
+    @weekly_reset_loop.before_loop
+    async def weekly_reset_before_loop(self) -> None:
+        now = pendulum.now()
+        if now.weekday() != 1:
+            then = now.next(2)
+        else:
+            then = now
+
+        sleep_until = datetime.datetime.combine(
+            then, datetime.time(hour=7, minute=45, second=0, microsecond=0), tzinfo=datetime.timezone.utc
+        )
+
+        LOGGER.info("[Subscriptions] :: Weekly Reset sleeping until %s", sleep_until)
+
+        await discord.utils.sleep_until(sleep_until)
+
+    @tasks.loop(time=datetime.time(hour=7, tzinfo=datetime.timezone.utc))
+    async def fashion_report_loop(self) -> None:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        if now.weekday() != 4:  # friday
+            return
+
+        query = """
+                SELECT *
+                FROM event_remind_subscriptions
+                WHERE subscriptions & $1 = $1;
+                """
+
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(4, length=6))  # type: ignore # stub shenanigans
+
+        fashion_report_cog: FashionReportCog = self.bot.get_cog("FashionReport")  # type: ignore # weird
+
+        fmt: str = MISSING
+
+        try:
+            embed = await fashion_report_cog._gen_fashion_embed()
+        except ValueError:
+            # no report yet.
+            fmt = "Kaiyoko's post is not up yet. Please use `g fr` later for their insight!"
+            embed = MISSING
+
+        for record in records:
+            conf = await self.get_sub_config(existing_record=record)
+            try:
+                webhook = await conf.get_webhook()
+            except MisconfiguredSubscription:
+                LOGGER.warn("Subscription %r is misconfigured. Deleting.", conf)
+                # todo: resolve a way to let people know it was messed up.
+                await self._delete_subscription(conf)
+                return
+
+            if not webhook:
+                webhook = await conf._resolve_webhook(force=True)
+
+            await webhook.send(fmt, embed=embed, thread=conf.thread)
+
+    @fashion_report_loop.before_loop
+    async def fashion_report_before_loop(self) -> None:
+        now = pendulum.now()
+        if now.weekday() != 4:
+            then = now.next(5)
+        else:
+            then = now
+
+        sleep_until = datetime.datetime.combine(
+            then, datetime.time(hour=7, minute=45, second=0, microsecond=0), tzinfo=datetime.timezone.utc
+        )
+
+        LOGGER.info("[Subscriptions] :: Fashion Report sleeping until %s", sleep_until)
+
+        await discord.utils.sleep_until(sleep_until)
+
+    @tasks.loop(hours=2)
+    async def ocean_fishing_loop(self) -> None:
+        ...
+
+    @ocean_fishing_loop.before_loop
+    async def ocean_fishing_before_loop(self) -> None:
+        # todo calculate odd-hour 45m cycle to sleep.
+        ...
+
+    @tasks.loop(time=datetime.time(hour=18, minute=45, tzinfo=datetime.timezone.utc))
+    async def jumbo_cactpot_loop(self) -> None:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        if now.weekday() != 1:  # tuesday
+            return
+
+        then = (now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+        embed = discord.Embed(
+            title="Jumbo Cactpot!", description=f"The Jumbo Cactpot numbers will be called in {format_dt(then):R}!"
+        )
+
+        query = """
+                SELECT *
+                FROM event_remind_subscriptions
+                WHERE subscriptions & $1 = $1;
+                """
+
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(4, length=6))  # type: ignore # stub shenanigans
+
+        for record in records:
+            conf = EventSubConfig.from_record(self.bot, record=record)
+            webhook = await conf.get_webhook()
+
+            await webhook.send(embed=embed, thread=conf.thread)
+
+    @jumbo_cactpot_loop.before_loop
+    async def jumbo_cactpot_before_loop(self) -> None:
+        now = pendulum.now()
+        if now.weekday() != 5:
+            then = now.next(6)
+        else:
+            then = now
+
+        sleep_until = datetime.datetime.combine(
+            then, datetime.time(hour=18, minute=45, second=0, microsecond=0), tzinfo=datetime.timezone.utc
+        )
+
+        LOGGER.info("[Subscriptions] :: Jumbo Cactpot sleeping until %s", sleep_until)
+
+        await discord.utils.sleep_until(sleep_until)
 
 
 async def setup(bot: Graha) -> None:

@@ -11,9 +11,9 @@ import re
 import sys
 import unicodedata
 from collections.abc import Iterable, Sequence
-from typing import Any, SupportsAbs
+from typing import Any, SupportsAbs, cast
 
-from discord.utils import escape_markdown
+from discord.utils import TimestampStyle, escape_markdown, format_dt as format_dt_discord
 
 
 CONTROL_CHARS = re.compile(
@@ -108,10 +108,15 @@ class TabularData:
         return "\n".join(to_draw)
 
 
-def format_dt(dt: datetime.datetime, style: str | None = None) -> str:
-    if style is None:
-        return f"<t:{int(dt.timestamp())}>"
-    return f"<t:{int(dt.timestamp())}:{style}>"
+class format_dt:
+    def __init__(self, dt: datetime.datetime) -> None:
+        self.dt: datetime.datetime = dt
+
+    def __format__(self, __format_spec: str) -> str:
+        _, _, style = __format_spec.partition("|")
+
+        style = cast(TimestampStyle, style)
+        return format_dt_discord(self.dt, style=style)
 
 
 def to_codeblock(

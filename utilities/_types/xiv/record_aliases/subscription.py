@@ -6,6 +6,8 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from typing import TypedDict
 
+from asyncpg import BitString
+
 
 __all__ = ("EventRecord",)
 
@@ -18,8 +20,8 @@ class EventRecord(TypedDict):
     guild_id: int
     channel_id: int | None
     thread_id: int | None
-    webhook_url: str
-    subscriptions: int
+    webhook_id: int
+    subscriptions: BitString
     daily_role_id: int | None
     weekly_role_id: int | None
     fashion_report_role_id: int | None

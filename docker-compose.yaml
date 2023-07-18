@@ -11,6 +11,7 @@ services:
     image: ghcr.io/abstractumbra/graha:latest
     networks:
       main:
+    restart: unless-stopped
     volumes:
       - ./configs/:/app/configs/:ro
 
