@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import datetime
 import logging
-from typing import TYPE_CHECKING, ClassVar
+from collections.abc import Coroutine
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import discord
 import pendulum
@@ -24,6 +26,7 @@ if TYPE_CHECKING:
 
     from bot import Graha
     from extensions.fashion_report import FashionReport as FashionReportCog
+    from extensions.resets import Resets as ResetsCog
     from utilities._types.xiv.record_aliases.subscription import EventRecord as SubscriptionEventRecord
 
 LOGGER = logging.getLogger(__name__)
@@ -80,15 +83,15 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
     def __init__(self, bot: Graha, /) -> None:
         self.bot: Graha = bot
-        # self.daily_reset_loop.start()
-        # self.weekly_reset_loop.start()
+        self.daily_reset_loop.start()
+        self.weekly_reset_loop.start()
         self.fashion_report_loop.start()
         # self.ocean_fishing_loop.start()
         self.jumbo_cactpot_loop.start()
 
     async def cog_unload(self) -> None:
-        # self.daily_reset_loop.stop()
-        # self.weekly_reset_loop.stop()
+        self.daily_reset_loop.stop()
+        self.weekly_reset_loop.stop()
         self.fashion_report_loop.stop()
         # self.ocean_fishing_loop.stop()
         self.jumbo_cactpot_loop.stop()
@@ -97,31 +100,57 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         self,
         guild_id: int,
         subscription_value: int,
-        webhook_url: str | None,
+        webhook: discord.Webhook,
         channel_id: int | None = None,
         thread_id: int | None = None,
     ) -> None:
         query = """
-                INSERT INTO event_remind_subscriptions (guild_id, webhook_url, subscriptions, channel_id, thread_id)
-                VALUES ($1, $2, $3, $4, $5)
-                ON CONFLICT (guild_id)
+                WITH sub_insert AS (
+                    INSERT INTO event_remind_subscriptions
+                        (guild_id, subscriptions, channel_id, thread_id)
+                    VALUES
+                        ($1, $2, $3, $4)
+                    ON CONFLICT
+                        (guild_id)
+                    DO UPDATE SET
+                        subscriptions = EXCLUDED.subscriptions,
+                        channel_id = EXCLUDED.channel_id,
+                        thread_id = EXCLUDED.thread_id
+                    RETURNING guild_id
+                )
+                INSERT INTO webhooks
+                    (guild_id, webhook_id, webhook_url, webhook_token)
+                SELECT
+                    sub_insert.guild_id, $5, $6, $7
+                FROM sub_insert
+                ON CONFLICT
+                    (guild_id)
                 DO UPDATE SET
+                    webhook_id = EXCLUDED.webhook_id,
                     webhook_url = EXCLUDED.webhook_url,
-                    subscriptions = EXCLUDED.subscriptions,
-                    channel_id = EXCLUDED.channel_id,
-                    thread_id = EXCLUDED.thread_id;
+                    webhook_token = EXCLUDED.webhook_token;
                 """
 
-        subscription_bits = BitString.from_int(subscription_value, length=10)
-        await self.bot.pool.execute(query, guild_id, webhook_url, subscription_bits, channel_id, thread_id)
+        subscription_bits = BitString.from_int(subscription_value, length=6)
+        await self.bot.pool.execute(
+            query,
+            guild_id,
+            subscription_bits,
+            channel_id,
+            thread_id,
+            webhook.id,
+            webhook.url,
+            webhook.token,
+        )
         self.get_sub_config.invalidate(self, guild_id)
 
     async def _delete_subscription(self, config: EventSubConfig) -> None:
         query = """
                 DELETE FROM event_remind_subscriptions
-                WHERE guild_id = $1
-                CASCADE;
+                WHERE guild_id = $1;
                 """
+
+        LOGGER.info("Deleting subscription from guild: %r", config.guild_id)
 
         await self.bot.pool.execute(query, config.guild_id)
 
@@ -135,9 +164,10 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE guild_id = $1;
                 """
 
-        record: SubscriptionEventRecord | None = await self.pool.fetchrow(query, guild_id)  # type: ignore # wish I knew how to make a Record subclass
+        record: SubscriptionEventRecord | None = await self.bot.pool.fetchrow(query, guild_id)  # type: ignore # wish I knew how to make a Record subclass
 
         if not record:
+            LOGGER.info("Creating new subscription config for guild: %s", guild_id)
             return EventSubConfig(self.bot, guild_id=guild_id)
 
         return EventSubConfig.from_record(self.bot, record=record)
@@ -178,9 +208,10 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             current_channel = interaction.channel
 
         assert current_channel  # this should never happen
+        config.channel_id = current_channel.id
 
         try:
-            webhook = await config._resolve_webhook(force=False)
+            webhook = await config.get_webhook()
         except discord.HTTPException:
             await interaction.followup.send(
                 "I was not able to create the necessary webhook. Can you please correct my permissions and try again?"
@@ -191,7 +222,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             channel_id = interaction.channel.parent.id
             thread_id = interaction.channel.id
 
-        await self._set_subscriptions(interaction.guild.id, resolved_flags, (webhook and webhook.url), channel_id, thread_id)
+        await self._set_subscriptions(interaction.guild.id, resolved_flags, webhook, channel_id, thread_id)
 
     @select_subscriptions.error
     async def on_subscription_select_error(self, interaction: Interaction, error: app_commands.AppCommandError) -> None:
@@ -200,9 +231,53 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         await interaction.followup.send("Sorry, there was an error processing this command!")
 
+    async def dispatcher(
+        self, *, webhook: discord.Webhook, embed: discord.Embed, content: str = MISSING, config: EventSubConfig
+    ) -> None:
+        try:
+            await webhook.send(content=content, embed=embed, thread=config.thread)
+        except (discord.NotFound, MisconfiguredSubscription):
+            await self._delete_subscription(config)
+
+    async def handle_dispatch(self, to_dispatch: list[Coroutine[Any, Any, None]]) -> None:
+        _: list[BaseException] = await asyncio.gather(*to_dispatch, return_exceptions=True)
+
+        # todo handle exceptions cleanly?
+
     @tasks.loop(time=datetime.time(hour=14, minute=45, tzinfo=datetime.timezone.utc))
     async def daily_reset_loop(self) -> None:
-        ...
+        query = """
+                SELECT *
+                FROM event_remind_subscriptions
+                WHERE subscriptions & $1 = $1;
+                """
+
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(1, length=6))  # type: ignore # reee
+
+        if not records:
+            return
+
+        resets_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # ree
+
+        if not resets_cog:
+            LOGGER.error("Resets cog is not available.")
+            return
+
+        embed = resets_cog._get_daily_reset_embed()
+
+        to_send: list[Coroutine[Any, Any, None]] = []
+        for record in records:
+            conf = await self.get_sub_config(record["guild_id"])
+            try:
+                webhook = await conf.get_webhook()
+            except MisconfiguredSubscription:
+                LOGGER.warn("Subscription %r is misconfigured. Deleting.", conf)
+                await self._delete_subscription(conf)
+                return
+
+            to_send.append(self.dispatcher(webhook=webhook, embed=embed, config=conf))
+
+        await self.handle_dispatch(to_send)
 
     @daily_reset_loop.before_loop
     async def daily_reset_before_loop(self) -> None:
@@ -226,7 +301,38 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         if now.weekday() != 1:  # tuesday
             return
 
-        ...
+        query = """
+                SELECT *
+                FROM event_remind_subscriptions
+                WHERE subscriptions & $1 = $1;
+                """
+
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(1, length=6))  # type: ignore # reee
+
+        if not records:
+            return
+
+        resets_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # ree
+
+        if not resets_cog:
+            LOGGER.error("Resets cog is not available.")
+            return
+
+        embed = resets_cog._get_weekly_reset_embed()
+
+        to_send: list[Coroutine[Any, Any, None]] = []
+        for record in records:
+            conf = await self.get_sub_config(record["guild_id"])
+            try:
+                webhook = await conf.get_webhook()
+            except MisconfiguredSubscription:
+                LOGGER.warn("Subscription %r is misconfigured. Deleting.", conf)
+                await self._delete_subscription(conf)
+                return
+
+            to_send.append(self.dispatcher(webhook=webhook, embed=embed, config=conf))
+
+        await self.handle_dispatch(to_send)
 
     @weekly_reset_loop.before_loop
     async def weekly_reset_before_loop(self) -> None:
@@ -257,6 +363,8 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 """
 
         records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(4, length=6))  # type: ignore # stub shenanigans
+        if not records:
+            return
 
         fashion_report_cog: FashionReportCog = self.bot.get_cog("FashionReport")  # type: ignore # weird
 
@@ -269,8 +377,10 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             fmt = "Kaiyoko's post is not up yet. Please use `g fr` later for their insight!"
             embed = MISSING
 
+        to_send: list[Coroutine[Any, Any, None]] = []
+
         for record in records:
-            conf = await self.get_sub_config(existing_record=record)
+            conf = await self.get_sub_config(record["guild_id"])
             try:
                 webhook = await conf.get_webhook()
             except MisconfiguredSubscription:
@@ -279,10 +389,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 await self._delete_subscription(conf)
                 return
 
-            if not webhook:
-                webhook = await conf._resolve_webhook(force=True)
+            to_send.append(self.dispatcher(webhook=webhook, embed=embed, content=fmt, config=conf))
 
-            await webhook.send(fmt, embed=embed, thread=conf.thread)
+        await self.handle_dispatch(to_send)
 
     @fashion_report_loop.before_loop
     async def fashion_report_before_loop(self) -> None:

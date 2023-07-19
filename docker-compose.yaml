@@ -14,5 +14,6 @@ services:
     restart: unless-stopped
     volumes:
       - ./configs/:/app/configs/:ro
+      - ./logs/:/app/logs/:rw
 
 version: "3"

@@ -52,6 +52,23 @@ class Resets(BaseCog, name="Reset Information"):
 
         return next_reset.replace(hour=15, minute=0, second=0, microsecond=0)
 
+    def _get_daily_reset_embed(self) -> discord.Embed:
+        next_daily = self._get_daily_reset_time()
+
+        daily_dt_full = discord.utils.format_dt(next_daily, "F")
+        daily_dt_relative = discord.utils.format_dt(next_daily, "R")
+        daily_fmt = f"Resets at {daily_dt_full} ({daily_dt_relative})\n\n" + "\n".join(self.DAILIES)
+
+        embed = discord.Embed(colour=discord.Colour.random())
+        embed.set_thumbnail(
+            url="https://media.discordapp.net/attachments/872373121292853248/991352363577250003/unknown.png?width=198&height=262",
+        )
+        embed.title = "Daily Reset Details!"
+        embed.add_field(name="Daily Reset", value=daily_fmt, inline=False)
+        embed.timestamp = next_daily
+
+        return embed
+
     def _get_weekly_reset_time(self) -> datetime.datetime:
         now = datetime.datetime.now(datetime.timezone.utc).date()
         diff = 1 - now.weekday()
@@ -66,15 +83,8 @@ class Resets(BaseCog, name="Reset Information"):
             next_reset, datetime.time(hour=8, minute=0, second=0, microsecond=0), tzinfo=datetime.timezone.utc
         )
 
-    @commands.command(name="reset", aliases=["resets", "r"])
-    async def resets_summary(self, ctx: Context) -> None:
-        """Sends a reset information summary!"""
-        next_daily = self._get_daily_reset_time()
+    def _get_weekly_reset_embed(self) -> discord.Embed:
         next_weekly = self._get_weekly_reset_time()
-
-        daily_dt_full = discord.utils.format_dt(next_daily, "F")
-        daily_dt_relative = discord.utils.format_dt(next_daily, "R")
-        daily_fmt = f"Resets at {daily_dt_full} ({daily_dt_relative})\n\n" + "\n".join(self.DAILIES)
 
         weekly_dt_full = discord.utils.format_dt(next_weekly, "F")
         weekly_dt_relative = discord.utils.format_dt(next_weekly, "R")
@@ -84,11 +94,20 @@ class Resets(BaseCog, name="Reset Information"):
         embed.set_thumbnail(
             url="https://media.discordapp.net/attachments/872373121292853248/991352363577250003/unknown.png?width=198&height=262",
         )
-        embed.title = "Reset Details!"
-        embed.add_field(name="Daily Reset", value=daily_fmt, inline=False)
+        embed.title = "Weekly Reset Details!"
         embed.add_field(name="Weekly Reset", value=weekly_fmt, inline=False)
+        embed.timestamp = next_weekly
 
-        await ctx.send(embed=embed)
+        return embed
+
+    @commands.command(name="reset", aliases=["resets", "r"])
+    async def resets_summary(self, ctx: Context) -> None:
+        """Sends a reset information summary!"""
+
+        daily = self._get_daily_reset_embed()
+        weekly = self._get_weekly_reset_embed()
+
+        await ctx.send(embeds=[daily, weekly])
 
 
 async def setup(bot: Graha) -> None:

@@ -13,8 +13,9 @@ import logging
 import pathlib
 import traceback
 from collections import Counter, deque
+from collections.abc import Callable, Coroutine
 from logging.handlers import RotatingFileHandler
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Literal, NoReturn, overload
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, overload
 
 import aiohttp
 import asyncpg
@@ -115,7 +116,7 @@ class LogHandler:
 
         self.log.setLevel(logging.INFO)
         handler = RotatingFileHandler(
-            filename=self.logging_path / "Mipha.log", encoding="utf-8", mode="w", maxBytes=self.max_bytes, backupCount=5
+            filename=self.logging_path / "Graha.log", encoding="utf-8", mode="w", maxBytes=self.max_bytes, backupCount=5
         )
         dt_fmt = "%Y-%m-%d %H:%M:%S"
         fmt = logging.Formatter("[{asctime}] [{levelname:<7}] {name}: {message}", dt_fmt, style="{")

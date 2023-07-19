@@ -130,35 +130,38 @@ class EventSubConfig:
         if self.guild and self.weekly_role_id:
             return self.guild.get_role(self.weekly_role_id)
 
-    async def _resolve_webhook(self, *, force: bool) -> discord.Webhook:
-        webhook = await self.get_webhook()
-        if not webhook:
-            return await self._create_or_replace_webhook(force=force, existing_webhook=webhook)
-
-        return webhook
-
-    async def _create_or_replace_webhook(
-        self, *, force: bool = False, existing_webhook: discord.Webhook | None = None
-    ) -> discord.Webhook:
+    async def _create_or_replace_webhook(self) -> discord.Webhook:
         if not self.channel:
             raise MisconfiguredSubscription(self)
 
-        if force:
-            # we just delete the old and create the new
-            webhook = existing_webhook or await self.get_webhook()
-            if webhook:
-                try:
-                    await webhook.delete(reason="Forced deletion by G'raha Tia. Re-creating.")
-                except discord.HTTPException:
-                    pass
+        fetch_query = """
+                      SELECT webhook_id
+                      FROM webhooks
+                      WHERE guild_id = $1;
+                      """
+
+        existing_webhook_id: int = await self._bot.pool.fetchval(fetch_query, self.guild_id)
+        try:
+            existing_webhook = await self._bot.fetch_webhook(existing_webhook_id)
+        except discord.HTTPException:
+            # no webhook clearly
+            pass
+        else:
+            try:
+                await existing_webhook.delete(reason="Deleted by G'raha Tia due to misconfiguration.")
+            except discord.Forbidden:
+                # we can't do anything here.
+                pass
 
         webhook = await self.channel.create_webhook(name="XIV Timers", reason="Created via G'raha Tia subscriptions!")
         query = """
-                UPDATE event_remind_subscriptions
-                SET webhook_url = $2
+                UPDATE webhooks
+                SET webhook_id = $2, webhook_url = $3
                 WHERE guild_id = $1;
                 """
-        await self._bot.pool.execute(query, self.guild_id, webhook.url)
+        await self._bot.pool.execute(query, self.guild_id, webhook.id, webhook.url)
+
+        self.webhook_id = webhook.id
 
         return webhook
 
@@ -168,14 +171,11 @@ class EventSubConfig:
             query = "SELECT * FROM webhooks WHERE guild_id = $1 OR webhook_id = $2;"
             record: WebhooksRecord = await self._bot.pool.fetchrow(query, self.guild_id, self.webhook_id)  # type: ignore # stubs
             if not record:
-                return await self._create_or_replace_webhook(force=True)
+                return await self._create_or_replace_webhook()
 
-            url = (
-                record["webhook_url"]
-                or (f"https://discord.com/api/webhooks/{record['webhook_id']}" + record["webhook_token"])
-                if record["webhook_token"]
-                else ""
+            url = record["webhook_url"] or (
+                f"https://discord.com/api/webhooks/{record['webhook_id']}/" + record["webhook_token"]
             )
 
-            return discord.Webhook.from_url(url)
-        return await self._create_or_replace_webhook(force=True)
+            return discord.Webhook.from_url(url, client=self._bot)
+        return await self._create_or_replace_webhook()
