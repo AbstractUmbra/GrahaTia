@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
     from bot import Graha
     from extensions.fashion_report import FashionReport as FashionReportCog
+    from extensions.ocean_fishing import OceanFishing as OceanFishingCog
     from extensions.resets import Resets as ResetsCog
     from utilities._types.xiv.record_aliases.subscription import EventRecord as SubscriptionEventRecord
 
@@ -83,17 +84,18 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
     def __init__(self, bot: Graha, /) -> None:
         self.bot: Graha = bot
+        self.avatar_url: str = "https://static.abstractumbra.dev/images/graha.png"
         self.daily_reset_loop.start()
         self.weekly_reset_loop.start()
         self.fashion_report_loop.start()
-        # self.ocean_fishing_loop.start()
+        self.ocean_fishing_loop.start()
         self.jumbo_cactpot_loop.start()
 
     async def cog_unload(self) -> None:
         self.daily_reset_loop.stop()
         self.weekly_reset_loop.stop()
         self.fashion_report_loop.stop()
-        # self.ocean_fishing_loop.stop()
+        self.ocean_fishing_loop.stop()
         self.jumbo_cactpot_loop.stop()
 
     async def _set_subscriptions(
@@ -221,6 +223,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         if isinstance(interaction.channel, discord.Thread) and isinstance(interaction.channel.parent, discord.TextChannel):
             channel_id = interaction.channel.parent.id
             thread_id = interaction.channel.id
+        else:
+            channel_id = current_channel.id
+            thread_id = None
 
         await self._set_subscriptions(interaction.guild.id, resolved_flags, webhook, channel_id, thread_id)
 
@@ -235,7 +240,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         self, *, webhook: discord.Webhook, embed: discord.Embed, content: str = MISSING, config: EventSubConfig
     ) -> None:
         try:
-            await webhook.send(content=content, embed=embed, thread=config.thread)
+            await webhook.send(content=content, embed=embed, thread=config.thread, avatar_url=self.avatar_url)
         except (discord.NotFound, MisconfiguredSubscription):
             await self._delete_subscription(config)
 
@@ -307,7 +312,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(1, length=6))  # type: ignore # reee
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(2, length=6))  # type: ignore # reee
 
         if not records:
             return
@@ -411,12 +416,56 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
     @tasks.loop(hours=2)
     async def ocean_fishing_loop(self) -> None:
-        ...
+        ocean_fishing_cog: OceanFishingCog | None = self.bot.get_cog("OceanFishing")  # type: ignore
+        if not ocean_fishing_cog:
+            LOGGER.error("No ocean fishing cog available.")
+            return
+
+        query = """
+                SELECT *
+                FROM event_remind_subscriptions
+                WHERE subscriptions & $1 = $1;
+                """
+
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(8, length=6))  # type: ignore
+        if not records:
+            return
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+
+        embed = ocean_fishing_cog._generate_ocean_fishing_embed(now)
+
+        to_send: list[Coroutine[Any, Any, None]] = []
+        for record in records:
+            conf = await self.get_sub_config(record["guild_id"])
+            try:
+                webhook = await conf.get_webhook()
+            except MisconfiguredSubscription:
+                LOGGER.warn("Subscription %r is misconfigured. Deleting.", conf)
+                await self._delete_subscription(conf)
+                return
+
+            to_send.append(self.dispatcher(webhook=webhook, embed=embed, config=conf))
+
+        await self.handle_dispatch(to_send)
 
     @ocean_fishing_loop.before_loop
     async def ocean_fishing_before_loop(self) -> None:
-        # todo calculate odd-hour 45m cycle to sleep.
-        ...
+        now = datetime.datetime.now(datetime.timezone.utc)
+        if now.hour % 2 == 0:
+            then = now + datetime.timedelta(hours=1)
+        else:
+            then = now
+
+        if then.minute >= 45:
+            # exceeded warning time, sleep
+            then += datetime.timedelta(hours=2)
+        else:
+            then = then.replace(minute=45, second=0, microsecond=0)
+
+        LOGGER.info("[Subscriptions] :: Ocean Fishing sleeping until %s", then)
+
+        await discord.utils.sleep_until(then)
 
     @tasks.loop(time=datetime.time(hour=18, minute=45, tzinfo=datetime.timezone.utc))
     async def jumbo_cactpot_loop(self) -> None:

@@ -111,7 +111,6 @@ class LogHandler:
     def __enter__(self: Self) -> Self:
         logging.getLogger("discord").setLevel(logging.INFO)
         logging.getLogger("discord.http").setLevel(logging.INFO)
-        logging.getLogger("hondana.http").setLevel(logging.INFO)
         logging.getLogger("discord.state").addFilter(RemoveNoise())
 
         self.log.setLevel(logging.INFO)
@@ -400,6 +399,7 @@ async def main() -> None:
     ) as pool:
         bot.pool = pool
         bot.log_handler = log_handler
+        bot.log_handler.info("\n" * 5)
 
         bot.session = session
 

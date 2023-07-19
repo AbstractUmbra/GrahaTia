@@ -196,12 +196,10 @@ class OceanFishing(GrahaBaseCog):
 
         return upcoming_voyages
 
-    @commands.command(name="oceanfishing", aliases=["of", "fishing"])
-    async def ocean_fishing_times(self, ctx: Context) -> None:
-        """Shows your local time against the current ocean fishing schedule windows."""
+    def _generate_ocean_fishing_embed(self, dt: datetime.datetime, /) -> discord.Embed:
         embed = discord.Embed(colour=discord.Colour.random(), title="Ocean Fishing availability")
 
-        current, next_ = self.calculate_voyages(dt=datetime.datetime.now(datetime.timezone.utc), count=2, filter_=None)
+        current, next_ = self.calculate_voyages(dt=dt, count=2, filter_=None)
         now = datetime.datetime.now(datetime.timezone.utc)
 
         fmt = f"The current ocean fishing expedition is {current} {current.emoji} with a route of:-\n{current.route()}.\n"
@@ -227,7 +225,14 @@ class OceanFishing(GrahaBaseCog):
         fmt += f"Registration opens at {next_window_fmt} ({next_window_fmt_rel})."
         embed.add_field(name="Next Route", value=fmt, inline=False)
 
-        await ctx.send(embed=embed)
+        return embed
+
+    @commands.command(name="oceanfishing", aliases=["of", "fishing"])
+    async def ocean_fishing_times(self, ctx: Context) -> None:
+        """Shows your local time against the current ocean fishing schedule windows."""
+        now = datetime.datetime.now(datetime.timezone.utc)
+
+        await ctx.send(embed=self._generate_ocean_fishing_embed(now))
 
 
 async def setup(bot: Graha) -> None:
