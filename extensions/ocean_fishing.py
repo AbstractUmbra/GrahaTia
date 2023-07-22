@@ -20,6 +20,11 @@ class UpcomingVoyage(TypedDict):
     destination: str
 
 
+DAY: str = "\U00002600\U0000fe0f"
+SUNSET: str = "\U0001f305"
+NIGHT: str = "\U0001f311"
+
+
 class Voyage:
     DESTINATION_MAPPING: ClassVar[dict[str, str]] = {
         "T": "Rothlyt Sound",
@@ -42,9 +47,9 @@ class Voyage:
     }
 
     ROUTE_TIME_MAPPING: ClassVar[dict[str, list[str]]] = {
-        "D": ["\U0001F31E \U00002B07\U0000FE0F", "\U0001F31D", "\U0001F31E"],
-        "N": ["\U0001F31E", "\U0001F31E \U00002B07\U0000FE0F", "\U0001F31D"],
-        "S": ["\U0001F31D", "\U0001F31E", "\U0001F31E \U00002B07\U0000FE0F"],
+        "D": [SUNSET, NIGHT, DAY],
+        "N": [DAY, SUNSET, NIGHT],
+        "S": [NIGHT, DAY, SUNSET],
     }
 
     __slots__ = (
@@ -85,7 +90,7 @@ class Voyage:
         ):
             routes.append((route_destination, time))
 
-        return " -> ".join([f"{item[0]} ({item[1]})" for item in routes])
+        return "\n".join([f"{item[1]}: {item[0]}" for item in routes])
 
     @property
     def destination(self) -> str:
@@ -98,15 +103,6 @@ class Voyage:
     @property
     def details(self) -> str:
         return f"{self.destination!r} at {self.time.lower()}"
-
-    @property
-    def emoji(self) -> str:
-        if self.time == "Day":
-            return "\U0001F31E"
-        elif self.time == "Night":
-            return "\U0001F31D"
-        else:
-            return "\U0001F31E \U00002B07\U0000FE0F"
 
 
 class OceanFishing(GrahaBaseCog):
@@ -202,28 +198,29 @@ class OceanFishing(GrahaBaseCog):
         current, next_ = self.calculate_voyages(dt=dt, count=2, filter_=None)
         now = datetime.datetime.now(datetime.timezone.utc)
 
-        fmt = f"The current ocean fishing expedition is {current} {current.emoji} with a route of:-\n{current.route()}.\n"
+        current_fmt = current.route() + "\n\n"
         if current.has_set_sail(now):
-            fmt += "The registration window for this has closed and the voyage is underway.\n\n"
+            current_fmt += "The registration window for this has closed and the voyage is underway.\n\n"
         elif current.can_register(now):
             closes = discord.utils.format_dt(current.start_time)
             closes_rel = discord.utils.format_dt(current.start_time, "R")
-            fmt += f"The registration window for this voyage is currently open if you wish to join. Registration will close at {closes} ({closes_rel}).\n\n"
+            current_fmt += f"The registration window for this voyage is currently open if you wish to join. Registration will close at {closes} ({closes_rel}).\n\n"
         else:
             registration_opens = current.registration_opens()
             registration_opens_formatted = discord.utils.format_dt(registration_opens)
             registration_opens_formatted_rel = discord.utils.format_dt(registration_opens, "R")
-            fmt += f"The registration window for this voyage will open at {registration_opens_formatted} ({registration_opens_formatted_rel})."
-        embed.add_field(name="Current Route", value=fmt, inline=False)
+            current_fmt += f"The registration window for this voyage will open at {registration_opens_formatted} ({registration_opens_formatted_rel})."
+        embed.add_field(name="Current Route", value=current_fmt, inline=False)
 
-        fmt = ""
-        next_fmt = discord.utils.format_dt(next_.start_time)
-        next_fmt_rel = discord.utils.format_dt(next_.start_time, "R")
-        fmt += f"Next available ocean fishing expedition to {next_} {next_.emoji} is on the {next_fmt} ({next_fmt_rel}) with a route of:-\n{next_.route()}.\n"
+        next_dt = discord.utils.format_dt(next_.start_time)
+        next_dt_rel = discord.utils.format_dt(next_.start_time, "R")
+        next_fmt = f"Leaves at {next_dt} ({next_dt_rel}) with a route of:-\n{next_.route()}\n\n"
         next_window_fmt = discord.utils.format_dt(next_.registration_opens())
         next_window_fmt_rel = discord.utils.format_dt(next_.registration_opens(), "R")
-        fmt += f"Registration opens at {next_window_fmt} ({next_window_fmt_rel})."
-        embed.add_field(name="Next Route", value=fmt, inline=False)
+        next_fmt += f"Registration opens at {next_window_fmt} ({next_window_fmt_rel})."
+        embed.add_field(name="Next Route", value=next_fmt, inline=False)
+
+        embed.set_footer(text="The route is named after the final stop.")
 
         return embed
 
