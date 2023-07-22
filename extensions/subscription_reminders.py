@@ -286,19 +286,15 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
     @daily_reset_loop.before_loop
     async def daily_reset_before_loop(self) -> None:
-        now = pendulum.now()
-        if now.hour > 7:
-            if now.minute > 45:
-                then = now.next()
-        then = now
+        reset_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # Cog downcasting woes
+        if not reset_cog:
+            return  # todo
 
-        sleep_until = datetime.datetime.combine(
-            then, datetime.time(hour=7, minute=45, second=0, microsecond=0), tzinfo=datetime.timezone.utc
-        )
+        then = reset_cog._get_daily_reset_time()
 
-        LOGGER.info("[Subscriptions] :: Daily Reset sleeping until %s", sleep_until)
-
-        await discord.utils.sleep_until(sleep_until)
+        LOGGER.info("[Subscriptions] :: Daily Reset sleeping until %s", then)
+        await discord.utils.sleep_until(then)
+        LOGGER.info("[Subscriptions] :: Daily Reset woken up at %s", datetime.datetime.now(datetime.timezone.utc))
 
     @tasks.loop(time=datetime.time(hour=7, minute=45, tzinfo=datetime.timezone.utc))
     async def weekly_reset_loop(self) -> None:
@@ -341,21 +337,17 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
     @weekly_reset_loop.before_loop
     async def weekly_reset_before_loop(self) -> None:
-        now = pendulum.now()
-        if now.weekday() != 1:
-            then = now.next(2)
-        else:
-            then = now
+        reset_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # Cog downcasting woes
+        if not reset_cog:
+            return  # todo
 
-        sleep_until = datetime.datetime.combine(
-            then, datetime.time(hour=7, minute=45, second=0, microsecond=0), tzinfo=datetime.timezone.utc
-        )
+        then = reset_cog._get_weekly_reset_time()
 
-        LOGGER.info("[Subscriptions] :: Weekly Reset sleeping until %s", sleep_until)
+        LOGGER.info("[Subscriptions] :: Weekly Reset sleeping until %s", then)
+        await discord.utils.sleep_until(then)
+        LOGGER.info("[Subscriptions] :: Weekly Reset woken up at %s", datetime.datetime.now(datetime.timezone.utc))
 
-        await discord.utils.sleep_until(sleep_until)
-
-    @tasks.loop(time=datetime.time(hour=7, tzinfo=datetime.timezone.utc))
+    @tasks.loop(time=datetime.time(hour=7, minute=45, tzinfo=datetime.timezone.utc))
     async def fashion_report_loop(self) -> None:
         now = datetime.datetime.now(datetime.timezone.utc)
         if now.weekday() != 4:  # friday
@@ -411,8 +403,8 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         )
 
         LOGGER.info("[Subscriptions] :: Fashion Report sleeping until %s", sleep_until)
-
         await discord.utils.sleep_until(sleep_until)
+        LOGGER.info("[Subscriptions] :: Fashion Report woken up at %s", sleep_until)
 
     @tasks.loop(hours=2)
     async def ocean_fishing_loop(self) -> None:
@@ -464,8 +456,8 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             then = then.replace(minute=45, second=0, microsecond=0)
 
         LOGGER.info("[Subscriptions] :: Ocean Fishing sleeping until %s", then)
-
         await discord.utils.sleep_until(then)
+        LOGGER.info("[Subscriptions] :: Ocean Fishing woken up at %s", then)
 
     @tasks.loop(time=datetime.time(hour=18, minute=45, tzinfo=datetime.timezone.utc))
     async def jumbo_cactpot_loop(self) -> None:
@@ -505,8 +497,8 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         )
 
         LOGGER.info("[Subscriptions] :: Jumbo Cactpot sleeping until %s", sleep_until)
-
         await discord.utils.sleep_until(sleep_until)
+        LOGGER.info("[Subscriptions] :: Jumbo Cactpot woken up at %s", sleep_until)
 
 
 async def setup(bot: Graha) -> None:
