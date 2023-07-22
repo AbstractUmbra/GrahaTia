@@ -91,9 +91,9 @@ class FashionReport(BaseCog):
     async def filter_submissions(self) -> KaiyokoSubmission:
         submissions = await self.get_kaiyoko_submissions()
 
+        now = datetime.datetime.now(datetime.timezone.utc)
         for submission in submissions["data"]["children"]:
             if match := FASHION_REPORT_PATTERN.search(submission["data"]["title"]):
-                now = datetime.datetime.now(datetime.timezone.utc)
                 if not self.weeks_since_start(now) == int(match["week_num"]):
                     continue
 
