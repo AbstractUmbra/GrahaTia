@@ -393,7 +393,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
     @fashion_report_loop.before_loop
     async def fashion_report_before_loop(self) -> None:
         now = pendulum.now()
-        if now.weekday() != 4:
+        if now.weekday() != 4 or (now.weekday() == 4 and (now.hour >= 7 and now.minute >= 45)):
             then = now.next(5)
         else:
             then = now
