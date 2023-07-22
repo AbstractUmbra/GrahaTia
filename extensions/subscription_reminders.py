@@ -395,8 +395,10 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         now = pendulum.now()
         if now.weekday() != 4 or (now.weekday() == 4 and (now.hour >= 7 and now.minute >= 45)):
             then = now.next(5)
+            LOGGER.info("[Subscriptions] -> [Fashion Report] :: Beyond start time and date. Setting `then` to '%s'", then)
         else:
             then = now
+            LOGGER.info("[Subscriptions] -> [Fashion Report] :: Still available. Setting `then` to '%s'", then)
 
         sleep_until = datetime.datetime.combine(
             then, datetime.time(hour=7, minute=45, second=0, microsecond=0), tzinfo=datetime.timezone.utc
