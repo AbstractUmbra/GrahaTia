@@ -113,7 +113,7 @@ class format_dt:
         self.dt: datetime.datetime = dt
 
     def __format__(self, __format_spec: str) -> str:
-        _, _, style = __format_spec.partition("|")
+        style, _, _ = __format_spec.partition("|")
 
         style = cast(TimestampStyle, style)
         return format_dt_discord(self.dt, style=style)
@@ -215,22 +215,17 @@ def clean_triple_backtick(line: str) -> str:
 try:
     import orjson
 except ImportError:
-    HAS_ORJSON = False
-else:
-    HAS_ORJSON = True
-
-if HAS_ORJSON:
-
-    def to_json(obj: Any) -> str:
-        return orjson.dumps(obj).decode()
-
-    def from_json(obj: str) -> Any:
-        return orjson.loads(obj)
-
-else:
 
     def to_json(obj: Any) -> str:
         return json.dumps(obj, separators=(",", "."), ensure_ascii=True)
 
     def from_json(obj: str) -> Any:
         return json.loads(obj)
+
+else:
+
+    def to_json(obj: Any) -> str:
+        return orjson.dumps(obj).decode()
+
+    def from_json(obj: str) -> Any:
+        return orjson.loads(obj)
