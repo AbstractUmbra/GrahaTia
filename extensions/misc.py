@@ -74,10 +74,9 @@ class Misc(BaseCog):
         clean_link = discord.utils.oauth_url(ctx.bot.user.id)
 
         fmt = (
-            "Hello, thank you for wanting to invite me.\n"
-            f"I like being upfront about things so [this link]({perms_link})"
-            " will invite me with the mandatory permissions I need for full features.\n"
-            f"[This link]({clean_link}) will invite me with no permissions and you can update and assign permissions/roles as necessary."
+            f"Hello, thank you for wanting to invite me.\nI like being upfront about things so [this link]({perms_link})"
+            f" will invite me with the mandatory permissions I need for full features.\n[This link]({clean_link}) will"
+            " invite me with no permissions and you can update and assign permissions/roles as necessary."
         )
 
         now = datetime.datetime.now(datetime.timezone.utc)

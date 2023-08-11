@@ -204,12 +204,18 @@ class OceanFishing(GrahaBaseCog):
         elif current.can_register(now):
             closes = discord.utils.format_dt(current.start_time)
             closes_rel = discord.utils.format_dt(current.start_time, "R")
-            current_fmt += f"The registration window for this voyage is currently open if you wish to join. Registration will close at {closes} ({closes_rel}).\n\n"
+            current_fmt += (
+                "The registration window for this voyage is currently open if you wish to join. Registration will close at"
+                f" {closes} ({closes_rel}).\n\n"
+            )
         else:
             registration_opens = current.registration_opens()
             registration_opens_formatted = discord.utils.format_dt(registration_opens)
             registration_opens_formatted_rel = discord.utils.format_dt(registration_opens, "R")
-            current_fmt += f"The registration window for this voyage will open at {registration_opens_formatted} ({registration_opens_formatted_rel})."
+            current_fmt += (
+                "The registration window for this voyage will open at"
+                f" {registration_opens_formatted} ({registration_opens_formatted_rel})."
+            )
         embed.add_field(name="Current Route", value=current_fmt, inline=False)
 
         next_dt = discord.utils.format_dt(next_.start_time)

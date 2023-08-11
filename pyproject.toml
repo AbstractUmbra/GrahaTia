@@ -2,7 +2,7 @@
 name = "Graha Tia"
 version = "0.0.1"
 description = "A helper bot for organizing your FFXIV needs."
-authors = ["Alex Nørgaard <Umbra@AbstractUmbra.dev>"]
+authors = ["Alex Nørgaard <umbra@abstractumbra.dev>"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -24,13 +24,13 @@ pendulum = "*"
 black = "*"
 typing-extensions = "*"
 asyncpg-stubs = "*"
-ipykernel = "^6.24.0"
 
 [tool.poetry.group.speed.dependencies]
 orjson = "*"
 
 [tool.black]
 line-length = 125
+preview = true
 
 [tool.isort]
 profile = "black"
