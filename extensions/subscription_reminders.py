@@ -109,15 +109,16 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         query = """
                 WITH sub_insert AS (
                     INSERT INTO event_remind_subscriptions
-                        (guild_id, subscriptions, channel_id, thread_id)
+                        (guild_id, subscriptions, channel_id, thread_id, webhook_id)
                     VALUES
-                        ($1, $2, $3, $4)
+                        ($1, $2, $3, $4, $5)
                     ON CONFLICT
                         (guild_id)
                     DO UPDATE SET
                         subscriptions = EXCLUDED.subscriptions,
                         channel_id = EXCLUDED.channel_id,
-                        thread_id = EXCLUDED.thread_id
+                        thread_id = EXCLUDED.thread_id,
+                        webhook_id = EXCLUDED.webhook_id
                     RETURNING guild_id
                 )
                 INSERT INTO webhooks
@@ -371,7 +372,10 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             embed = await fashion_report_cog._gen_fashion_embed()
         except ValueError:
             # no report yet.
-            fmt = "Kaiyoko's post is not up yet. Please use `g fr` later for their insight!"
+            fmt = (
+                "Kaiyoko's post is not up yet. Please use `gt fr` later for their insight, or have a look on their Twitter"
+                " page for the post:-\n<https://twitter.com/KaiyokoStar>"
+            )
             embed = MISSING
 
         to_send: list[Coroutine[Any, Any, None]] = []
@@ -464,12 +468,14 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
     @tasks.loop(time=datetime.time(hour=18, minute=45, tzinfo=datetime.timezone.utc))
     async def jumbo_cactpot_loop(self) -> None:
         now = datetime.datetime.now(datetime.timezone.utc)
-        if now.weekday() != 1:  # tuesday
+        if now.weekday() != 5:  # saturday
             return
 
         then = (now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
         embed = discord.Embed(
-            title="Jumbo Cactpot!", description=f"The Jumbo Cactpot numbers will be called in {format_dt(then):R}!"
+            title="Jumbo Cactpot!",
+            description=f"The Jumbo Cactpot numbers will be called in {format_dt(then):R}!",
+            colour=discord.Colour.random(),
         )
 
         query = """
