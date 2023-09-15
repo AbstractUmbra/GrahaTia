@@ -8,11 +8,10 @@ import discord
 from discord.ext import commands
 
 from utilities.cog import GrahaBaseCog
-from utilities.context import Context
-
 
 if TYPE_CHECKING:
     from bot import Graha
+    from utilities.context import Context
 
 
 class UpcomingVoyage(TypedDict):

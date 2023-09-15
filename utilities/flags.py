@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 from discord.flags import BaseFlags, fill_with_flags, flag_value
 
-
 if TYPE_CHECKING:
     from typing_extensions import Self
 

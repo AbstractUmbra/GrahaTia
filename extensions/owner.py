@@ -13,21 +13,20 @@ import re
 import subprocess
 import time
 import traceback
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Literal
 
 import discord
 from discord.ext import commands
-from discord.ext.commands import Greedy
+from discord.ext.commands import Greedy  # noqa: TCH002
 
 from utilities import formats
 from utilities.cog import GrahaBaseCog as BaseCog
-from utilities.context import Context, GuildContext
-
 
 if TYPE_CHECKING:
     from asyncpg import Record
 
     from bot import Graha
+    from utilities.context import Context, GuildContext
 
 SANE_EXTENSION_REGEX = re.compile(r"(?P<prefix>extensions(?:\.|\\|\/))?(?P<extension>\w+)")
 
@@ -149,12 +148,7 @@ class Admin(BaseCog):
         """Run some SQL."""
         query = self.cleanup_code(query)
 
-        is_multistatement = query.count(";") > 1
-        if is_multistatement:
-            # fetch does not support multiple statements
-            strategy = ctx.db.execute
-        else:
-            strategy = ctx.db.fetch
+        strategy = ctx.db.execute if query.count(";") > 1 else ctx.db.fetch
 
         try:
             start = time.perf_counter()
@@ -208,7 +202,7 @@ class Admin(BaseCog):
     @commands.command()
     @commands.guild_only()
     async def sync(
-        self, ctx: GuildContext, guilds: Greedy[discord.Object], spec: Optional[Literal["~", "*", "^"]] = None
+        self, ctx: GuildContext, guilds: Greedy[discord.Object], spec: Literal["~", "*", "^"] | None = None
     ) -> None:
         """
         Pass guild ids or pass a sync specification:-

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pathlib
 from collections import defaultdict
 from io import BytesIO
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 import discord
 import yarl
@@ -11,16 +11,15 @@ from discord import app_commands
 from discord.app_commands.commands import _populate_choices
 
 from utilities import fuzzy
-from utilities._types.xiv.worlds import WorldsData
 from utilities.cog import GrahaBaseCog as BaseCog
 from utilities.formats import from_json
-
 
 if TYPE_CHECKING:
     from typing import ClassVar
 
     from bot import Graha
     from utilities._types.xiv.character_cards import Error, PrepareResponse
+    from utilities._types.xiv.worlds import WorldsData
 
 _worlds_path = pathlib.Path("configs/worlds.json")
 if not _worlds_path.exists():
@@ -71,7 +70,7 @@ class CharacterCards(BaseCog):
     def _resolve_dc_to_region(self, datacenter: str, /) -> str | None:
         for key, value in WORLDS_DATA.items():
             for dc in value["datacenters"]:  # type: ignore # typing grievance with TypedDict.items()
-                if datacenter in dc.keys():
+                if datacenter in dc:
                     return key
 
     async def get_card(self, *, world: str, name: str) -> str:
@@ -87,7 +86,7 @@ class CharacterCards(BaseCog):
         :class:`str`:  The prepared image url.
         """
         async with self.bot.session.get(self.URL / f"prepare/name/{world}/{name}") as r:
-            res: Union[Error, PrepareResponse] = await r.json()
+            res: Error | PrepareResponse = await r.json()
 
         if res["status"] == "error":
             raise APIError(res["reason"])

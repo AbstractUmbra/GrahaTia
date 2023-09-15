@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import datetime
 import secrets
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Generic, Protocol, Sequence, TypeAlias, TypeVar
 
 import discord
@@ -16,8 +15,8 @@ from discord.ext import commands
 
 from .ui import ConfirmationView
 
-
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from types import TracebackType
 
     from aiohttp import ClientSession
@@ -79,7 +78,7 @@ class DisambiguatorView(discord.ui.View, Generic[T]):
     message: discord.Message
     selected: T
 
-    def __init__(self, ctx: Context, data: list[T], entry: Callable[[T], Any]):
+    def __init__(self, ctx: Context, data: list[T], entry: Callable[[T], Any]) -> None:
         super().__init__()
         self.ctx: Context = ctx
         self.data: list[T] = data
@@ -104,7 +103,7 @@ class DisambiguatorView(discord.ui.View, Generic[T]):
             return False
         return True
 
-    async def on_select_submit(self, interaction: discord.Interaction):
+    async def on_select_submit(self, interaction: discord.Interaction) -> None:
         index = int(self.select.values[0])
         self.selected = self.data[index]
         await interaction.response.defer()
@@ -125,7 +124,7 @@ class Context(commands.Context["Graha"]):
         "exc_handled",
     )
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs) -> None:  # noqa: ANN003
         super().__init__(**kwargs)
         self.pool = self.bot.pool
         self.ray_id: str = self._gen_ray_id()

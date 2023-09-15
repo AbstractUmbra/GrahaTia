@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 
 import discord
 
-
 if TYPE_CHECKING:
     from typing_extensions import Self
 

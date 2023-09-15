@@ -12,14 +12,14 @@ import gc
 import io
 import itertools
 import logging
-import os
+import pathlib
 import re
 import secrets
 import sys
 import textwrap
 import traceback
 from collections import Counter, defaultdict
-from typing import TYPE_CHECKING, Annotated, Any, Optional, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, TypedDict
 
 import asyncpg
 import discord
@@ -33,7 +33,6 @@ from utilities.context import Context
 from utilities.formats import to_codeblock
 from utilities.paginator import FieldPageSource, RoboPages
 
-
 if TYPE_CHECKING:
     from bot import Graha
 
@@ -43,7 +42,7 @@ LOGGING_CHANNEL = 1037306036698230814
 
 
 class DataBatchEntry(TypedDict):
-    guild: Optional[int]
+    guild: int | None
     channel: int
     author: int
     used: str
@@ -68,7 +67,7 @@ class LoggingHandler(logging.Handler):
 _INVITE_REGEX = re.compile(r"(?:https?:\/\/)?discord(?:\.gg|\.com|app\.com\/invite)?\/[A-Za-z0-9]+")
 
 
-def censor_invite(obj: Any, *, _regex=_INVITE_REGEX) -> str:
+def censor_invite(obj: Any, *, _regex: re.Pattern[str] = _INVITE_REGEX) -> str:
     return _regex.sub("[censored-invite]", str(obj))
 
 
@@ -76,7 +75,7 @@ def hex_value(arg: str) -> int:
     return int(arg, base=16)
 
 
-def object_at(addr: int) -> Optional[Any]:
+def object_at(addr: int) -> Any | None:
     for o in gc.get_objects():
         if id(o) == addr:
             return o
@@ -162,7 +161,7 @@ class Stats(commands.Cog):
         else:
             content = message.content
 
-        log.info(f"{message.created_at}: {message.author} in {destination}: {content}")
+        log.info("%s: %s in %s: %s", message.created_at, message.author, destination, content)
         async with self._batch_lock:
             self._data_batch.append(
                 {
@@ -261,7 +260,7 @@ class Stats(commands.Cog):
         offset = time.format_relative(commit_time.astimezone(datetime.timezone.utc))
         return f"[`{short_sha2}`](https://github.com/AbstractUmbra/Graha/commit/{commit.hex}) {short} ({offset})"
 
-    def get_last_commits(self, count=3) -> str:
+    def get_last_commits(self, count: int = 3) -> str:
         repo = pygit2.Repository(".git")
         commits = list(itertools.islice(repo.walk(repo.head.target, pygit2.GIT_SORT_TOPOLOGICAL), count))
         return "\n".join(self.format_commit(c) for c in commits)
@@ -335,10 +334,7 @@ class Stats(commands.Cog):
         count: tuple[int, datetime.datetime] = await ctx.db.fetchrow(query, ctx.guild.id)  # type: ignore
 
         embed.description = f"{count[0]} commands used."
-        if count[1]:
-            timestamp = count[1].replace(tzinfo=datetime.timezone.utc)
-        else:
-            timestamp = discord.utils.utcnow()
+        timestamp = count[1].replace(tzinfo=datetime.timezone.utc) if count[1] else discord.utils.utcnow()
 
         embed.set_footer(text="Tracking command usage since").timestamp = timestamp
 
@@ -440,10 +436,7 @@ class Stats(commands.Cog):
         count: tuple[int, datetime.datetime] = await ctx.db.fetchrow(query, ctx.guild.id, member.id)  # type: ignore
 
         embed.description = f"{count[0]} commands used."
-        if count[1]:
-            timestamp = count[1].replace(tzinfo=datetime.timezone.utc)
-        else:
-            timestamp = discord.utils.utcnow()
+        timestamp = count[1].replace(tzinfo=datetime.timezone.utc) if count[1] else discord.utils.utcnow()
 
         embed.set_footer(text="First command used").timestamp = timestamp
 
@@ -787,9 +780,9 @@ class Stats(commands.Cog):
         all_tasks = asyncio.all_tasks(loop=self.bot.loop)
         event_tasks = [t for t in all_tasks if "Client._run_event" in repr(t) and not t.done()]
 
-        cogs_directory = os.path.dirname(__file__)
-        tasks_directory = os.path.join("discord", "ext", "tasks", "__init__.py")
-        inner_tasks = [t for t in all_tasks if cogs_directory in repr(t) or tasks_directory in repr(t)]
+        cogs_directory = pathlib.Path(__file__).parent
+        tasks_directory = pathlib.Path("discord") / "ext" / "tasks" / "__init__.py"
+        inner_tasks = [t for t in all_tasks if str(cogs_directory) in repr(t) or str(tasks_directory) in repr(t)]
 
         bad_inner_tasks = ", ".join(hex(id(t)) for t in inner_tasks if t.done() and t._exception is not None)
         total_warnings += bool(bad_inner_tasks)
@@ -884,7 +877,7 @@ class Stats(commands.Cog):
 
     @command_history.command(name="for")
     @commands.is_owner()
-    async def command_history_for(self, ctx: Context, days: Annotated[int, Optional[int]] = 7, *, command: str) -> None:
+    async def command_history_for(self, ctx: Context, days: Annotated[int, int | None] = 7, *, command: str) -> None:
         """Command history for a command."""
 
         query = """SELECT *, t.success + t.failed AS "total"
@@ -985,7 +978,7 @@ class Stats(commands.Cog):
 
     @command_history.command(name="cog")
     @commands.is_owner()
-    async def command_history_cog(self, ctx: Context, days: int = 7, *, cog_name: str | None = None):
+    async def command_history_cog(self, ctx: Context, days: int = 7, *, cog_name: str | None = None) -> None:
         """Command history for a cog or grouped by a cog."""
 
         interval = datetime.timedelta(days=days)
@@ -1025,12 +1018,12 @@ class Stats(commands.Cog):
         class Count:
             __slots__ = ("success", "failed", "total")
 
-            def __init__(self):
+            def __init__(self) -> None:
                 self.success = 0
                 self.failed = 0
                 self.total = 0
 
-            def add(self, record):
+            def add(self, record: dict[str, int]) -> None:
                 self.success += record["success"]
                 self.failed += record["failed"]
                 self.total += record["total"]
@@ -1056,7 +1049,7 @@ class Stats(commands.Cog):
 old_on_error = commands.Bot.on_error
 
 
-async def on_error(self, event: str, *args: Any, **kwargs: Any) -> None:
+async def on_error(self: Graha, event: str, *args: Any, **kwargs: Any) -> None:
     (exception_type, exception, tb) = sys.exc_info()
     ray_id = secrets.token_hex(16)
 
@@ -1090,7 +1083,7 @@ async def setup(bot: Graha) -> None:
     await bot.add_cog(cog)
     bot._stats_cog_gateway_handler = handler = LoggingHandler(cog)
     logging.getLogger().addHandler(handler)
-    commands.Bot.on_error = on_error
+    commands.Bot.on_error = on_error  # type: ignore # monkeypatching
 
 
 async def teardown(bot: Graha) -> None:

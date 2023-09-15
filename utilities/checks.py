@@ -10,8 +10,7 @@ from typing import Any, Callable, TypeVar
 import discord
 from discord.ext import commands
 
-from utilities.context import Context
-
+from utilities.context import Context, GuildContext
 
 T = TypeVar("T")
 
@@ -28,7 +27,7 @@ async def check_permissions(ctx: Context, perms: dict[str, bool], *, check: Call
 
 
 def has_permissions(*, check: Callable = all, **perms: bool) -> Callable[[T], T]:
-    async def pred(ctx):
+    async def pred(ctx: Context) -> bool:
         return await check_permissions(ctx, perms, check=check)
 
     return commands.check(pred)
@@ -53,8 +52,8 @@ async def check_guild_permissions(
     return check(getattr(resolved, name, None) == value for name, value in perms.items())
 
 
-def has_guild_permissions(*, check: Callable = all, **perms) -> Callable[[T], T]:
-    async def pred(ctx):
+def has_guild_permissions(*, check: Callable = all, **perms: bool) -> Callable[[T], T]:
+    async def pred(ctx: GuildContext) -> bool:
         return await check_guild_permissions(ctx, perms, check=check)
 
     return commands.check(pred)
@@ -75,7 +74,7 @@ def is_admin() -> Callable[[T], T]:
     return commands.check(pred)
 
 
-def mod_or_permissions(**perms) -> Callable[[T], T]:
+def mod_or_permissions(**perms: bool) -> Callable[[T], T]:
     perms["manage_guild"] = True
 
     async def predicate(ctx: Context) -> bool:
@@ -84,7 +83,7 @@ def mod_or_permissions(**perms) -> Callable[[T], T]:
     return commands.check(predicate)
 
 
-def admin_or_permissions(**perms) -> Callable[[T], T]:
+def admin_or_permissions(**perms: bool) -> Callable[[T], T]:
     perms["administrator"] = True
 
     async def predicate(ctx: Context) -> bool:
@@ -93,7 +92,7 @@ def admin_or_permissions(**perms) -> Callable[[T], T]:
     return commands.check(predicate)
 
 
-def is_in_guilds(*guild_ids) -> Callable[[T], T]:
+def is_in_guilds(*guild_ids: int) -> Callable[[T], T]:
     def predicate(ctx: Context) -> bool:
         guild = ctx.guild
         if guild is None:

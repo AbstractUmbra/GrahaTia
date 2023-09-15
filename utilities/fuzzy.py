@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -12,10 +10,11 @@ from __future__ import annotations
 
 import heapq
 import re
-from collections.abc import Callable, Generator, Iterable, Sequence
 from difflib import SequenceMatcher
-from typing import Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
+if TYPE_CHECKING:
+    from collections.abc import Callable, Generator, Iterable, Sequence
 
 T = TypeVar("T")
 

@@ -3,11 +3,9 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
-from collections.abc import Coroutine
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import discord
-import pendulum
 from asyncpg import BitString
 from discord import SelectOption, app_commands
 from discord.ext import tasks
@@ -15,20 +13,27 @@ from discord.utils import MISSING
 
 from utilities.cache import cache
 from utilities.cog import GrahaBaseCog
-from utilities.containers.event_subscription import EventSubConfig, MisconfiguredSubscription
-from utilities.context import Interaction
+from utilities.containers.event_subscription import (
+    EventSubConfig,
+    MisconfiguredSubscription,
+)
 from utilities.formats import format_dt
+from utilities.time import Weekday, resolve_next_weekday
 from utilities.ui import GrahaBaseView
 
-
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
     from typing_extensions import Self
 
     from bot import Graha
     from extensions.fashion_report import FashionReport as FashionReportCog
     from extensions.ocean_fishing import OceanFishing as OceanFishingCog
     from extensions.resets import Resets as ResetsCog
-    from utilities._types.xiv.record_aliases.subscription import EventRecord as SubscriptionEventRecord
+    from utilities._types.xiv.record_aliases.subscription import (
+        EventRecord as SubscriptionEventRecord,
+    )
+    from utilities.context import Interaction
 
 LOGGER = logging.getLogger(__name__)
 
@@ -277,7 +282,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             try:
                 webhook = await conf.get_webhook()
             except MisconfiguredSubscription:
-                LOGGER.warn("Subscription %r is misconfigured. Deleting.", conf)
+                LOGGER.warning("Subscription %r is misconfigured. Deleting.", conf)
                 await self._delete_subscription(conf)
                 return
 
@@ -328,7 +333,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             try:
                 webhook = await conf.get_webhook()
             except MisconfiguredSubscription:
-                LOGGER.warn("Subscription %r is misconfigured. Deleting.", conf)
+                LOGGER.warning("Subscription %r is misconfigured. Deleting.", conf)
                 await self._delete_subscription(conf)
                 return
 
@@ -350,9 +355,10 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
     @tasks.loop(time=datetime.time(hour=7, minute=45, tzinfo=datetime.timezone.utc))
     async def fashion_report_loop(self) -> None:
-        now = datetime.datetime.now(datetime.timezone.utc)
-        if now.weekday() != 4:  # friday
-            return
+        datetime.datetime.now(datetime.timezone.utc)
+        # if now.weekday() != 4:  # friday
+        #     LOGGER.error("Somehow woke up on not-Friday: %s", now.weekday())
+        #     return
 
         query = """
                 SELECT *
@@ -362,6 +368,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(4, length=6))  # type: ignore # stub shenanigans
         if not records:
+            LOGGER.warning("No one subscribed to fashion reports.")
             return
 
         fashion_report_cog: FashionReportCog = self.bot.get_cog("FashionReport")  # type: ignore # weird
@@ -385,7 +392,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             try:
                 webhook = await conf.get_webhook()
             except MisconfiguredSubscription:
-                LOGGER.warn("Subscription %r is misconfigured. Deleting.", conf)
+                LOGGER.warning("Subscription %r is misconfigured. Deleting.", conf)
                 # todo: resolve a way to let people know it was messed up.
                 await self._delete_subscription(conf)
                 return
@@ -396,17 +403,30 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
     @fashion_report_loop.before_loop
     async def fashion_report_before_loop(self) -> None:
-        now = pendulum.now()
-        if now.weekday() != 4 or (now.weekday() == 4 and (now.hour >= 7 and now.minute >= 45)):
-            then = now.next(5)
-            LOGGER.info("[Subscriptions] -> [Fashion Report] :: Beyond start time and date. Setting `then` to '%s'", then)
-        else:
-            then = now
-            LOGGER.info("[Subscriptions] -> [Fashion Report] :: Still available. Setting `then` to '%s'", then)
+        now = datetime.datetime.now(datetime.timezone.utc)
 
-        sleep_until = datetime.datetime.combine(
-            then, datetime.time(hour=7, minute=45, second=0, microsecond=0), tzinfo=datetime.timezone.utc
-        )
+        def _is_past(when: datetime.datetime) -> tuple[str, datetime.datetime]:
+            weekday = when.weekday()
+            if weekday != 4:
+                then = resolve_next_weekday(source=now, target=Weekday.friday)
+                return "[Subscriptions] -> [Fashion Report] :: Not Friday. Setting `then` to '%s'", then
+            else:
+                if when.hour < 7:
+                    return "[Subscriptions] -> [Fashion Report] :: Friday and before 7am UTC. Setting `then` to '%s'", when
+                elif when.hour == 7 and when.minute < 45:
+                    return (
+                        (
+                            "[Subscriptions] -> [Fashion Report] :: Friday and after 7am UTC but before start time. Setting"
+                            " `then` to '%s'"
+                        ),
+                        when,
+                    )
+                return "[Subscriptions] -> [Fashion Report] :: Friday and after start time. Setting `then` to '%s'", when
+
+        to_log, then = _is_past(now)
+        LOGGER.info(to_log, then)
+
+        sleep_until = then.replace(hour=7, minute=45, second=0, microsecond=0, tzinfo=datetime.timezone.utc)
 
         LOGGER.info("[Subscriptions] :: Fashion Report sleeping until %s", sleep_until)
         await discord.utils.sleep_until(sleep_until)
@@ -439,7 +459,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             try:
                 webhook = await conf.get_webhook()
             except MisconfiguredSubscription:
-                LOGGER.warn("Subscription %r is misconfigured. Deleting.", conf)
+                LOGGER.warning("Subscription %r is misconfigured. Deleting.", conf)
                 await self._delete_subscription(conf)
                 return
 
@@ -450,16 +470,12 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
     @ocean_fishing_loop.before_loop
     async def ocean_fishing_before_loop(self) -> None:
         now = datetime.datetime.now(datetime.timezone.utc)
-        if now.hour % 2 == 0:
-            then = now + datetime.timedelta(hours=1)
-        else:
-            then = now
+        then = now + datetime.timedelta(hours=1) if now.hour % 2 == 0 else now
 
         if then.minute >= 45:
-            # exceeded warning time, sleep
+            # exceeded warning time, alert on next
             then += datetime.timedelta(hours=2)
-        else:
-            then = then.replace(minute=45, second=0, microsecond=0)
+        then = then.replace(minute=45, second=0, microsecond=0)
 
         LOGGER.info("[Subscriptions] :: Ocean Fishing sleeping until %s", then)
         await discord.utils.sleep_until(then)
@@ -494,11 +510,8 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
     @jumbo_cactpot_loop.before_loop
     async def jumbo_cactpot_before_loop(self) -> None:
-        now = pendulum.now()
-        if now.weekday() != 5:
-            then = now.next(6)
-        else:
-            then = now
+        now = datetime.datetime.now(datetime.timezone.utc)
+        then = resolve_next_weekday(source=now, target=Weekday.saturday) if now.weekday() != 5 else now
 
         sleep_until = datetime.datetime.combine(
             then, datetime.time(hour=18, minute=45, second=0, microsecond=0), tzinfo=datetime.timezone.utc

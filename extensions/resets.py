@@ -13,11 +13,10 @@ import discord
 from discord.ext import commands
 
 from utilities.cog import GrahaBaseCog as BaseCog
-from utilities.context import Context
-
 
 if TYPE_CHECKING:
     from bot import Graha
+    from utilities.context import Context
 
 
 class Resets(BaseCog, name="Reset Information"):
@@ -45,10 +44,7 @@ class Resets(BaseCog, name="Reset Information"):
 
     def _get_daily_reset_time(self) -> datetime.datetime:
         now = datetime.datetime.now(datetime.timezone.utc)
-        if now.hour >= 15:
-            next_reset = now + datetime.timedelta(days=1)
-        else:
-            next_reset = now
+        next_reset = now + datetime.timedelta(days=1) if now.hour >= 15 else now
 
         return next_reset.replace(hour=15, minute=0, second=0, microsecond=0)
 

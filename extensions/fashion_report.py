@@ -13,16 +13,15 @@ from typing import TYPE_CHECKING, ClassVar, NamedTuple
 import discord
 from discord.ext import commands, tasks
 
-from utilities._types.xiv.reddit.kaiyoko import TopLevelListingResponse
 from utilities.cache import cache
 from utilities.cog import GrahaBaseCog as BaseCog
-from utilities.containers.event_subscription import EventSubConfig
 from utilities.context import Context as BaseContext
 from utilities.formats import plural
 
-
 if TYPE_CHECKING:
     from bot import Graha
+    from utilities._types.xiv.reddit.kaiyoko import TopLevelListingResponse
+    from utilities.containers.event_subscription import EventSubConfig
 
 FASHION_REPORT_PATTERN: re.Pattern[str] = re.compile(
     r"Fashion Report - Full Details - For Week of (?P<date>[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}) \(Week (?P<week_num>[0-9]{3})\)"
@@ -94,7 +93,7 @@ class FashionReport(BaseCog):
         now = datetime.datetime.now(datetime.timezone.utc)
         for submission in submissions["data"]["children"]:
             if match := FASHION_REPORT_PATTERN.search(submission["data"]["title"]):
-                if not self.weeks_since_start(now) == int(match["week_num"]):
+                if self.weeks_since_start(now) != int(match["week_num"]):
                     continue
 
                 created = datetime.datetime.fromtimestamp(submission["data"]["created_utc"], tz=datetime.timezone.utc)

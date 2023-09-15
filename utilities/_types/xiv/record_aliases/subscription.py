@@ -8,7 +8,6 @@ from typing import TypedDict
 
 from asyncpg import BitString
 
-
 __all__ = ("EventRecord",)
 
 

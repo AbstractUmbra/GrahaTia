@@ -7,11 +7,22 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 from __future__ import annotations
 
 import datetime
+import enum
 
 from dateutil.relativedelta import relativedelta
 from discord.utils import format_dt
 
 from .formats import human_join, plural
+
+
+class Weekday(enum.Enum):
+    monday = 0
+    tuesday = 1
+    wednesday = 2
+    thursday = 3
+    friday = 4
+    saturday = 5
+    sunday = 6
 
 
 def human_timedelta(
@@ -94,3 +105,16 @@ def ordinal(number: int) -> str:
 
 def format_relative(dt: datetime.datetime) -> str:
     return format_dt(dt, "R")
+
+
+def resolve_next_weekday(*, source: datetime.datetime | None = None, target: Weekday) -> datetime.datetime:
+    source = source or datetime.datetime.now(datetime.timezone.utc)
+    weekday = source.weekday()
+
+    if weekday == target.value:
+        return source + datetime.timedelta(days=7)
+
+    while source.weekday() != target.value:
+        source += datetime.timedelta(days=1)
+
+    return source

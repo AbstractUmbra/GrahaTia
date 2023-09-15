@@ -8,7 +8,6 @@ from typing import Any, Callable, Coroutine, MutableMapping, Protocol, TypeVar
 
 from lru import LRU
 
-
 R = TypeVar("R")
 
 
@@ -48,7 +47,7 @@ class ExpiringCache(dict):
         self.__verify_cache_integrity()
         return super().__contains__(key)
 
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> Any:
         self.__verify_cache_integrity()
         return super().__getitem__(key)
 
@@ -81,7 +80,7 @@ def cache(
         def _make_key(args: tuple[Any, ...], kwargs: dict[str, Any]) -> str:
             # this is a bit of a cluster fuck
             # we do care what 'self' parameter is when we __repr__ it
-            def _true_repr(o):
+            def _true_repr(o: object) -> str:
                 if o.__class__.__repr__ is object.__repr__:
                     return f"<{o.__class__.__module__}.{o.__class__.__name__}>"
                 return repr(o)
@@ -103,7 +102,7 @@ def cache(
             return ":".join(key)
 
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any):
+        def wrapper(*args: Any, **kwargs: Any) -> asyncio.Task[R]:
             key = _make_key(args, kwargs)
             try:
                 task = _internal_cache[key]
@@ -122,10 +121,7 @@ def cache(
                 return True
 
         def _invalidate_containing(key: str) -> None:
-            to_remove = []
-            for k in _internal_cache.keys():
-                if key in k:
-                    to_remove.append(k)
+            to_remove = [k for k in _internal_cache if key in k]
             for k in to_remove:
                 try:
                     del _internal_cache[k]

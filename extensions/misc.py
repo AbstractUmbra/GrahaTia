@@ -8,21 +8,20 @@ from __future__ import annotations
 
 import datetime
 import re
-import zoneinfo
 from typing import TYPE_CHECKING
 
 import discord
+import zoneinfo
 from discord.ext import commands
 
 from bot import Graha
 from utilities.cog import GrahaBaseCog as BaseCog
-from utilities.context import Context
 from utilities.formats import to_codeblock
 from utilities.time import ordinal
 
-
 if TYPE_CHECKING:
     from bot import Graha
+    from utilities.context import Context
 
 TZ_NAME_MAPPING = {
     "UTC": "Europe (Chaos/Light)",
@@ -53,7 +52,7 @@ class Misc(BaseCog):
             embed.description = fmt
 
             embed.set_footer(
-                text=f"You can also use the first letter of your display name followed by a space.",
+                text="You can also use the first letter of your display name followed by a space.",
                 icon_url=message.author.display_avatar,
             )
 

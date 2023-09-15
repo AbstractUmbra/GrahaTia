@@ -15,7 +15,6 @@ from typing import Any, SupportsAbs, cast
 
 from discord.utils import TimestampStyle, escape_markdown, format_dt as format_dt_discord
 
-
 CONTROL_CHARS = re.compile(
     "[%s]" % re.escape("".join(chr(i) for i in range(sys.maxunicode) if unicodedata.category(chr(i)).startswith("C")))
 )
@@ -94,15 +93,14 @@ class TabularData:
 
         to_draw = [sep]
 
-        def get_entry(d):
+        def get_entry(d: list[str]) -> str:
             elem = "|".join(f"{e:^{self._widths[i]}}" for i, e in enumerate(d))
             return f"|{elem}|"
 
         to_draw.append(get_entry(self._columns))
         to_draw.append(sep)
 
-        for row in self._rows:
-            to_draw.append(get_entry(row))
+        to_draw.extend(get_entry(row) for row in self._rows)
 
         to_draw.append(sep)
         return "\n".join(to_draw)

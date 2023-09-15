@@ -7,18 +7,17 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 from __future__ import annotations
 
 import datetime
-import zoneinfo
 from typing import TYPE_CHECKING, Literal, TypedDict
 
 import discord
+import zoneinfo
 from discord import app_commands
 from discord.ext import commands
 
-from utilities.context import Context
-
-
 if TYPE_CHECKING:
     from typing_extensions import NotRequired
+
+    from utilities.context import Context
 
 
 class DucklingNormalised(TypedDict):
@@ -57,10 +56,7 @@ class DatetimeConverter(commands.Converter[datetime.datetime]):
             row: str | None = await ctx.bot.pool.fetchval(
                 "SELECT tz FROM tz_store WHERE user_id = $1 and $2 = ANY(guild_ids);", ctx.author.id, ctx.guild.id
             )
-            if row:
-                tz = zoneinfo.ZoneInfo(row)
-            else:
-                tz = zoneinfo.ZoneInfo("UTC")
+            tz = zoneinfo.ZoneInfo(row) if row else zoneinfo.ZoneInfo("UTC")
 
         return tz
 
@@ -156,10 +152,7 @@ class WhenAndWhatConverter(commands.Converter[tuple[datetime.datetime, str]]):
         if begin != 0 and end != len(argument):
             raise commands.BadArgument("Could not distinguish time from argument.")
 
-        if begin == 0:
-            what = argument[end + 1 :].lstrip(" ,.!:;")
-        else:
-            what = argument[:begin].strip()
+        what = argument[end + 1 :].lstrip(" ,.!:;") if begin == 0 else argument[:begin].strip()
 
         for prefix in ("to ",):
             if what.startswith(prefix):
@@ -179,10 +172,7 @@ class WhenAndWhatTransformer(app_commands.Transformer):
                 interaction.user.id,
                 interaction.guild.id,
             )
-            if row:
-                tz = zoneinfo.ZoneInfo(row)
-            else:
-                tz = zoneinfo.ZoneInfo("UTC")
+            tz = zoneinfo.ZoneInfo(row) if row else zoneinfo.ZoneInfo("UTC")
 
         return tz
 
@@ -261,10 +251,7 @@ class WhenAndWhatTransformer(app_commands.Transformer):
         if begin != 0 and end != len(value):
             raise ValueError("Could not distinguish time from argument.")
 
-        if begin == 0:
-            what = value[end + 1 :].lstrip(" ,.!:;")
-        else:
-            what = value[:begin].strip()
+        what = value[end + 1 :].lstrip(" ,.!:;") if begin == 0 else value[:begin].strip()
 
         for prefix in ("to ",):
             if what.startswith(prefix):

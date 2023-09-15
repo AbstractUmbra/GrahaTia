@@ -6,7 +6,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import discord
 from discord import Guild, Role
@@ -14,7 +14,6 @@ from discord.utils import MISSING
 
 from utilities.cache import cache
 from utilities.flags import SubscribedEventsFlags
-
 
 if TYPE_CHECKING:
     from _types.xiv.record_aliases.subscription import EventRecord
@@ -29,7 +28,7 @@ __all__ = ("EventSubConfig",)
 class MisconfiguredSubscription(Exception):
     __slots__ = ("subscription_config",)
 
-    def __init__(self, subscription_config: EventSubConfig, *args, **kwargs) -> None:
+    def __init__(self, subscription_config: EventSubConfig, *args: Any, **kwargs: Any) -> None:
         super().__init__()
         self.subscription_config = subscription_config
 

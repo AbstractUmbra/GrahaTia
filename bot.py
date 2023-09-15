@@ -13,7 +13,6 @@ import logging
 import pathlib
 import traceback
 from collections import Counter, deque
-from collections.abc import Callable, Coroutine
 from logging.handlers import RotatingFileHandler
 from typing import TYPE_CHECKING, Any, Literal, NoReturn, overload
 
@@ -35,8 +34,9 @@ from utilities.context import Context
 from utilities.db import db_init
 from utilities.prefix import callable_prefix as _callable_prefix
 
-
 if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
+
     from typing_extensions import Self
 
     from utilities._types.bot_config import Config as BotConfig
@@ -350,10 +350,9 @@ class Graha(commands.Bot):
             return
 
         conditional_acces = CONFIG.get("conditional_access")
-        if conditional_acces:
-            if message.guild and (access := conditional_acces.get(str(message.guild.id))):
-                if message.channel.id not in access:
-                    return
+        if conditional_acces and message.guild and (access := conditional_acces.get(str(message.guild.id))):
+            if message.channel.id not in access:
+                return
 
         await self.process_commands(message)
 

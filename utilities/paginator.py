@@ -8,15 +8,16 @@ from __future__ import annotations
 
 import datetime
 import traceback
-from typing import Any, Generic, Optional, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
 import discord
 from discord import app_commands
 from discord.ext import menus
 from discord.ext.commands import Paginator as CommandPaginator
 
-from utilities.context import Context
-
+if TYPE_CHECKING:
+    from extensions.logging import Stats
+    from utilities.context import Context
 
 T = TypeVar("T")
 SourceT = TypeVar("SourceT", bound="menus.PageSource")
@@ -25,7 +26,7 @@ SourceT = TypeVar("SourceT", bound="menus.PageSource")
 class NumberedPageModal(discord.ui.Modal, title="Go to page"):
     page = discord.ui.TextInput(label="Page", placeholder="Enter a number", min_length=1)
 
-    def __init__(self, max_pages: Optional[int]) -> None:
+    def __init__(self, max_pages: int | None) -> None:
         super().__init__()
         if max_pages is not None:
             as_string = str(max_pages)
@@ -45,12 +46,12 @@ class RoboPages(discord.ui.View):
         ctx: Context,
         check_embeds: bool = True,
         compact: bool = False,
-    ):
+    ) -> None:
         super().__init__()
         self.source: menus.PageSource = source
         self.check_embeds: bool = check_embeds
         self.ctx: Context = ctx
-        self.message: Optional[discord.Message] = None
+        self.message: discord.Message | None = None
         self.current_page: int = 0
         self.compact: bool = compact
         self.clear_items()
@@ -153,7 +154,7 @@ class RoboPages(discord.ui.View):
         else:
             await interaction.response.send_message("An unknown error occurred, sorry", ephemeral=True)
 
-    async def start(self, *, content: Optional[str] = None, ephemeral: bool = False) -> None:
+    async def start(self, *, content: str | None = None, ephemeral: bool = False) -> None:
         if self.check_embeds and not self.ctx.channel.permissions_for(self.ctx.me).embed_links:  # type: ignore
             await self.ctx.send("Bot does not have embed links permission in this channel.", ephemeral=True)
             return
@@ -168,32 +169,32 @@ class RoboPages(discord.ui.View):
         self.message = await self.ctx.send(**kwargs, view=self, ephemeral=ephemeral)
 
     @discord.ui.button(label="≪", style=discord.ButtonStyle.grey)
-    async def go_to_first_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def go_to_first_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         """go to the first page"""
         await self.show_page(interaction, 0)
 
     @discord.ui.button(label="Back", style=discord.ButtonStyle.blurple)
-    async def go_to_previous_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def go_to_previous_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         """go to the previous page"""
         await self.show_checked_page(interaction, self.current_page - 1)
 
     @discord.ui.button(label="Current", style=discord.ButtonStyle.grey, disabled=True)
-    async def go_to_current_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def go_to_current_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         pass
 
     @discord.ui.button(label="Next", style=discord.ButtonStyle.blurple)
-    async def go_to_next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def go_to_next_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         """go to the next page"""
         await self.show_checked_page(interaction, self.current_page + 1)
 
     @discord.ui.button(label="≫", style=discord.ButtonStyle.grey)
-    async def go_to_last_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def go_to_last_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         """go to the last page"""
         # The call here is safe because it's guarded by skip_if
         await self.show_page(interaction, self.source.get_max_pages() - 1)  # type: ignore # unsure
 
     @discord.ui.button(label="Skip to page...", style=discord.ButtonStyle.grey)
-    async def numbered_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def numbered_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         """lets you type a page number to go to"""
         if self.message is None:
             return
@@ -221,7 +222,7 @@ class RoboPages(discord.ui.View):
             await modal.interaction.response.send_message(error, ephemeral=True)
 
     @discord.ui.button(label="Quit", style=discord.ButtonStyle.red)
-    async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         """stops the pagination session."""
         await interaction.response.defer()
         await interaction.delete_original_response()
@@ -261,14 +262,14 @@ class FieldPageSource(menus.ListPageSource):
 
 
 class TextPageSource(menus.ListPageSource):
-    def __init__(self, text, *, prefix="```", suffix="```", max_size=2000):
+    def __init__(self, text: str, *, prefix: str = "```", suffix: str = "```", max_size: int = 2000) -> None:
         pages = CommandPaginator(prefix=prefix, suffix=suffix, max_size=max_size - 200)
         for line in text.split("\n"):
             pages.add_line(line)
 
         super().__init__(entries=pages.pages, per_page=1)
 
-    async def format_page(self, menu, content):
+    async def format_page(self, menu: menus.Menu, content: str) -> str:
         maximum = self.get_max_pages()
         if maximum > 1:
             return f"{content}\nPage {menu.current_page + 1}/{maximum}"
@@ -296,7 +297,7 @@ class SimplePages(RoboPages):
     Basically an embed with some normal formatting.
     """
 
-    def __init__(self, entries, *, ctx: Context, per_page: int = 12):
+    def __init__(self, entries, *, ctx: Context, per_page: int = 12) -> None:
         super().__init__(SimplePageSource(entries, per_page=per_page), ctx=ctx)
         self.embed = discord.Embed(colour=discord.Colour.blurple())
 
