@@ -310,12 +310,10 @@ class SimpleListSource(menus.ListPageSource, Generic[T]):
         super().__init__(data, per_page=per_page)
 
     @overload
-    async def format_page(self, menu: menus.Menu, entries: list[T]) -> list[T]:
-        ...
+    async def format_page(self, menu: menus.Menu, entries: list[T]) -> list[T]: ...
 
     @overload
-    async def format_page(self, menu: menus.Menu, entries: T) -> T:
-        ...
+    async def format_page(self, menu: menus.Menu, entries: T) -> T: ...
 
     async def format_page(self, menu: menus.Menu, entries: T | list[T]) -> T | list[T]:
         return entries

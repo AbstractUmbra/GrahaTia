@@ -75,12 +75,10 @@ class Config(Generic[_T]):
             await self.loop.run_in_executor(None, self._dump)
 
     @overload
-    def get(self, key: Any) -> _T | Any | None:
-        ...
+    def get(self, key: Any) -> _T | Any | None: ...
 
     @overload
-    def get(self, key: Any, default: _defT) -> _T | _defT:
-        ...
+    def get(self, key: Any, default: _defT) -> _T | _defT: ...
 
     def get(self, key: Any, default: _defT = None) -> _T | _defT | None:
         """Retrieves a config entry."""
