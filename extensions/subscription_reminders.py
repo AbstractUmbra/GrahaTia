@@ -355,10 +355,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
     @tasks.loop(time=datetime.time(hour=7, minute=45, tzinfo=datetime.timezone.utc))
     async def fashion_report_loop(self) -> None:
-        datetime.datetime.now(datetime.timezone.utc)
-        # if now.weekday() != 4:  # friday
-        #     LOGGER.error("Somehow woke up on not-Friday: %s", now.weekday())
-        #     return
+        now = datetime.datetime.now(datetime.timezone.utc)
+        if now.weekday() != 4:  # friday
+            return
 
         query = """
                 SELECT *
@@ -424,13 +423,12 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 return "[Subscriptions] -> [Fashion Report] :: Friday and after start time. Setting `then` to '%s'", when
 
         to_log, then = _is_past(now)
-        LOGGER.info(to_log, then)
-
         sleep_until = then.replace(hour=7, minute=45, second=0, microsecond=0, tzinfo=datetime.timezone.utc)
+        LOGGER.info(to_log, sleep_until)
 
-        LOGGER.info("[Subscriptions] :: Fashion Report sleeping until %s", sleep_until)
+        LOGGER.info("[Subscriptions] -> [Fashion Report] :: sleeping until %s", sleep_until)
         await discord.utils.sleep_until(sleep_until)
-        LOGGER.info("[Subscriptions] :: Fashion Report woken up at %s", sleep_until)
+        LOGGER.info("[Subscriptions] -> [Fashion Report] :: woken up at %s", sleep_until)
 
     @tasks.loop(hours=2)
     async def ocean_fishing_loop(self) -> None:
