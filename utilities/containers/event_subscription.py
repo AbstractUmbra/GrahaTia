@@ -29,7 +29,7 @@ class MisconfiguredSubscription(Exception):
     __slots__ = ("subscription_config",)
 
     def __init__(self, subscription_config: EventSubConfig, *args: Any, **kwargs: Any) -> None:
-        super().__init__()
+        super().__init__(*args, **kwargs)
         self.subscription_config = subscription_config
 
 
@@ -150,13 +150,16 @@ class EventSubConfig:
                 await existing_webhook.delete(reason="Deleted by G'raha Tia due to misconfiguration.")
             except discord.Forbidden:
                 # we can't do anything here.
-                pass
+                raise MisconfiguredSubscription(self, "Unable to delete webhooks within guild.")
 
         webhook = await self.channel.create_webhook(name="XIV Timers", reason="Created via G'raha Tia subscriptions!")
         query = """
-                UPDATE webhooks
-                SET webhook_id = $2, webhook_url = $3
-                WHERE guild_id = $1;
+                INSERT INTO webhooks (guild_id, webhook_id, webhook_url)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (webhooks.guild_id)
+                    DO UPDATE webhooks
+                    SET webhook_id = $2, webhook_url = $3
+                    WHERE guild_id = $1;
                 """
         await self._bot.pool.execute(query, self.guild_id, webhook.id, webhook.url)
 
