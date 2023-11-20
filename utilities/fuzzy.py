@@ -2,6 +2,8 @@
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+Code below is sourced from RoboDanny (https://github.com/Rapptz/RoboDanny)
 """
 
 # help with: http://chairnerd.seatgeek.com/fuzzywuzzy-fuzzy-string-matching-in-python/
@@ -81,8 +83,7 @@ def _extraction_generator(
     choices: Sequence[str],
     scorer: Callable[[str, str], int] = ...,
     score_cutoff: int = ...,
-) -> Generator[tuple[str, int], None, None]:
-    ...
+) -> Generator[tuple[str, int], None, None]: ...
 
 
 @overload
@@ -91,8 +92,7 @@ def _extraction_generator(
     choices: dict[str, T],
     scorer: Callable[[str, str], int] = ...,
     score_cutoff: int = ...,
-) -> Generator[tuple[str, int, T], None, None]:
-    ...
+) -> Generator[tuple[str, int, T], None, None]: ...
 
 
 def _extraction_generator(
@@ -121,8 +121,7 @@ def extract(
     scorer: Callable[[str, str], int] = ...,
     score_cutoff: int = ...,
     limit: int | None = ...,
-) -> list[tuple[str, int]]:
-    ...
+) -> list[tuple[str, int]]: ...
 
 
 @overload
@@ -133,8 +132,7 @@ def extract(
     scorer: Callable[[str, str], int] = ...,
     score_cutoff: int = ...,
     limit: int | None = ...,
-) -> list[tuple[str, int, T]]:
-    ...
+) -> list[tuple[str, int, T]]: ...
 
 
 def extract(
@@ -159,8 +157,7 @@ def extract_one(
     *,
     scorer: Callable[[str, str], int] = ...,
     score_cutoff: int = ...,
-) -> tuple[str, int] | None:
-    ...
+) -> tuple[str, int] | None: ...
 
 
 @overload
@@ -170,8 +167,7 @@ def extract_one(
     *,
     scorer: Callable[[str, str], int] = ...,
     score_cutoff: int = ...,
-) -> tuple[str, int, T] | None:
-    ...
+) -> tuple[str, int, T] | None: ...
 
 
 def extract_one(
@@ -198,8 +194,7 @@ def extract_or_exact(
     scorer: Callable[[str, str], int] = ...,
     score_cutoff: int = ...,
     limit: int | None = ...,
-) -> list[tuple[str, int]]:
-    ...
+) -> list[tuple[str, int]]: ...
 
 
 @overload
@@ -210,8 +205,7 @@ def extract_or_exact(
     scorer: Callable[[str, str], int] = ...,
     score_cutoff: int = ...,
     limit: int | None = ...,
-) -> list[tuple[str, int, T]]:
-    ...
+) -> list[tuple[str, int, T]]: ...
 
 
 def extract_or_exact(
@@ -246,8 +240,7 @@ def extract_matches(
     *,
     scorer: Callable[[str, str], int] = ...,
     score_cutoff: int = ...,
-) -> list[tuple[str, int]]:
-    ...
+) -> list[tuple[str, int]]: ...
 
 
 @overload
@@ -257,8 +250,7 @@ def extract_matches(
     *,
     scorer: Callable[[str, str], int] = ...,
     score_cutoff: int = ...,
-) -> list[tuple[str, int, T]]:
-    ...
+) -> list[tuple[str, int, T]]: ...
 
 
 def extract_matches(
@@ -297,8 +289,7 @@ def finder(
     *,
     key: Callable[[str], str] | None = ...,
     lazy: Literal[True] = ...,
-) -> Generator[str, None, None]:
-    ...
+) -> Generator[str, None, None]: ...
 
 
 @overload
@@ -308,8 +299,7 @@ def finder(
     *,
     key: Callable[[str], str] | None = ...,
     lazy: Literal[False],
-) -> list[str]:
-    ...
+) -> list[str]: ...
 
 
 @overload
@@ -319,8 +309,7 @@ def finder(
     *,
     key: Callable[[str], str] | None = ...,
     lazy: bool = ...,
-) -> Generator[str, None, None] | list[str]:
-    ...
+) -> Generator[str, None, None] | list[str]: ...
 
 
 def finder(
