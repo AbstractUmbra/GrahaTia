@@ -20,7 +20,6 @@ psutil = "*"
 pygit2 = "*"
 
 [tool.poetry.group.dev.dependencies]
-black = "*"
 ruff = "*"
 typing-extensions = "*"
 asyncpg-stubs = "*"
