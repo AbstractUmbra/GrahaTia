@@ -11,21 +11,10 @@ from __future__ import annotations
 import datetime
 import secrets
 from functools import cached_property
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Iterable,
-    Literal,
-    Protocol,
-    Sequence,
-    TypeAlias,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Generic, Iterable, Literal, Protocol, Sequence, TypeAlias, TypeVar, overload
 
 import discord
 from discord.ext import commands
-from typing_extensions import TypeVar
 
 from .shared.ui import BaseView, ConfirmationView
 
@@ -35,6 +24,7 @@ if TYPE_CHECKING:
 
     from aiohttp import ClientSession
     from asyncpg import Connection
+    from typing_extensions import TypeVar  # noqa: TCH004, F811
 
     from bot import Graha
 

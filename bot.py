@@ -28,11 +28,11 @@ from discord.ext import commands
 from discord.utils import _ColourFormatter as ColourFormatter, stream_supports_colour
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
-from .extensions import EXTENSIONS
-from .utilities.context import Context
-from .utilities.prefix import callable_prefix as _callable_prefix
-from .utilities.shared.async_config import Config
-from .utilities.shared.db import db_init
+from extensions import EXTENSIONS
+from utilities.context import Context
+from utilities.prefix import callable_prefix as _callable_prefix
+from utilities.shared.async_config import Config
+from utilities.shared.db import db_init
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
