@@ -250,9 +250,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             await self._delete_subscription(config)
 
     async def handle_dispatch(self, to_dispatch: list[Coroutine[Any, Any, None]]) -> None:
-        _: list[BaseException] = await asyncio.gather(*to_dispatch, return_exceptions=True)
+        await asyncio.gather(*to_dispatch, return_exceptions=False)
 
-        # todo handle exceptions cleanly?
+        # TODO handle exceptions cleanly?
 
     @tasks.loop(time=datetime.time(hour=14, minute=45, tzinfo=datetime.timezone.utc))
     async def daily_reset_loop(self) -> None:

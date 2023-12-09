@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.323
+    rev: v1.1.339
     hooks:
       - id: pyright
         name: pyright (3.11)
