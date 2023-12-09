@@ -14,10 +14,9 @@ import discord
 import zoneinfo
 from discord.ext import commands
 
-from bot import Graha
 from utilities.cog import GrahaBaseCog as BaseCog
-from utilities.formats import to_codeblock
-from utilities.time import ordinal
+from utilities.shared.formats import to_codeblock
+from utilities.shared.time import ordinal
 
 if TYPE_CHECKING:
     from bot import Graha

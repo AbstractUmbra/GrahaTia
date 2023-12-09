@@ -28,18 +28,18 @@ from discord.ext import commands
 from discord.utils import _ColourFormatter as ColourFormatter, stream_supports_colour
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
-from extensions import EXTENSIONS
-from utilities.async_config import Config
-from utilities.context import Context
-from utilities.db import db_init
-from utilities.prefix import callable_prefix as _callable_prefix
+from .extensions import EXTENSIONS
+from .utilities.context import Context
+from .utilities.prefix import callable_prefix as _callable_prefix
+from .utilities.shared.async_config import Config
+from .utilities.shared.db import db_init
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
     from typing_extensions import Self
 
-    from utilities._types.bot_config import Config as BotConfig
+    from utilities.shared._types.bot_config import Config as BotConfig
 
 LOGGER = logging.getLogger("root.graha")
 jishaku.Flags.HIDE = True
@@ -168,7 +168,7 @@ class Graha(commands.Bot):
             activity=discord.Game(name="My default prefix is 'gt ', but mention me to see all of them!"),
         )
         self._prefix_data: Config[list[str]] = Config(pathlib.Path("configs/prefixes.json"))
-        self._blacklist_data: Config[list[str]] = Config(pathlib.Path("configs/blacklist.json"))
+        self._blacklist_data: Config[bool] = Config(pathlib.Path("configs/blacklist.json"))
 
         # auto spam detection
         self._spam_cooldown_mapping: commands.CooldownMapping = commands.CooldownMapping.from_cooldown(
@@ -349,10 +349,14 @@ class Graha(commands.Bot):
         if message.author.bot:
             return
 
-        conditional_acces = CONFIG.get("conditional_access")
-        if conditional_acces and message.guild and (access := conditional_acces.get(str(message.guild.id))):
-            if message.channel.id not in access:
-                return
+        conditional_access = CONFIG.get("conditional_access")
+        if (
+            conditional_access
+            and message.guild
+            and (access := conditional_access.get(str(message.guild.id)))
+            and message.channel.id not in access
+        ):
+            return
 
         await self.process_commands(message)
 

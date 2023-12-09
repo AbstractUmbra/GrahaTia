@@ -12,14 +12,14 @@ from discord.app_commands.commands import _populate_choices
 
 from utilities import fuzzy
 from utilities.cog import GrahaBaseCog as BaseCog
-from utilities.formats import from_json
+from utilities.shared.formats import from_json
 
 if TYPE_CHECKING:
     from typing import ClassVar
 
     from bot import Graha
-    from utilities._types.xiv.character_cards import Error, PrepareResponse
-    from utilities._types.xiv.worlds import WorldsData
+    from utilities.shared._types.xiv.character_cards import Error, PrepareResponse
+    from utilities.shared._types.xiv.worlds import WorldsData
 
 _worlds_path = pathlib.Path("configs/worlds.json")
 if not _worlds_path.exists():

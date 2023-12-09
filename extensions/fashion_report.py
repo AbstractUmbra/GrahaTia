@@ -13,15 +13,15 @@ from typing import TYPE_CHECKING, ClassVar, NamedTuple
 import discord
 from discord.ext import commands, tasks
 
-from utilities.cache import cache
 from utilities.cog import GrahaBaseCog as BaseCog
 from utilities.context import Context as BaseContext
-from utilities.formats import plural
+from utilities.shared.cache import cache
+from utilities.shared.formats import plural
 
 if TYPE_CHECKING:
     from bot import Graha
-    from utilities._types.xiv.reddit.kaiyoko import TopLevelListingResponse
     from utilities.containers.event_subscription import EventSubConfig
+    from utilities.shared._types.xiv.reddit.kaiyoko import TopLevelListingResponse
 
 FASHION_REPORT_PATTERN: re.Pattern[str] = re.compile(
     r"Fashion Report - Full Details - For Week of (?P<date>[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}) \(Week (?P<week_num>[0-9]{3})\)"

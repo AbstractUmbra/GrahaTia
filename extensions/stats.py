@@ -30,8 +30,8 @@ from discord.ext import commands, menus, tasks
 
 from utilities import formats, time
 from utilities.context import Context
-from utilities.formats import to_codeblock
-from utilities.paginator import FieldPageSource, RoboPages
+from utilities.shared.formats import to_codeblock
+from utilities.shared.paginator import FieldPageSource, RoboPages
 
 if TYPE_CHECKING:
     from bot import Graha
