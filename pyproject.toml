@@ -24,6 +24,7 @@ black = "*"
 ruff = "*"
 typing-extensions = "*"
 asyncpg-stubs = "*"
+"pre-commit" = "*"
 
 [tool.poetry.group.speed.dependencies]
 orjson = "*"
