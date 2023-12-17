@@ -21,7 +21,7 @@ from utilities.shared.time import Weekday, format_dt, resolve_next_weekday
 from utilities.shared.ui import BaseView
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
+    from collections.abc import Coroutine, Sequence
 
     from typing_extensions import Self
 
@@ -242,10 +242,10 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         await interaction.followup.send("Sorry, there was an error processing this command!")
 
     async def dispatcher(
-        self, *, webhook: discord.Webhook, embed: discord.Embed, content: str = MISSING, config: EventSubConfig
+        self, *, webhook: discord.Webhook, embeds: Sequence[discord.Embed], content: str = MISSING, config: EventSubConfig
     ) -> None:
         try:
-            await webhook.send(content=content, embed=embed, thread=config.thread, avatar_url=self.avatar_url)
+            await webhook.send(content=content, embeds=embeds, thread=config.thread, avatar_url=self.avatar_url)
         except (discord.NotFound, MisconfiguredSubscription):
             await self._delete_subscription(config)
 
@@ -285,7 +285,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 await self._delete_subscription(conf)
                 return
 
-            to_send.append(self.dispatcher(webhook=webhook, embed=embed, config=conf))
+            to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], config=conf))
 
         await self.handle_dispatch(to_send)
 
@@ -336,7 +336,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 await self._delete_subscription(conf)
                 return
 
-            to_send.append(self.dispatcher(webhook=webhook, embed=embed, config=conf))
+            to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], config=conf))
 
         await self.handle_dispatch(to_send)
 
@@ -395,7 +395,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 await self._delete_subscription(conf)
                 return
 
-            to_send.append(self.dispatcher(webhook=webhook, embed=embed, content=fmt, config=conf))
+            to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], content=fmt, config=conf))
 
         await self.handle_dispatch(to_send)
 
@@ -448,7 +448,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         now = datetime.datetime.now(datetime.timezone.utc)
 
-        embed = ocean_fishing_cog._generate_ocean_fishing_embed(now)
+        embeds = ocean_fishing_cog._generate_both_embeds(now)
 
         to_send: list[Coroutine[Any, Any, None]] = []
         for record in records:
@@ -460,7 +460,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 await self._delete_subscription(conf)
                 return
 
-            to_send.append(self.dispatcher(webhook=webhook, embed=embed, config=conf))
+            to_send.append(self.dispatcher(webhook=webhook, embeds=embeds, config=conf))
 
         await self.handle_dispatch(to_send)
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import math
-from typing import TYPE_CHECKING, ClassVar, TypedDict
+from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
 import discord
 from discord.enums import Enum
@@ -47,12 +47,6 @@ class Destination(Enum):
     the_rothlyt_sound = Stop.the_rothlyt_sound
     the_ruby_sea = Stop.the_ruby_sea
     the_one_river = Stop.the_one_river
-
-
-class UpcomingVoyage(TypedDict):
-    date: datetime.datetime
-    destination: Destination
-    time: Time
 
 
 DAY: str = "\U00002600\U0000fe0f"
@@ -117,17 +111,10 @@ STOP_TIME_MAPPING: dict[Time, list[str]] = {
 }
 
 
-class Voyage:
-    __slots__ = (
-        "start_time",
-        "_destination",
-        "_time",
-    )
-
-    def __init__(self, input_: UpcomingVoyage, /) -> None:
-        self.start_time: datetime.datetime = input_["date"]
-        self._destination: Destination = input_["destination"]
-        self._time: Time = input_["time"]
+class Voyage(NamedTuple):
+    start_time: datetime.datetime
+    d: Destination
+    t: Time
 
     def __repr__(self) -> str:
         return f"<Voyage start_time={self.start_time} destination={self.destination!r} time={self.time!r}>"
@@ -153,18 +140,18 @@ class Voyage:
     def stops(self) -> str:
         routes: list[tuple[str, str]] = []
 
-        for stop, time in zip(STOP_MAPPING[self._destination], STOP_TIME_MAPPING[self._time]):
+        for stop, time in zip(STOP_MAPPING[self.d], STOP_TIME_MAPPING[self.t]):
             routes.append((stop.value, time))
 
         return "\n".join([f"{item[1]}: {item[0]}" for item in routes])
 
     @property
     def destination(self) -> str:
-        return DESTINATION_MAPPING[self._destination]
+        return DESTINATION_MAPPING[self.d]
 
     @property
     def time(self) -> str:
-        return TIME_MAPPING[self._time]
+        return TIME_MAPPING[self.t]
 
     @property
     def details(self) -> str:
@@ -192,9 +179,9 @@ class OceanFishing(GrahaBaseCog):
         dt = datetime.datetime.fromtimestamp(2700, tz=datetime.timezone.utc)
         cache = self._calculate_voyages(route=route, dt=dt, count=144)
 
-        self.voyage_cache[route] = [(item["destination"], item["time"]) for item in cache]
+        self.voyage_cache[route] = [(item.d, item.t) for item in cache]
 
-    def _calculate_voyages(self, *, route: Route, dt: datetime.datetime, count: int) -> list[UpcomingVoyage]:
+    def _calculate_voyages(self, *, route: Route, dt: datetime.datetime, count: int) -> list[Voyage]:
         _destination_cycle = DESTINATION_CYCLE[route]
         _time_cycle = TIME_CYCLE[route]
         adjusted_date = (dt + datetime.timedelta(hours=9)) - datetime.timedelta(minutes=45)
@@ -214,14 +201,12 @@ class OceanFishing(GrahaBaseCog):
         )
         time_index = ((day + voyage_number) % len(TIME_CYCLE) + len(TIME_CYCLE)) % len(TIME_CYCLE)
 
-        upcoming_voyages: list[UpcomingVoyage] = []
+        upcoming_voyages: list[Voyage] = []
 
         while len(upcoming_voyages) < count:
             _current_destination = _destination_cycle[destination_index]
             _current_time = _time_cycle[time_index]
-            upcoming_voyages.append(
-                {"date": self._from_epoch(day, hour), "destination": _current_destination, "time": _current_time}
-            )
+            upcoming_voyages.append(Voyage(self._from_epoch(day, hour), _current_destination, _current_time))
 
             if hour == 23:
                 day += 1
@@ -246,13 +231,7 @@ class OceanFishing(GrahaBaseCog):
             dest, time = self.voyage_cache[route][(start_index + idx) % 144]
 
             upcoming_voyages.append(
-                Voyage(
-                    {
-                        "date": datetime.datetime.fromtimestamp((start_index + idx + 1) * 7200, tz=datetime.timezone.utc),
-                        "destination": dest,
-                        "time": time,
-                    },
-                )
+                Voyage(datetime.datetime.fromtimestamp((start_index + idx + 1) * 7200, tz=datetime.timezone.utc), dest, time)
             )
 
         return upcoming_voyages
@@ -294,6 +273,12 @@ class OceanFishing(GrahaBaseCog):
         embed.set_footer(text="The route is named after the final stop.")
 
         return embed
+
+    def _generate_both_embeds(self, dt: datetime.datetime, /) -> list[discord.Embed]:
+        return [
+            self._generate_ocean_fishing_embed(dt, route=Route.indigo),
+            self._generate_ocean_fishing_embed(dt, route=Route.ruby),
+        ]
 
     @commands.command(name="oceanfishing", aliases=["of", "fishing"])
     async def ocean_fishing_times(self, ctx: Context, *, route: Route = Route.indigo) -> None:
