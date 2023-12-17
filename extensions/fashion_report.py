@@ -81,7 +81,7 @@ class FashionReport(BaseCog):
 
     async def get_kaiyoko_submissions(self) -> TopLevelListingResponse:
         headers = {"User-Agent": "Graha Discord Bot (by /u/AbstractUmbra)"}
-        async with self.bot.session.get("https://reddit.com/user/kaiyoko/submitted.json", headers=headers) as resp:
+        async with self.bot.session.get("https://old.reddit.com/user/kaiyoko/submitted.json", headers=headers) as resp:
             data: TopLevelListingResponse = await resp.json()
 
         return data
