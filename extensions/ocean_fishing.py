@@ -5,6 +5,7 @@ import math
 from typing import TYPE_CHECKING, ClassVar, TypedDict
 
 import discord
+from discord.enums import Enum
 from discord.ext import commands
 
 from utilities.cog import GrahaBaseCog
@@ -14,51 +15,119 @@ if TYPE_CHECKING:
     from utilities.context import Context
 
 
+class Route(Enum):
+    indigo = 1
+    ruby = 2
+
+
+class Time(Enum):
+    day = "D"
+    sunset = "S"
+    night = "N"
+
+
+class Stop(Enum):
+    galadion_bay = "Galadion Bay"
+    the_southern_strait_of_merlthor = "The Southern Strait of Merlthor"
+    the_northern_strait_of_merlthor = "The Northern Strait of Merlthor"
+    rhotano_sea = "Rhotano Sea"
+    the_cieldalaes = "The Cieldalaes"
+    the_bloodbrine_sea = "The Bloodbrine Sea"
+    the_rothlyt_sound = "The Rothlyt Sound"
+    the_sirensong_sea = "The Sirensong Sea"
+    kugane = "Kugane"
+    the_ruby_sea = "The Ruby Sea"
+    the_one_river = "The One River"
+
+
+class Destination(Enum):
+    the_northern_strait_of_merlthor = Stop.the_northern_strait_of_merlthor
+    rhotano_sea = Stop.rhotano_sea
+    the_bloodbrine_sea = Stop.the_bloodbrine_sea
+    the_rothlyt_sound = Stop.the_rothlyt_sound
+    the_ruby_sea = Stop.the_ruby_sea
+    the_one_river = Stop.the_one_river
+
+
 class UpcomingVoyage(TypedDict):
     date: datetime.datetime
-    destination: str
+    destination: Destination
+    time: Time
 
 
 DAY: str = "\U00002600\U0000fe0f"
 SUNSET: str = "\U0001f305"
 NIGHT: str = "\U0001f311"
 
+DESTINATION_CYCLE: dict[Route, list[Destination]] = {
+    Route.indigo: [
+        Destination.the_bloodbrine_sea,
+        Destination.the_rothlyt_sound,
+        Destination.the_northern_strait_of_merlthor,
+        Destination.rhotano_sea,
+    ],
+    Route.ruby: [Destination.the_one_river, Destination.the_ruby_sea],
+}
+DESTINATION_MAPPING: dict[Destination, str] = {
+    Destination.the_bloodbrine_sea: "The Bloodbrine Sea",
+    Destination.the_rothlyt_sound: "The RothlytSound",
+    Destination.the_northern_strait_of_merlthor: "The Northern Strait of Merlthor",
+    Destination.rhotano_sea: "Rhotano Sea",
+}
+STOP_MAPPING: dict[Destination, list[Stop]] = {
+    Destination.the_northern_strait_of_merlthor: [
+        Stop.the_southern_strait_of_merlthor,
+        Stop.galadion_bay,
+        Stop.the_northern_strait_of_merlthor,
+    ],
+    Destination.rhotano_sea: [Stop.galadion_bay, Stop.the_southern_strait_of_merlthor, Stop.rhotano_sea],
+    Destination.the_bloodbrine_sea: [Stop.the_cieldalaes, Stop.the_northern_strait_of_merlthor, Stop.the_bloodbrine_sea],
+    Destination.the_rothlyt_sound: [Stop.the_cieldalaes, Stop.rhotano_sea, Stop.the_rothlyt_sound],
+    Destination.the_ruby_sea: [Stop.the_sirensong_sea, Stop.kugane, Stop.the_ruby_sea],
+    Destination.the_one_river: [Stop.the_sirensong_sea, Stop.kugane, Stop.the_one_river],
+}
+
+TIME_CYCLE: dict[Route, list[Time]] = {
+    Route.indigo: [
+        Time.sunset,
+        Time.sunset,
+        Time.sunset,
+        Time.sunset,
+        Time.night,
+        Time.night,
+        Time.night,
+        Time.night,
+        Time.day,
+        Time.day,
+        Time.day,
+        Time.day,
+    ],
+    Route.ruby: [Time.day, Time.day, Time.sunset, Time.sunset, Time.night, Time.night],
+}
+TIME_MAPPING: dict[Time, str] = {
+    Time.day: "Day",
+    Time.night: "Night",
+    Time.sunset: "Sunset",
+}
+
+STOP_TIME_MAPPING: dict[Time, list[str]] = {
+    Time.day: [SUNSET, NIGHT, DAY],
+    Time.night: [DAY, SUNSET, NIGHT],
+    Time.sunset: [NIGHT, DAY, SUNSET],
+}
+
 
 class Voyage:
-    DESTINATION_MAPPING: ClassVar[dict[str, str]] = {
-        "T": "Rothlyt Sound",
-        "N": "Northern Strait of Merlthor",
-        "B": "Bloodbrine Sea",
-        "R": "Rhotano Sea",
-    }
-
-    TIME_MAPPING: ClassVar[dict[str, str]] = {
-        "D": "Day",
-        "N": "Night",
-        "S": "Sunset",
-    }
-
-    ROUTE_MAPPING: ClassVar[dict[str, list[str]]] = {
-        "T": ["The Cieldalaes", "Rhotano Sea", "The Rothlyt Sound"],
-        "N": ["The Southern Strait of Merlthor", "Galadion Bay", "The Northern Strait of Merlthor"],
-        "B": ["The Cieldalaes", "The Northern Strait of Merlthor", "The Bloodbrine Sea"],
-        "R": ["Galadion Bay", "The Southern Strait of Merlthor", "The Rhotano Sea"],
-    }
-
-    ROUTE_TIME_MAPPING: ClassVar[dict[str, list[str]]] = {
-        "D": [SUNSET, NIGHT, DAY],
-        "N": [DAY, SUNSET, NIGHT],
-        "S": [NIGHT, DAY, SUNSET],
-    }
-
     __slots__ = (
         "start_time",
-        "_dest_time",
+        "_destination",
+        "_time",
     )
 
-    def __init__(self, input_: UpcomingVoyage) -> None:
+    def __init__(self, input_: UpcomingVoyage, /) -> None:
         self.start_time: datetime.datetime = input_["date"]
-        self._dest_time: str = input_["destination"]
+        self._destination: Destination = input_["destination"]
+        self._time: Time = input_["time"]
 
     def __repr__(self) -> str:
         return f"<Voyage start_time={self.start_time} destination={self.destination!r} time={self.time!r}>"
@@ -81,23 +150,21 @@ class Voyage:
 
         return False
 
-    def route(self) -> str:
+    def stops(self) -> str:
         routes: list[tuple[str, str]] = []
 
-        for route_destination, time in zip(
-            self.ROUTE_MAPPING[self._dest_time[0]], self.ROUTE_TIME_MAPPING[self._dest_time[1]]
-        ):
-            routes.append((route_destination, time))
+        for stop, time in zip(STOP_MAPPING[self._destination], STOP_TIME_MAPPING[self._time]):
+            routes.append((stop.value, time))
 
         return "\n".join([f"{item[1]}: {item[0]}" for item in routes])
 
     @property
     def destination(self) -> str:
-        return self.DESTINATION_MAPPING[self._dest_time[0]]
+        return DESTINATION_MAPPING[self._destination]
 
     @property
     def time(self) -> str:
-        return self.TIME_MAPPING[self._dest_time[1]]
+        return TIME_MAPPING[self._time]
 
     @property
     def details(self) -> str:
@@ -106,13 +173,12 @@ class Voyage:
 
 class OceanFishing(GrahaBaseCog):
     STARTING_EPOCH: ClassVar[datetime.datetime] = datetime.datetime.fromtimestamp(1593302400, tz=datetime.timezone.utc)
-    DESTINATION_CYCLE: ClassVar[list[str]] = ["B", "T", "N", "R"]
-    TIME_CYCLE: ClassVar[list[str]] = ["S", "S", "S", "S", "N", "N", "N", "N", "D", "D", "D", "D"]
 
     def __init__(self, bot: Graha, /) -> None:
         super().__init__(bot)
-        self.voyage_cache: list[str] = []
-        self.cache_voyages()
+        self.voyage_cache: dict[Route, list[tuple[Destination, Time]]] = {}
+        self.cache_voyages(route=Route.indigo)
+        self.cache_voyages(route=Route.ruby)
 
     def _from_epoch(self, day: int, hour: int) -> datetime.datetime:
         return (
@@ -122,15 +188,15 @@ class OceanFishing(GrahaBaseCog):
             - datetime.timedelta(seconds=32400)
         )
 
-    def cache_voyages(self) -> None:
+    def cache_voyages(self, *, route: Route) -> None:
         dt = datetime.datetime.fromtimestamp(2700, tz=datetime.timezone.utc)
-        cache = self._calculate_voyages(dt=dt, count=144)
+        cache = self._calculate_voyages(route=route, dt=dt, count=144)
 
-        self.voyage_cache = [item["destination"] for item in cache]
+        self.voyage_cache[route] = [(item["destination"], item["time"]) for item in cache]
 
-    def _calculate_voyages(
-        self, *, dt: datetime.datetime, count: int, filter_: list[str] | None = None
-    ) -> list[UpcomingVoyage]:
+    def _calculate_voyages(self, *, route: Route, dt: datetime.datetime, count: int) -> list[UpcomingVoyage]:
+        _destination_cycle = DESTINATION_CYCLE[route]
+        _time_cycle = TIME_CYCLE[route]
         adjusted_date = (dt + datetime.timedelta(hours=9)) - datetime.timedelta(minutes=45)
         day = math.floor((adjusted_date.timestamp() - 1593302400) / 86400)
         hour = adjusted_date.hour
@@ -143,31 +209,33 @@ class OceanFishing(GrahaBaseCog):
             hour -= 24
 
         voyage_number = hour >> 1
-        destination_index = ((day + voyage_number) % len(self.DESTINATION_CYCLE) + len(self.DESTINATION_CYCLE)) % len(
-            self.DESTINATION_CYCLE
+        destination_index = ((day + voyage_number) % len(DESTINATION_CYCLE) + len(DESTINATION_CYCLE)) % len(
+            DESTINATION_CYCLE
         )
-        time_index = ((day + voyage_number) % len(self.TIME_CYCLE) + len(self.TIME_CYCLE)) % len(self.TIME_CYCLE)
+        time_index = ((day + voyage_number) % len(TIME_CYCLE) + len(TIME_CYCLE)) % len(TIME_CYCLE)
 
         upcoming_voyages: list[UpcomingVoyage] = []
 
         while len(upcoming_voyages) < count:
-            current_destination = self.DESTINATION_CYCLE[destination_index] + self.TIME_CYCLE[time_index]
-            if not filter_ or (current_destination in filter_):
-                upcoming_voyages.append({"date": self._from_epoch(day, hour), "destination": current_destination})
+            _current_destination = _destination_cycle[destination_index]
+            _current_time = _time_cycle[time_index]
+            upcoming_voyages.append(
+                {"date": self._from_epoch(day, hour), "destination": _current_destination, "time": _current_time}
+            )
 
             if hour == 23:
                 day += 1
                 hour = 1
-                destination_index = (destination_index + 2) % len(self.DESTINATION_CYCLE)
-                time_index = (time_index + 2) % len(self.TIME_CYCLE)
+                destination_index = (destination_index + 2) % len(DESTINATION_CYCLE)
+                time_index = (time_index + 2) % len(TIME_CYCLE)
             else:
                 hour += 2
-                destination_index = (destination_index + 1) % len(self.DESTINATION_CYCLE)
-                time_index = (time_index + 1) % len(self.TIME_CYCLE)
+                destination_index = (destination_index + 1) % len(DESTINATION_CYCLE)
+                time_index = (time_index + 1) % len(TIME_CYCLE)
 
         return upcoming_voyages
 
-    def calculate_voyages(self, *, dt: datetime.datetime, count: int = 144, filter_: list[str] | None) -> list[Voyage]:
+    def calculate_voyages(self, *, route: Route, dt: datetime.datetime, count: int = 144) -> list[Voyage]:
         start_index = math.floor((dt - datetime.timedelta(minutes=45)).timestamp() / 7200)
         upcoming_voyages = []
 
@@ -175,29 +243,27 @@ class OceanFishing(GrahaBaseCog):
             if len(upcoming_voyages) >= count:
                 break
 
-            dest_time = self.voyage_cache[(start_index + idx) % 144]
+            dest, time = self.voyage_cache[route][(start_index + idx) % 144]
 
-            if (not filter_) or dest_time in filter_:
-                upcoming_voyages.append(
-                    Voyage(
-                        {
-                            "date": datetime.datetime.fromtimestamp(
-                                (start_index + idx + 1) * 7200, tz=datetime.timezone.utc
-                            ),
-                            "destination": dest_time,
-                        }
-                    )
+            upcoming_voyages.append(
+                Voyage(
+                    {
+                        "date": datetime.datetime.fromtimestamp((start_index + idx + 1) * 7200, tz=datetime.timezone.utc),
+                        "destination": dest,
+                        "time": time,
+                    },
                 )
+            )
 
         return upcoming_voyages
 
-    def _generate_ocean_fishing_embed(self, dt: datetime.datetime, /) -> discord.Embed:
+    def _generate_ocean_fishing_embed(self, dt: datetime.datetime, /, *, route: Route) -> discord.Embed:
         embed = discord.Embed(colour=discord.Colour.random(), title="Ocean Fishing availability")
 
-        current, next_ = self.calculate_voyages(dt=dt, count=2, filter_=None)
+        current, next_ = self.calculate_voyages(route=route, dt=dt, count=2)
         now = datetime.datetime.now(datetime.timezone.utc)
 
-        current_fmt = current.route() + "\n\n"
+        current_fmt = current.stops() + "\n\n"
         if current.has_set_sail(now):
             current_fmt += "The registration window for this has closed and the voyage is underway.\n\n"
         elif current.can_register(now):
@@ -219,7 +285,7 @@ class OceanFishing(GrahaBaseCog):
 
         next_dt = discord.utils.format_dt(next_.start_time)
         next_dt_rel = discord.utils.format_dt(next_.start_time, "R")
-        next_fmt = f"Leaves at {next_dt} ({next_dt_rel}) with a route of:-\n{next_.route()}\n\n"
+        next_fmt = f"Leaves at {next_dt} ({next_dt_rel}) with a route of:-\n{next_.stops()}\n\n"
         next_window_fmt = discord.utils.format_dt(next_.registration_opens())
         next_window_fmt_rel = discord.utils.format_dt(next_.registration_opens(), "R")
         next_fmt += f"Registration opens at {next_window_fmt} ({next_window_fmt_rel})."
@@ -230,11 +296,11 @@ class OceanFishing(GrahaBaseCog):
         return embed
 
     @commands.command(name="oceanfishing", aliases=["of", "fishing"])
-    async def ocean_fishing_times(self, ctx: Context) -> None:
+    async def ocean_fishing_times(self, ctx: Context, *, route: Route = Route.indigo) -> None:
         """Shows your local time against the current ocean fishing schedule windows."""
         now = datetime.datetime.now(datetime.timezone.utc)
 
-        await ctx.send(embed=self._generate_ocean_fishing_embed(now))
+        await ctx.send(embed=self._generate_ocean_fishing_embed(now, route=route))
 
 
 async def setup(bot: Graha) -> None:
