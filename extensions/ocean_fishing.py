@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 
 class Route(Enum):
-    indigo = 1
-    ruby = 2
+    indigo = "Indigo"
+    ruby = "Ruby"
 
 
 class Time(Enum):
@@ -222,14 +222,10 @@ class OceanFishing(GrahaBaseCog):
 
     def calculate_voyages(self, *, route: Route, dt: datetime.datetime, count: int = 144) -> list[Voyage]:
         start_index = math.floor((dt - datetime.timedelta(minutes=45)).timestamp() / 7200)
-        upcoming_voyages = []
+        upcoming_voyages: list[Voyage] = []
 
-        for idx in range(100000):
-            if len(upcoming_voyages) >= count:
-                break
-
+        for idx in range(count + 1):
             dest, time = self.voyage_cache[route][(start_index + idx) % 144]
-
             upcoming_voyages.append(
                 Voyage(datetime.datetime.fromtimestamp((start_index + idx + 1) * 7200, tz=datetime.timezone.utc), dest, time)
             )
@@ -237,7 +233,7 @@ class OceanFishing(GrahaBaseCog):
         return upcoming_voyages
 
     def _generate_ocean_fishing_embed(self, dt: datetime.datetime, /, *, route: Route) -> discord.Embed:
-        embed = discord.Embed(colour=discord.Colour.random(), title="Ocean Fishing availability")
+        embed = discord.Embed(colour=discord.Colour.random(), title=f"Ocean Fishing availability ({route.value} route)")
 
         current, next_ = self.calculate_voyages(route=route, dt=dt, count=2)
         now = datetime.datetime.now(datetime.timezone.utc)
