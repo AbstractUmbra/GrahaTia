@@ -17,7 +17,7 @@ from utilities.containers.event_subscription import (
     MisconfiguredSubscription,
 )
 from utilities.shared.cache import cache
-from utilities.shared.time import Weekday, format_dt, resolve_next_weekday
+from utilities.shared.time import Weekday, resolve_next_weekday
 from utilities.shared.ui import BaseView
 
 if TYPE_CHECKING:
@@ -96,11 +96,11 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         self.jumbo_cactpot_loop.start()
 
     async def cog_unload(self) -> None:
-        self.daily_reset_loop.stop()
-        self.weekly_reset_loop.stop()
-        self.fashion_report_loop.stop()
-        self.ocean_fishing_loop.stop()
-        self.jumbo_cactpot_loop.stop()
+        self.daily_reset_loop.cancel()
+        self.weekly_reset_loop.cancel()
+        self.fashion_report_loop.cancel()
+        self.ocean_fishing_loop.cancel()
+        self.jumbo_cactpot_loop.cancel()
 
     async def _set_subscriptions(
         self,
@@ -185,7 +185,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
     async def select_subscriptions(self, interaction: Interaction) -> None:
         """Open a selection of subscriptions for this channel!"""
         assert interaction.guild  # guarded in check
-        if not isinstance(interaction.channel, (discord.TextChannel, discord.Thread)):
+        if not isinstance(interaction.channel, (discord.TextChannel, discord.VoiceChannel, discord.Thread)):
             return await interaction.response.send_message(
                 "Sorry, but I can't process subscriptions in this channel. Please use a normal text channel or a thread."
             )
@@ -295,7 +295,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         if not reset_cog:
             return  # todo
 
-        then = reset_cog._get_daily_reset_time()
+        then = reset_cog._get_daily_reset_time() - datetime.timedelta(minutes=20)
 
         LOGGER.info("[Subscriptions] :: Daily Reset sleeping until %s", then)
         await discord.utils.sleep_until(then)
@@ -305,6 +305,11 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
     async def weekly_reset_loop(self) -> None:
         now = datetime.datetime.now(datetime.timezone.utc)
         if now.weekday() != 1:  # tuesday
+            LOGGER.warning(
+                "[Subscriptions] -> [Weekly reset] :: Attempted to run on a non-Tuesday: '%s (day # '%s')'",
+                now.strftime("%A"),
+                now.weekday(),
+            )
             return
 
         query = """
@@ -316,12 +321,13 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(2, length=6))  # type: ignore # reee
 
         if not records:
+            LOGGER.info("[Subscriptions] -> [Weekly reset] :: No records found to notify.")
             return
 
         resets_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # ree
 
         if not resets_cog:
-            LOGGER.error("Resets cog is not available.")
+            LOGGER.error("[Subscriptions] -> [Weekly reset] :: Resets cog is not available.")
             return
 
         embed = resets_cog._get_weekly_reset_embed()
@@ -332,7 +338,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             try:
                 webhook = await conf.get_webhook()
             except MisconfiguredSubscription:
-                LOGGER.warning("Subscription %r is misconfigured. Deleting.", conf)
+                LOGGER.warning("[Subscriptions] -> [Weekly reset] :: Subscription %r is misconfigured. Deleting.", conf)
                 await self._delete_subscription(conf)
                 return
 
@@ -346,7 +352,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         if not reset_cog:
             return  # todo
 
-        then = reset_cog._get_weekly_reset_time()
+        then = reset_cog._get_weekly_reset_time() - datetime.timedelta(minutes=20)
 
         LOGGER.info("[Subscriptions] :: Weekly Reset sleeping until %s", then)
         await discord.utils.sleep_until(then)
