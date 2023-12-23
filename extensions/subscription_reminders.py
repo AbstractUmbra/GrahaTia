@@ -507,16 +507,15 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
     @jumbo_cactpot_loop.before_loop
     async def jumbo_cactpot_before_loop(self) -> None:
-        now = datetime.datetime.now(datetime.timezone.utc)
-        then = resolve_next_weekday(source=now, target=Weekday.saturday) if now.weekday() != 5 else now
+        now = resolve_next_weekday(target=Weekday.saturday, current_week_included=True)
 
         sleep_until = datetime.datetime.combine(
-            then, datetime.time(hour=18, minute=45, second=0, microsecond=0), tzinfo=datetime.timezone.utc
+            now, datetime.time(hour=18, minute=45, second=0, microsecond=0), tzinfo=datetime.timezone.utc
         )
 
-        LOGGER.info("[Subscriptions] :: Jumbo Cactpot sleeping until %s", sleep_until)
+        LOGGER.info("[Subscriptions] -> [Jumbo Cactpot] :: Sleeping until %s", sleep_until)
         await discord.utils.sleep_until(sleep_until)
-        LOGGER.info("[Subscriptions] :: Jumbo Cactpot woken up at %s", sleep_until)
+        LOGGER.info("[Subscriptions] -> [Jumbo Cactpot] :: Woken up at %s", sleep_until)
 
 
 async def setup(bot: Graha) -> None:
