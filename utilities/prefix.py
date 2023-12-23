@@ -18,10 +18,10 @@ if TYPE_CHECKING:
 
 def callable_prefix(bot: Graha, message: Message, /) -> list[str]:
     if message.guild is None:
-        return commands.when_mentioned_or("hey babe ")(bot, message)
+        return commands.when_mentioned_or("gt ")(bot, message)
 
     guild_prefixes: list[str] | None = bot._prefix_data.get(str(message.guild.id))
     if guild_prefixes is None:
-        guild_prefixes = ["hey babe "]
+        guild_prefixes = ["gt "]
 
     return commands.when_mentioned_or(*guild_prefixes)(bot, message)
