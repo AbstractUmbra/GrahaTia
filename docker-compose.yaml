@@ -15,5 +15,6 @@ services:
     volumes:
       - ./configs/:/app/configs/:ro
       - ./logs/:/app/logs/:rw
+      - ./extensions/:/app/extensions/:ro
 
 version: "3"
