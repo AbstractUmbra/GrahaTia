@@ -13,6 +13,7 @@ import discord
 from discord.ext import commands
 
 from utilities.cog import GrahaBaseCog as BaseCog
+from utilities.shared.time import Weekday, resolve_next_weekday
 
 if TYPE_CHECKING:
     from bot import Graha
@@ -41,6 +42,26 @@ class Resets(BaseCog, name="Reset Information"):
 
     def __init__(self, bot: Graha) -> None:
         super().__init__(bot)
+
+    def _get_cactpot_reset_time(self) -> datetime.datetime:
+        date = resolve_next_weekday(target=Weekday.saturday, current_week_included=True)
+        return date.replace(hour=19, minute=0, second=0, microsecond=0, tzinfo=datetime.timezone.utc)
+
+    def _get_cactpot_embed(self) -> discord.Embed:
+        next_ = self._get_cactpot_reset_time()
+
+        next_full_fmt = discord.utils.format_dt(next_, "F")
+        next_rel_fmt = discord.utils.format_dt(next_, "R")
+
+        fmt = f"Cashing out is available at {next_full_fmt} ({next_rel_fmt})"
+
+        embed = discord.Embed(title="Jumbo Cactpot cashout!", colour=discord.Colour.random())
+        embed.set_thumbnail(
+            url="https://media.discordapp.net/attachments/872373121292853248/991352363577250003/unknown.png?width=198&height=262",
+        )
+        embed.description = fmt
+
+        return embed
 
     def _get_daily_reset_time(self) -> datetime.datetime:
         now = datetime.datetime.now(datetime.timezone.utc)
