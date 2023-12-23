@@ -482,14 +482,15 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
     async def jumbo_cactpot_loop(self) -> None:
         now = datetime.datetime.now(datetime.timezone.utc)
         if now.weekday() != 5:  # saturday
+            LOGGER.warning("[Subscriptions] -> [Jumbo Cactpot] :: Tried to run on a non-Saturday.")
             return
 
-        then = (now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
-        embed = discord.Embed(
-            title="Jumbo Cactpot!",
-            description=f"The Jumbo Cactpot numbers will be called in {format_dt(then):R}!",
-            colour=discord.Colour.random(),
-        )
+        resets: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # cog downcasting
+        if not resets:
+            LOGGER.error("[Subscriptions] -> [Jumbo Cactpot] :: Could not load the resets Cog.")
+            return
+
+        embed = resets._get_cactpot_embed()
 
         query = """
                 SELECT *
