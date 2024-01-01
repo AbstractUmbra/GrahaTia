@@ -155,15 +155,16 @@ class EventSubConfig:
 
         webhook = await self.channel.create_webhook(name="XIV Timers", reason="Created via G'raha Tia subscriptions!")
         query = """
-                INSERT INTO webhooks (guild_id, webhook_id, webhook_url)
-                VALUES ($1, $2, $3)
+                INSERT INTO webhooks (guild_id, webhook_id, webhook_url, webhook_token)
+                VALUES ($1, $2, $3, $4)
                 ON CONFLICT (guild_id)
                     DO UPDATE SET
                         webhook_id = $2,
-                        webhook_url = $3
-                    WHERE guild_id = $1;
+                        webhook_url = $3,
+                        webhook_token = $4
+                    WHERE webhooks.guild_id = $1;
                 """
-        await self._bot.pool.execute(query, self.guild_id, webhook.id, webhook.url)
+        await self._bot.pool.execute(query, self.guild_id, webhook.id, webhook.url, webhook.token)
 
         self.webhook_id = webhook.id
 

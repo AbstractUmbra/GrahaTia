@@ -1,20 +1,25 @@
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE TABLE IF NOT EXISTS event_remind_subscription (
+
+CREATE TABLE IF NOT EXISTS event_remind_subscriptions (
     guild_id BIGINT PRIMARY KEY,
-    webhook_url TEXT NOT NULL,
-    subscriptions INT NOT NULL DEFAULT 0,
+    channel_id BIGINT,
+    thread_id BIGINT,
+    webhook_id BIGINT NOT NULL,
+    subscriptions BIT(6) NOT NULL DEFAULT '000000'::bit(6),
     daily_role_id BIGINT,
     weekly_role_id BIGINT,
     fashion_report_role_id BIGINT
 );
-CREATE TABLE IF NOT EXISTS reminders (
-    id SERIAL PRIMARY KEY,
-    expires TIMESTAMP WITH TIME ZONE,
-    created TIMESTAMP WITH TIME ZONE DEFAULT (NOW() AT TIME ZONE 'utc'),
-    event TEXT,
-    extra JSONB DEFAULT '{}'::JSONB
+
+CREATE TABLE IF NOT EXISTS webhooks (
+    guild_id BIGINT PRIMARY KEY,
+    webhook_id BIGINT UNIQUE NOT NULL,
+    webhook_url TEXT UNIQUE NOT NULL,
+    webhook_token TEXT UNIQUE NOT NULL
 );
-CREATE INDEX IF NOT EXISTS reminders_expires_idx ON reminders (expires);
+
+CREATE INDEX IF NOT EXISTS event_subscriptions_webhook_idx ON event_remind_subscriptions(webhook_id);
+
 CREATE TABLE IF NOT EXISTS commands (
     id SERIAL PRIMARY KEY,
     guild_id BIGINT,

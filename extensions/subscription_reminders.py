@@ -155,6 +155,8 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         query = """
                 DELETE FROM event_remind_subscriptions
                 WHERE guild_id = $1;
+                DELETE FROM webhooks
+                WHERE guild_id = $1;
                 """
 
         LOGGER.info("[EventSub] -> [Delete] :: From guild: %r", config.guild_id)
@@ -200,7 +202,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             option.default = value
 
         view = EventSubView(options=options)
-        await interaction.followup.send(view=view)
+        await interaction.followup.send(
+            content="Please select which reminders you wish to recieve in the following dropdown!", view=view
+        )
         await view.wait()
 
         resolved_flags = sum(map(int, view.sub_selection.values))

@@ -1,1 +1,0 @@
-ALTER TABLE event_remind_subscription RENAME TO event_remind_subscriptions;
