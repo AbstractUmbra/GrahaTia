@@ -157,7 +157,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE guild_id = $1;
                 """
 
-        LOGGER.info("Deleting subscription from guild: %r", config.guild_id)
+        LOGGER.info("[EventSub] -> [Delete] :: From guild: %r", config.guild_id)
 
         await self.bot.pool.execute(query, config.guild_id)
 
@@ -281,7 +281,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             try:
                 webhook = await conf.get_webhook()
             except MisconfiguredSubscription:
-                LOGGER.warning("Subscription %r is misconfigured. Deleting.", conf)
+                LOGGER.warning("[EventSub] -> [Delete] ([DailyReset]) :: Subscription %r is misconfigured. Deleting.", conf)
                 await self._delete_subscription(conf)
                 return
 
@@ -338,7 +338,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             try:
                 webhook = await conf.get_webhook()
             except MisconfiguredSubscription:
-                LOGGER.warning("[Subscriptions] -> [Weekly reset] :: Subscription %r is misconfigured. Deleting.", conf)
+                LOGGER.warning("[EventSub] -> [Delete] ([WeeklyReset]) :: Subscription %r is misconfigured. Deleting.", conf)
                 await self._delete_subscription(conf)
                 return
 
@@ -396,7 +396,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             try:
                 webhook = await conf.get_webhook()
             except MisconfiguredSubscription:
-                LOGGER.warning("Subscription %r is misconfigured. Deleting.", conf)
+                LOGGER.warning(
+                    "[EventSub] -> [Delete] ([FashionReport]) :: Subscription %r is misconfigured. Deleting.", conf
+                )
                 # todo: resolve a way to let people know it was messed up.
                 await self._delete_subscription(conf)
                 return
@@ -462,7 +464,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             try:
                 webhook = await conf.get_webhook()
             except MisconfiguredSubscription:
-                LOGGER.warning("Subscription %r is misconfigured. Deleting.", conf)
+                LOGGER.warning(
+                    "[EventSub] -> [Delete] ([OceanFishing]) :: Subscription %r is misconfigured. Deleting.", conf
+                )
                 await self._delete_subscription(conf)
                 return
 
