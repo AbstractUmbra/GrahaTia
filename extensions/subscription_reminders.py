@@ -42,19 +42,43 @@ class NoKaiyokoPost(Exception):
 
 
 class EventSubView(BaseView):
-    def __init__(self, *, timeout: float | None = 180.0, options: list[SelectOption]) -> None:
+    def __init__(self, *, timeout: float | None = 180.0, options: list[SelectOption], cog: EventSubscriptions) -> None:
         super().__init__(timeout=timeout)
         self.sub_selection.options = options
+        self.cog: EventSubscriptions = cog
 
     async def on_timeout(self) -> None:
         return
 
     @discord.ui.select(max_values=5, min_values=1)  # type: ignore # pyright bug
     async def sub_selection(self, interaction: Interaction, item: discord.ui.Select[Self]) -> None:
-        await interaction.response.edit_message(
-            content="Thank you, your subscription choices have been recorded!", view=None
+        assert interaction.guild  # guarded in earlier check
+        await interaction.response.defer()
+
+        config = await self.cog.get_sub_config(interaction.guild.id)
+
+        resolved_flags = sum(map(int, self.sub_selection.values))
+
+        if isinstance(interaction.channel, discord.Thread):
+            current_channel = interaction.channel.parent
+        else:
+            current_channel = interaction.channel
+
+        assert current_channel  # this should never happen
+        config.channel_id = current_channel.id
+
+        if isinstance(interaction.channel, discord.Thread) and isinstance(interaction.channel.parent, discord.TextChannel):
+            channel_id = interaction.channel.parent.id
+            thread_id = interaction.channel.id
+        else:
+            channel_id = current_channel.id
+            thread_id = None
+
+        await self.cog._set_subscriptions(interaction.guild.id, resolved_flags, channel_id, thread_id)
+
+        await interaction.edit_original_response(
+            content="Your subscription choices have been recorded, thank you!", view=None
         )
-        self.stop()
 
 
 class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
@@ -106,36 +130,20 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         self,
         guild_id: int,
         subscription_value: int,
-        webhook: discord.Webhook,
         channel_id: int | None = None,
         thread_id: int | None = None,
     ) -> None:
         query = """
-                WITH sub_insert AS (
-                    INSERT INTO event_remind_subscriptions
-                        (guild_id, subscriptions, channel_id, thread_id, webhook_id)
-                    VALUES
-                        ($1, $2, $3, $4, $5)
-                    ON CONFLICT
-                        (guild_id)
-                    DO UPDATE SET
-                        subscriptions = EXCLUDED.subscriptions,
-                        channel_id = EXCLUDED.channel_id,
-                        thread_id = EXCLUDED.thread_id,
-                        webhook_id = EXCLUDED.webhook_id
-                    RETURNING guild_id
-                )
-                INSERT INTO webhooks
-                    (guild_id, webhook_id, webhook_url, webhook_token)
-                SELECT
-                    sub_insert.guild_id, $5, $6, $7
-                FROM sub_insert
+                INSERT INTO event_remind_subscriptions
+                    (guild_id, subscriptions, channel_id, thread_id)
+                VALUES
+                    ($1, $2, $3, $4)
                 ON CONFLICT
                     (guild_id)
                 DO UPDATE SET
-                    webhook_id = EXCLUDED.webhook_id,
-                    webhook_url = EXCLUDED.webhook_url,
-                    webhook_token = EXCLUDED.webhook_token;
+                    subscriptions = EXCLUDED.subscriptions,
+                    channel_id = EXCLUDED.channel_id,
+                    thread_id = EXCLUDED.thread_id;
                 """
 
         subscription_bits = BitString.from_int(subscription_value, length=6)
@@ -145,10 +153,30 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             subscription_bits,
             channel_id,
             thread_id,
-            webhook.id,
-            webhook.url,
-            webhook.token,
         )
+        config = await self.get_sub_config(guild_id)
+        webhook = await config.get_webhook()
+
+        webhook_query = """
+                        WITH sub_update AS (
+                            UPDATE event_remind_subscriptions
+                                SET webhook_id = $1
+                            RETURNING guild_id
+                        )
+                        INSERT INTO webhooks
+                            (guild_id, webhook_id, webhook_url, webhook_token)
+                        SELECT
+                            sub_update.guild_id, $1, $2, $3
+                        FROM sub_update
+                        ON CONFLICT
+                            (guild_id)
+                        DO UPDATE SET
+                            webhook_id = EXCLUDED.webhook_id,
+                            webhook_url = EXCLUDED.webhook_url,
+                            webhook_token = EXCLUDED.webhook_token;
+                        """
+        await self.bot.pool.execute(webhook_query, webhook.id, webhook.url, webhook.token)
+
         self.get_sub_config.invalidate(self, guild_id)
 
     async def _delete_subscription(self, config: EventSubConfig) -> None:
@@ -201,42 +229,10 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         for (_, value), option in zip(config.subscriptions, options):
             option.default = value
 
-        view = EventSubView(options=options)
+        view = EventSubView(options=options, cog=self)
         await interaction.followup.send(
             content="Please select which reminders you wish to recieve in the following dropdown!", view=view
         )
-        await view.wait()
-
-        resolved_flags = sum(map(int, view.sub_selection.values))
-
-        webhook = None
-        channel_id = None
-        thread_id = None
-
-        if isinstance(interaction.channel, discord.Thread):
-            current_channel = interaction.channel.parent
-        else:
-            current_channel = interaction.channel
-
-        assert current_channel  # this should never happen
-        config.channel_id = current_channel.id
-
-        try:
-            webhook = await config.get_webhook()
-        except discord.HTTPException:
-            await interaction.followup.send(
-                "I was not able to create the necessary webhook. Can you please correct my permissions and try again?"
-            )
-            return
-
-        if isinstance(interaction.channel, discord.Thread) and isinstance(interaction.channel.parent, discord.TextChannel):
-            channel_id = interaction.channel.parent.id
-            thread_id = interaction.channel.id
-        else:
-            channel_id = current_channel.id
-            thread_id = None
-
-        await self._set_subscriptions(interaction.guild.id, resolved_flags, webhook, channel_id, thread_id)
 
     @select_subscriptions.error
     async def on_subscription_select_error(self, interaction: Interaction, error: app_commands.AppCommandError) -> None:
