@@ -224,7 +224,7 @@ class OceanFishing(GrahaBaseCog):
         start_index = math.floor((dt - datetime.timedelta(minutes=45)).timestamp() / 7200)
         upcoming_voyages: list[Voyage] = []
 
-        for idx in range(count + 1):
+        for idx in range(count):
             dest, time = self.voyage_cache[route][(start_index + idx) % 144]
             upcoming_voyages.append(
                 Voyage(datetime.datetime.fromtimestamp((start_index + idx + 1) * 7200, tz=datetime.timezone.utc), dest, time)
