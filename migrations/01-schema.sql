@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS event_remind_subscriptions (
     guild_id BIGINT PRIMARY KEY,
     channel_id BIGINT,
     thread_id BIGINT,
-    webhook_id BIGINT NOT NULL,
+    webhook_id BIGINT,
     subscriptions BIT(6) NOT NULL DEFAULT '000000'::bit(6),
     daily_role_id BIGINT,
     weekly_role_id BIGINT,
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS event_remind_subscriptions (
 );
 
 CREATE TABLE IF NOT EXISTS webhooks (
-    guild_id BIGINT PRIMARY KEY,
+    guild_id BIGINT PRIMARY KEY REFERENCES event_remind_subscriptions(guild_id) ON DELETE CASCADE,
     webhook_id BIGINT UNIQUE NOT NULL,
     webhook_url TEXT UNIQUE NOT NULL,
     webhook_token TEXT UNIQUE NOT NULL
