@@ -204,7 +204,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         record: SubscriptionEventRecord | None = await self.bot.pool.fetchrow(query, guild_id)  # type: ignore # wish I knew how to make a Record subclass
 
         if not record:
-            LOGGER.info("Creating new subscription config for guild: %s", guild_id)
+            LOGGER.info("[EventSub] -> [Create] :: Creating new subscription config for guild: %s", guild_id)
             return EventSubConfig(self.bot, guild_id=guild_id)
 
         return EventSubConfig.from_record(self.bot, record=record)
@@ -270,7 +270,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         resets_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # ree
 
         if not resets_cog:
-            LOGGER.error("Resets cog is not available.")
+            LOGGER.error("[EventSub] -> [DailyReset] :: Resets cog is not available.")
             return
 
         embed = resets_cog._get_daily_reset_embed()
@@ -297,16 +297,16 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         then = reset_cog._get_daily_reset_time() - datetime.timedelta(minutes=20)
 
-        LOGGER.info("[Subscriptions] :: Daily Reset sleeping until %s", then)
+        LOGGER.info("[EventSub] -> [DailyReset] :: Sleeping until %s", then)
         await discord.utils.sleep_until(then)
-        LOGGER.info("[Subscriptions] :: Daily Reset woken up at %s", datetime.datetime.now(datetime.timezone.utc))
+        LOGGER.info("[EventSub] -> [DailyReset] :: Woken up at %s", datetime.datetime.now(datetime.timezone.utc))
 
     @tasks.loop(time=datetime.time(hour=7, minute=45, tzinfo=datetime.timezone.utc))
     async def weekly_reset_loop(self) -> None:
         now = datetime.datetime.now(datetime.timezone.utc)
         if now.weekday() != 1:  # tuesday
             LOGGER.warning(
-                "[Subscriptions] -> [Weekly reset] :: Attempted to run on a non-Tuesday: '%s (day # '%s')'",
+                "[EventSub] -> [Weekly reset] :: Attempted to run on a non-Tuesday: '%s (day # '%s')'",
                 now.strftime("%A"),
                 now.weekday(),
             )
@@ -321,13 +321,13 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(2, length=6))  # type: ignore # reee
 
         if not records:
-            LOGGER.info("[Subscriptions] -> [Weekly reset] :: No records found to notify.")
+            LOGGER.info("[EventSub] -> [Weekly reset] :: No records found to notify.")
             return
 
         resets_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # ree
 
         if not resets_cog:
-            LOGGER.error("[Subscriptions] -> [Weekly reset] :: Resets cog is not available.")
+            LOGGER.error("[EventSub] -> [Weekly reset] :: Resets cog is not available.")
             return
 
         embed = resets_cog._get_weekly_reset_embed()
@@ -354,9 +354,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         then = reset_cog._get_weekly_reset_time() - datetime.timedelta(minutes=20)
 
-        LOGGER.info("[Subscriptions] :: Weekly Reset sleeping until %s", then)
+        LOGGER.info("[EventSub] -> [WeeklyReset] :: Sleeping until %s", then)
         await discord.utils.sleep_until(then)
-        LOGGER.info("[Subscriptions] :: Weekly Reset woken up at %s", datetime.datetime.now(datetime.timezone.utc))
+        LOGGER.info("[EventSub] -> [WeeklyReset] :: Woken up at %s", datetime.datetime.now(datetime.timezone.utc))
 
     @tasks.loop(time=datetime.time(hour=7, minute=45, tzinfo=datetime.timezone.utc))
     async def fashion_report_loop(self) -> None:
@@ -372,7 +372,6 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(4, length=6))  # type: ignore # stub shenanigans
         if not records:
-            LOGGER.warning("No one subscribed to fashion reports.")
             return
 
         fashion_report_cog: FashionReportCog = self.bot.get_cog("FashionReport")  # type: ignore # weird
@@ -415,33 +414,33 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             weekday = when.weekday()
             if weekday != 4:
                 then = resolve_next_weekday(source=now, target=Weekday.friday)
-                return "[Subscriptions] -> [Fashion Report] :: Not Friday. Setting `then` to '%s'", then
+                return "[EventSub] -> [Fashion Report] :: Not Friday. Setting `then` to '%s'", then
             else:
                 if when.hour < 7:
                     return "[Subscriptions] -> [Fashion Report] :: Friday and before 7am UTC. Setting `then` to '%s'", when
                 elif when.hour == 7 and when.minute < 45:
                     return (
                         (
-                            "[Subscriptions] -> [Fashion Report] :: Friday and after 7am UTC but before start time. Setting"
+                            "[EventSub] -> [Fashion Report] :: Friday and after 7am UTC but before start time. Setting"
                             " `then` to '%s'"
                         ),
                         when,
                     )
-                return "[Subscriptions] -> [Fashion Report] :: Friday and after start time. Setting `then` to '%s'", when
+                return "[EventSub] -> [Fashion Report] :: Friday and after start time. Setting `then` to '%s'", when
 
         to_log, then = _is_past(now)
         sleep_until = then.replace(hour=7, minute=45, second=0, microsecond=0, tzinfo=datetime.timezone.utc)
         LOGGER.info(to_log, sleep_until)
 
-        LOGGER.info("[Subscriptions] -> [Fashion Report] :: sleeping until %s", sleep_until)
+        LOGGER.info("[EventSub] -> [Fashion Report] :: sleeping until %s", sleep_until)
         await discord.utils.sleep_until(sleep_until)
-        LOGGER.info("[Subscriptions] -> [Fashion Report] :: woken up at %s", sleep_until)
+        LOGGER.info("[EventSub] -> [Fashion Report] :: woken up at %s", sleep_until)
 
     @tasks.loop(hours=2)
     async def ocean_fishing_loop(self) -> None:
         ocean_fishing_cog: OceanFishingCog | None = self.bot.get_cog("OceanFishing")  # type: ignore
         if not ocean_fishing_cog:
-            LOGGER.error("No ocean fishing cog available.")
+            LOGGER.error("[EventSub] -> [Ocean Fishing] :: No ocean fishing cog available.")
             return
 
         query = """
@@ -484,20 +483,20 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             then += datetime.timedelta(hours=2)
         then = then.replace(minute=45, second=0, microsecond=0)
 
-        LOGGER.info("[Subscriptions] :: Ocean Fishing sleeping until %s", then)
+        LOGGER.info("[EventSub] -> [OceanFishing] :: Sleeping until %s", then)
         await discord.utils.sleep_until(then)
-        LOGGER.info("[Subscriptions] :: Ocean Fishing woken up at %s", then)
+        LOGGER.info("[EventSub] -> [OceanFishing] :: Woken up at %s", then)
 
     @tasks.loop(time=datetime.time(hour=18, minute=45, tzinfo=datetime.timezone.utc))
     async def jumbo_cactpot_loop(self) -> None:
         now = datetime.datetime.now(datetime.timezone.utc)
         if now.weekday() != 5:  # saturday
-            LOGGER.warning("[Subscriptions] -> [Jumbo Cactpot] :: Tried to run on a non-Saturday.")
+            LOGGER.warning("[EventSub] -> [Jumbo Cactpot] :: Tried to run on a non-Saturday.")
             return
 
         resets: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # cog downcasting
         if not resets:
-            LOGGER.error("[Subscriptions] -> [Jumbo Cactpot] :: Could not load the resets Cog.")
+            LOGGER.error("[EventSub] -> [Jumbo Cactpot] :: Could not load the resets Cog.")
             return
 
         embed = resets._get_cactpot_embed()
@@ -524,9 +523,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             now, datetime.time(hour=18, minute=45, second=0, microsecond=0), tzinfo=datetime.timezone.utc
         )
 
-        LOGGER.info("[Subscriptions] -> [Jumbo Cactpot] :: Sleeping until %s", sleep_until)
+        LOGGER.info("[EventSub] -> [Jumbo Cactpot] :: Sleeping until %s", sleep_until)
         await discord.utils.sleep_until(sleep_until)
-        LOGGER.info("[Subscriptions] -> [Jumbo Cactpot] :: Woken up at %s", sleep_until)
+        LOGGER.info("[EventSub] -> [Jumbo Cactpot] :: Woken up at %s", sleep_until)
 
 
 async def setup(bot: Graha) -> None:
