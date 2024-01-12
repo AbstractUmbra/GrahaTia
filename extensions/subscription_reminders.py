@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import discord
 from asyncpg import BitString
 from discord import SelectOption, app_commands
-from discord.ext import tasks
+from discord.ext import commands, tasks
 from discord.utils import MISSING
 
 from utilities.cog import GrahaBaseCog
@@ -17,13 +17,11 @@ from utilities.containers.event_subscription import (
     MisconfiguredSubscription,
 )
 from utilities.shared.cache import cache
-from utilities.shared.time import Weekday, resolve_next_weekday
 from utilities.shared.ui import BaseView
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine, Sequence
-
-    from typing_extensions import Self
+    from typing import Self
 
     from bot import Graha
     from extensions.fashion_report import FashionReport as FashionReportCog
@@ -161,12 +159,13 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                         WITH sub_update AS (
                             UPDATE event_remind_subscriptions
                                 SET webhook_id = $1
+                                WHERE guild_id = $2
                             RETURNING guild_id
                         )
                         INSERT INTO webhooks
                             (guild_id, webhook_id, webhook_url, webhook_token)
                         SELECT
-                            sub_update.guild_id, $1, $2, $3
+                            sub_update.guild_id, $1, $3, $4
                         FROM sub_update
                         ON CONFLICT
                             (guild_id)
@@ -175,7 +174,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                             webhook_url = EXCLUDED.webhook_url,
                             webhook_token = EXCLUDED.webhook_token;
                         """
-        await self.bot.pool.execute(webhook_query, webhook.id, webhook.url, webhook.token)
+        await self.bot.pool.execute(webhook_query, webhook.id, guild_id, webhook.url, webhook.token)
 
         self.get_sub_config.invalidate(self, guild_id)
 
@@ -208,6 +207,13 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             return EventSubConfig(self.bot, guild_id=guild_id)
 
         return EventSubConfig.from_record(self.bot, record=record)
+
+    @commands.Cog.listener()
+    async def on_guild_leave(self, guild: discord.Guild) -> None:
+        config = await self.get_sub_config(guild.id)
+
+        await config.delete()
+        self.get_sub_config.invalidate(self, guild.id)
 
     @app_commands.command(name="select")
     @app_commands.guild_only()
@@ -254,7 +260,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         # TODO handle exceptions cleanly?
 
-    @tasks.loop(time=datetime.time(hour=14, minute=45, tzinfo=datetime.timezone.utc))
+    @tasks.loop(time=datetime.time(hour=14, minute=45, tzinfo=datetime.UTC))
     async def daily_reset_loop(self) -> None:
         query = """
                 SELECT *
@@ -289,21 +295,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         await self.handle_dispatch(to_send)
 
-    @daily_reset_loop.before_loop
-    async def daily_reset_before_loop(self) -> None:
-        reset_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # Cog downcasting woes
-        if not reset_cog:
-            return  # todo
-
-        then = reset_cog._get_daily_reset_time() - datetime.timedelta(minutes=20)
-
-        LOGGER.info("[EventSub] -> [DailyReset] :: Sleeping until %s", then)
-        await discord.utils.sleep_until(then)
-        LOGGER.info("[EventSub] -> [DailyReset] :: Woken up at %s", datetime.datetime.now(datetime.timezone.utc))
-
-    @tasks.loop(time=datetime.time(hour=7, minute=45, tzinfo=datetime.timezone.utc))
+    @tasks.loop(time=datetime.time(hour=7, minute=45, tzinfo=datetime.UTC))
     async def weekly_reset_loop(self) -> None:
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         if now.weekday() != 1:  # tuesday
             LOGGER.warning(
                 "[EventSub] -> [Weekly reset] :: Attempted to run on a non-Tuesday: '%s (day # '%s')'",
@@ -346,21 +340,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         await self.handle_dispatch(to_send)
 
-    @weekly_reset_loop.before_loop
-    async def weekly_reset_before_loop(self) -> None:
-        reset_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # Cog downcasting woes
-        if not reset_cog:
-            return  # todo
-
-        then = reset_cog._get_weekly_reset_time() - datetime.timedelta(minutes=20)
-
-        LOGGER.info("[EventSub] -> [WeeklyReset] :: Sleeping until %s", then)
-        await discord.utils.sleep_until(then)
-        LOGGER.info("[EventSub] -> [WeeklyReset] :: Woken up at %s", datetime.datetime.now(datetime.timezone.utc))
-
-    @tasks.loop(time=datetime.time(hour=7, minute=45, tzinfo=datetime.timezone.utc))
+    @tasks.loop(time=datetime.time(hour=7, minute=45, tzinfo=datetime.UTC))
     async def fashion_report_loop(self) -> None:
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         if now.weekday() != 4:  # friday
             return
 
@@ -406,36 +388,6 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         await self.handle_dispatch(to_send)
 
-    @fashion_report_loop.before_loop
-    async def fashion_report_before_loop(self) -> None:
-        now = datetime.datetime.now(datetime.timezone.utc)
-
-        def _is_past(when: datetime.datetime) -> tuple[str, datetime.datetime]:
-            weekday = when.weekday()
-            if weekday != 4:
-                then = resolve_next_weekday(source=now, target=Weekday.friday)
-                return "[EventSub] -> [Fashion Report] :: Not Friday. Setting `then` to '%s'", then
-            else:
-                if when.hour < 7:
-                    return "[Subscriptions] -> [Fashion Report] :: Friday and before 7am UTC. Setting `then` to '%s'", when
-                elif when.hour == 7 and when.minute < 45:
-                    return (
-                        (
-                            "[EventSub] -> [Fashion Report] :: Friday and after 7am UTC but before start time. Setting"
-                            " `then` to '%s'"
-                        ),
-                        when,
-                    )
-                return "[EventSub] -> [Fashion Report] :: Friday and after start time. Setting `then` to '%s'", when
-
-        to_log, then = _is_past(now)
-        sleep_until = then.replace(hour=7, minute=45, second=0, microsecond=0, tzinfo=datetime.timezone.utc)
-        LOGGER.info(to_log, sleep_until)
-
-        LOGGER.info("[EventSub] -> [Fashion Report] :: sleeping until %s", sleep_until)
-        await discord.utils.sleep_until(sleep_until)
-        LOGGER.info("[EventSub] -> [Fashion Report] :: woken up at %s", sleep_until)
-
     @tasks.loop(hours=2)
     async def ocean_fishing_loop(self) -> None:
         ocean_fishing_cog: OceanFishingCog | None = self.bot.get_cog("OceanFishing")  # type: ignore
@@ -453,7 +405,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         if not records:
             return
 
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
 
         embeds = ocean_fishing_cog._generate_both_embeds(now)
 
@@ -473,23 +425,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         await self.handle_dispatch(to_send)
 
-    @ocean_fishing_loop.before_loop
-    async def ocean_fishing_before_loop(self) -> None:
-        now = datetime.datetime.now(datetime.timezone.utc)
-        then = now + datetime.timedelta(hours=1) if now.hour % 2 == 0 else now
-
-        if then.minute >= 45:
-            # exceeded warning time, alert on next
-            then += datetime.timedelta(hours=2)
-        then = then.replace(minute=45, second=0, microsecond=0)
-
-        LOGGER.info("[EventSub] -> [OceanFishing] :: Sleeping until %s", then)
-        await discord.utils.sleep_until(then)
-        LOGGER.info("[EventSub] -> [OceanFishing] :: Woken up at %s", then)
-
-    @tasks.loop(time=datetime.time(hour=18, minute=45, tzinfo=datetime.timezone.utc))
+    @tasks.loop(time=datetime.time(hour=18, minute=45, tzinfo=datetime.UTC))
     async def jumbo_cactpot_loop(self) -> None:
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         if now.weekday() != 5:  # saturday
             LOGGER.warning("[EventSub] -> [Jumbo Cactpot] :: Tried to run on a non-Saturday.")
             return
@@ -516,16 +454,12 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             await webhook.send(embed=embed, thread=conf.thread)
 
     @jumbo_cactpot_loop.before_loop
-    async def jumbo_cactpot_before_loop(self) -> None:
-        now = resolve_next_weekday(target=Weekday.saturday, current_week_included=True)
-
-        sleep_until = datetime.datetime.combine(
-            now, datetime.time(hour=18, minute=45, second=0, microsecond=0), tzinfo=datetime.timezone.utc
-        )
-
-        LOGGER.info("[EventSub] -> [Jumbo Cactpot] :: Sleeping until %s", sleep_until)
-        await discord.utils.sleep_until(sleep_until)
-        LOGGER.info("[EventSub] -> [Jumbo Cactpot] :: Woken up at %s", sleep_until)
+    @ocean_fishing_loop.before_loop
+    @weekly_reset_loop.before_loop
+    @daily_reset_loop.before_loop
+    @fashion_report_loop.before_loop
+    async def before_loop(self) -> None:
+        await self.bot.wait_until_ready()
 
 
 async def setup(bot: Graha) -> None:
