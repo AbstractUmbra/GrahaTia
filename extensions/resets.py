@@ -45,7 +45,7 @@ class Resets(BaseCog, name="Reset Information"):
 
     def _get_cactpot_reset_time(self) -> datetime.datetime:
         date = resolve_next_weekday(target=Weekday.saturday, current_week_included=True)
-        return date.replace(hour=19, minute=0, second=0, microsecond=0, tzinfo=datetime.timezone.utc)
+        return date.replace(hour=19, minute=0, second=0, microsecond=0, tzinfo=datetime.UTC)
 
     def _get_cactpot_embed(self) -> discord.Embed:
         next_ = self._get_cactpot_reset_time()
@@ -64,7 +64,7 @@ class Resets(BaseCog, name="Reset Information"):
         return embed
 
     def _get_daily_reset_time(self) -> datetime.datetime:
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         next_reset = now + datetime.timedelta(days=1) if now.hour >= 15 else now
 
         return next_reset.replace(hour=15, minute=0, second=0, microsecond=0)
@@ -87,7 +87,7 @@ class Resets(BaseCog, name="Reset Information"):
         return embed
 
     def _get_weekly_reset_time(self) -> datetime.datetime:
-        now = datetime.datetime.now(datetime.timezone.utc).date()
+        now = datetime.datetime.now(datetime.UTC).date()
         diff = 1 - now.weekday()
         days = diff + 7 if diff <= 0 else diff
 
@@ -97,7 +97,7 @@ class Resets(BaseCog, name="Reset Information"):
         next_reset = now + datetime.timedelta(days=days)  # 1 is Tuesday
 
         return datetime.datetime.combine(
-            next_reset, datetime.time(hour=8, minute=0, second=0, microsecond=0), tzinfo=datetime.timezone.utc
+            next_reset, datetime.time(hour=8, minute=0, second=0, microsecond=0), tzinfo=datetime.UTC
         )
 
     def _get_weekly_reset_embed(self) -> discord.Embed:

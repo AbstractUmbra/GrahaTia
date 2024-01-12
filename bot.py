@@ -36,8 +36,7 @@ from utilities.shared.db import db_init
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
-
-    from typing_extensions import Self
+    from typing import Self
 
     from utilities.shared._types.bot_config import Config as BotConfig
 
@@ -75,7 +74,7 @@ class GrahaCommandTree(app_commands.CommandTree):
         trace = traceback.format_exception(exc_type, exc, tb)
         clean = "".join(trace)
         e.description = f"```py\n{clean}\n```"
-        e.timestamp = datetime.datetime.now(datetime.timezone.utc)
+        e.timestamp = datetime.datetime.now(datetime.UTC)
         await self.client.logging_webhook.send(embed=e)
         await self.client.owner.send(embed=e)
 
@@ -174,24 +173,24 @@ class Graha(commands.Bot):
         self._spam_cooldown_mapping: commands.CooldownMapping = commands.CooldownMapping.from_cooldown(
             10, 12.0, commands.BucketType.user
         )
-        self._spammer_count: Counter = Counter()
+        self._spammer_count: Counter[int] = Counter()
 
         # misc logging
-        self._previous_websocket_events: deque = deque(maxlen=10)
+        self._previous_websocket_events: deque[Any] = deque(maxlen=10)
         self._error_handling_cooldown: commands.CooldownMapping = commands.CooldownMapping.from_cooldown(
             1, 5, commands.BucketType.user
         )
         self.command_stats = Counter()
         self.socket_stats = Counter()
         self.global_log: logging.Logger = LOGGER
-        self.start_time: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
+        self.start_time: datetime.datetime = datetime.datetime.now(datetime.UTC)
 
     def bot_check(self, ctx: Context) -> bool:
         if ctx.guild and ctx.guild.id == 149998214810959872:
             return ctx.channel.id in {995124873259135067, 872379715443380295}
         return True
 
-    def run(self) -> NoReturn:
+    def run(self, *args: Any, **kwargs: Any) -> NoReturn:
         raise NotImplementedError("Please use `.start()` instead.")
 
     @property
@@ -310,7 +309,7 @@ class Graha(commands.Bot):
         if guild_id is not None:
             embed.add_field(name="Guild Info", value=f"{guild_name} (ID {guild_id})", inline=False)
         embed.add_field(name="Channel Info", value=f"{message.channel} (ID: {message.channel.id}", inline=False)
-        embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
+        embed.timestamp = datetime.datetime.now(datetime.UTC)
 
         return self.logging_webhook.send(embed=embed, wait=True)
 
@@ -388,7 +387,7 @@ class Graha(commands.Bot):
 
     async def setup_hook(self) -> None:
         self.mb_client = mystbin.Client(session=self.session, token=CONFIG["misc"]["mystbin_token"])
-        self.start_time: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
+        self.start_time: datetime.datetime = datetime.datetime.now(datetime.UTC)
         self.bot_app_info = await self.application_info()
         self.owner_id = self.bot_app_info.owner.id
 

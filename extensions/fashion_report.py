@@ -49,7 +49,7 @@ class FashionReport(BaseCog):
         minute=0,
         second=0,
         microsecond=0,
-        tzinfo=datetime.timezone.utc,
+        tzinfo=datetime.UTC,
     )
 
     def __init__(self, bot: Graha) -> None:
@@ -64,14 +64,14 @@ class FashionReport(BaseCog):
 
         return weeks
 
-    def humanify_delta(self, *, td: datetime.timedelta, format_: str, is_available: bool) -> str:
+    def humanify_delta(self, *, td: datetime.timedelta, format_: str) -> str:
         seconds = round(td.total_seconds())
 
         days, seconds = divmod(seconds, 60 * 60 * 24)
         hours, seconds = divmod(seconds, 60 * 60)
         minutes, seconds = divmod(seconds, 60)
 
-        fmt = f"{format_} for " if is_available else f"{format_} in "
+        fmt = f"{format_} in "
         if days:
             fmt += f"{plural(days):day}, "
 
@@ -90,13 +90,13 @@ class FashionReport(BaseCog):
     async def filter_submissions(self) -> KaiyokoSubmission:
         submissions = await self.get_kaiyoko_submissions()
 
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         for submission in submissions["data"]["children"]:
             if match := FASHION_REPORT_PATTERN.search(submission["data"]["title"]):
                 if self.weeks_since_start(now) != int(match["week_num"]):
                     continue
 
-                created = datetime.datetime.fromtimestamp(submission["data"]["created_utc"], tz=datetime.timezone.utc)
+                created = datetime.datetime.fromtimestamp(submission["data"]["created_utc"], tz=datetime.UTC)
                 if (now - created) > datetime.timedelta(days=7):
                     continue
 
@@ -108,11 +108,11 @@ class FashionReport(BaseCog):
 
                 if is_available:
                     diff = 2 - wd  # next tuesday
-                    fmt = "Judging is available"
+                    fmt = "Judging becomes unavailable"
                     colour = discord.Colour.green()
                 else:
                     diff = 5 - wd  # next friday
-                    fmt = "Resets"
+                    fmt = "Judging becomes available"
                     colour = discord.Colour.dark_orange()
 
                 if (diff == 0 and now.time() < reset_time) or (diff == 5 and now.time() > reset_time):
@@ -122,7 +122,7 @@ class FashionReport(BaseCog):
 
                 upcoming_event = now + datetime.timedelta(days=days)
                 upcoming_event = upcoming_event.replace(hour=8, minute=0, second=0, microsecond=0)
-                reset_str = self.humanify_delta(td=(upcoming_event - now), format_=fmt, is_available=is_available)
+                reset_str = self.humanify_delta(td=(upcoming_event - now), format_=fmt)
 
                 return KaiyokoSubmission(
                     f"Fashion Report details for week of {match['date']} (Week {match['week_num']})",
@@ -156,7 +156,7 @@ class FashionReport(BaseCog):
 
         await ctx.send(embed=embed)
 
-    @tasks.loop(time=datetime.time(hour=15, tzinfo=datetime.timezone.utc))
+    @tasks.loop(time=datetime.time(hour=15, tzinfo=datetime.UTC))
     async def reset_cache(self) -> None:
         self.filter_submissions.invalidate(self)
 

@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import datetime
 import re
+import zoneinfo
 from typing import TYPE_CHECKING
 
 import discord
-import zoneinfo
 from discord.ext import commands
 
 from utilities.cog import GrahaBaseCog as BaseCog
@@ -77,7 +77,7 @@ class Misc(BaseCog):
             " invite me with no permissions and you can update and assign permissions/roles as necessary."
         )
 
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         embed = discord.Embed(colour=discord.Colour.random(), description=fmt, timestamp=now)
         embed.set_author(name=ctx.bot.user.name, icon_url=ctx.bot.user.display_avatar.url)
         await ctx.send(embed=embed)
@@ -85,7 +85,7 @@ class Misc(BaseCog):
     @commands.command(name="servertime", aliases=["st", "ST"])
     async def server_times(self, ctx: Context) -> None:
         """Shows your local time against the datacenter server times."""
-        utc = datetime.datetime.now(datetime.timezone.utc)
+        utc = datetime.datetime.now(datetime.UTC)
 
         clean_utc = discord.utils.format_dt(utc, "F")
         fmt = f"The time now is {clean_utc}, the server times are:-\n\n"

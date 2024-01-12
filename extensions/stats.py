@@ -257,7 +257,7 @@ class Stats(commands.Cog):
         commit_time = datetime.datetime.fromtimestamp(commit.commit_time).astimezone(commit_tz)
 
         # [`hash`](url) message (offset)
-        offset = time.format_relative(commit_time.astimezone(datetime.timezone.utc))
+        offset = discord.utils.format_dt(commit_time.astimezone(datetime.UTC), "R")
         return f"[`{short_sha2}`](https://github.com/AbstractUmbra/Graha/commit/{commit.hex}) {short} ({offset})"
 
     def get_last_commits(self, count: int = 3) -> str:
@@ -334,7 +334,7 @@ class Stats(commands.Cog):
         count: tuple[int, datetime.datetime] = await ctx.db.fetchrow(query, ctx.guild.id)  # type: ignore
 
         embed.description = f"{count[0]} commands used."
-        timestamp = count[1].replace(tzinfo=datetime.timezone.utc) if count[1] else discord.utils.utcnow()
+        timestamp = count[1].replace(tzinfo=datetime.UTC) if count[1] else discord.utils.utcnow()
 
         embed.set_footer(text="Tracking command usage since").timestamp = timestamp
 
@@ -436,7 +436,7 @@ class Stats(commands.Cog):
         count: tuple[int, datetime.datetime] = await ctx.db.fetchrow(query, ctx.guild.id, member.id)  # type: ignore
 
         embed.description = f"{count[0]} commands used."
-        timestamp = count[1].replace(tzinfo=datetime.timezone.utc) if count[1] else discord.utils.utcnow()
+        timestamp = count[1].replace(tzinfo=datetime.UTC) if count[1] else discord.utils.utcnow()
 
         embed.set_footer(text="First command used").timestamp = timestamp
 
@@ -695,7 +695,7 @@ class Stats(commands.Cog):
             fmt += f"\nGuild: {ctx.guild} (ID: {ctx.guild.id})"
         embed.add_field(name="Location", value=fmt, inline=False)
         embed.add_field(name="Content", value=textwrap.shorten(ctx.message.content, width=512))
-        embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
+        embed.timestamp = datetime.datetime.now(datetime.UTC)
         embed.set_footer(text=f"Ray ID: {ctx.ray_id}")
 
         await self.webhook.send(embed=embed, wait=False)
@@ -1058,7 +1058,7 @@ async def on_error(self: Graha, event: str, *args: Any, **kwargs: Any) -> None:
     clean = "".join(traceback.format_exception(exception_type, exception, tb))
     embed.description = formats.to_codeblock(clean, escape_md=False)
     embed.set_footer(text=f"Ray ID: {ray_id}")
-    embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
+    embed.timestamp = datetime.datetime.now(datetime.UTC)
 
     fmt = ["```py"]
     for index, arg in enumerate(args):

@@ -11,7 +11,7 @@ from __future__ import annotations
 import datetime
 import secrets
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Generic, Iterable, Literal, Protocol, Sequence, TypeAlias, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeAlias, TypeVar, overload
 
 import discord
 from discord.ext import commands
@@ -19,7 +19,7 @@ from discord.ext import commands
 from .shared.ui import BaseView, ConfirmationView
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable, Sequence
     from types import TracebackType
 
     from aiohttp import ClientSession
@@ -348,7 +348,7 @@ class Context(commands.Context["Graha"], Generic[CogT]):
                 filename=f"output.{mystbin_syntax}",
                 content=content,
                 password=password,
-                expires=(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=2)),
+                expires=(datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=2)),
             )
             assert paste.expires
             content = (

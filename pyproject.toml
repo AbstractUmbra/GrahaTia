@@ -34,6 +34,7 @@ preview = true
 
 [tool.ruff]
 line-length = 125
+target-version = "py311"
 exclude = ["docs/extensions/*.py"]
 select = [
     "C4",
@@ -64,6 +65,16 @@ ignore = [
     "ANN102",
     "ANN401",
 ]
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
 [tool.ruff.isort]
 split-on-trailing-comma = true
 combine-as-imports = true
@@ -71,9 +82,13 @@ combine-as-imports = true
 [tool.ruff.flake8-annotations]
 allow-star-arg-any = true
 
+[tool.ruff.flake8-pytest-style]
+fixture-parentheses = false
+mark-parentheses = false
+parametrize-names-type = "csv"
+
 [tool.ruff.flake8-quotes]
 inline-quotes = "single"
-
 
 [tool.pyright]
 include = ["bot.py", "utilities/**/*.py", "extensions/**/*.py"]

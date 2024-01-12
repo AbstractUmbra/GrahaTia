@@ -126,12 +126,12 @@ class Voyage(NamedTuple):
         return self.start_time - datetime.timedelta(minutes=15)
 
     def has_set_sail(self, dt: datetime.datetime | None = None, /) -> bool:
-        dt = dt or datetime.datetime.now(datetime.timezone.utc)
+        dt = dt or datetime.datetime.now(datetime.UTC)
         return self.start_time < dt
 
     def can_register(self, dt: datetime.datetime | None = None, /) -> bool:
         open = self.registration_opens()
-        dt = dt or datetime.datetime.now(datetime.timezone.utc)
+        dt = dt or datetime.datetime.now(datetime.UTC)
         if 0 < (dt - open).total_seconds() <= 900:
             return True
 
@@ -159,7 +159,7 @@ class Voyage(NamedTuple):
 
 
 class OceanFishing(GrahaBaseCog):
-    STARTING_EPOCH: ClassVar[datetime.datetime] = datetime.datetime.fromtimestamp(1593302400, tz=datetime.timezone.utc)
+    STARTING_EPOCH: ClassVar[datetime.datetime] = datetime.datetime.fromtimestamp(1593302400, tz=datetime.UTC)
 
     def __init__(self, bot: Graha, /) -> None:
         super().__init__(bot)
@@ -176,7 +176,7 @@ class OceanFishing(GrahaBaseCog):
         )
 
     def cache_voyages(self, *, route: Route) -> None:
-        dt = datetime.datetime.fromtimestamp(2700, tz=datetime.timezone.utc)
+        dt = datetime.datetime.fromtimestamp(2700, tz=datetime.UTC)
         cache = self._calculate_voyages(route=route, dt=dt, count=144)
 
         self.voyage_cache[route] = [(item.d, item.t) for item in cache]
@@ -227,7 +227,7 @@ class OceanFishing(GrahaBaseCog):
         for idx in range(count):
             dest, time = self.voyage_cache[route][(start_index + idx) % 144]
             upcoming_voyages.append(
-                Voyage(datetime.datetime.fromtimestamp((start_index + idx + 1) * 7200, tz=datetime.timezone.utc), dest, time)
+                Voyage(datetime.datetime.fromtimestamp((start_index + idx + 1) * 7200, tz=datetime.UTC), dest, time)
             )
 
         return upcoming_voyages
@@ -236,7 +236,7 @@ class OceanFishing(GrahaBaseCog):
         embed = discord.Embed(colour=discord.Colour.random(), title=f"Ocean Fishing availability ({route.value} route)")
 
         current, next_ = self.calculate_voyages(route=route, dt=dt, count=2)
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
 
         current_fmt = current.stops() + "\n\n"
         if current.has_set_sail(now):
@@ -279,7 +279,7 @@ class OceanFishing(GrahaBaseCog):
     @commands.command(name="oceanfishing", aliases=["of", "fishing"])
     async def ocean_fishing_times(self, ctx: Context, *, route: Route = Route.indigo) -> None:
         """Shows your local time against the current ocean fishing schedule windows."""
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
 
         await ctx.send(embed=self._generate_ocean_fishing_embed(now, route=route))
 

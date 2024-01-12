@@ -16,7 +16,7 @@ from ..shared.cache import cache
 from ..shared.flags import SubscribedEventsFlags
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
+    from typing import Self
 
     from bot import Graha
 
@@ -174,7 +174,7 @@ class EventSubConfig:
     async def get_webhook(self) -> discord.Webhook:
         if self.guild_id or self.webhook_id:
             query = "SELECT * FROM webhooks WHERE guild_id = $1 OR webhook_id = $2;"
-            record: WebhooksRecord = await self._bot.pool.fetchrow(query, self.guild_id, self.webhook_id)  # type: ignore # stubs
+            record: WebhooksRecord | None = await self._bot.pool.fetchrow(query, self.guild_id, self.webhook_id)  # type: ignore # stubs
             if not record:
                 return await self._create_or_replace_webhook()
 
@@ -184,3 +184,15 @@ class EventSubConfig:
 
             return discord.Webhook.from_url(url, client=self._bot)
         return await self._create_or_replace_webhook()
+
+    async def delete(self) -> bool:
+        query = """
+                DELETE FROM event_remind_subscriptions
+                WHERE guild_id = $1
+                ON DELETE CASCADE;
+                """
+
+        ret = await self._bot.pool.execute(query, self.guild_id)
+        if ret == "DELETE 0":
+            return False
+        return True
