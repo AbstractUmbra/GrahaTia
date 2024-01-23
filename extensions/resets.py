@@ -87,18 +87,14 @@ class Resets(BaseCog, name="Reset Information"):
         return embed
 
     def _get_weekly_reset_time(self) -> datetime.datetime:
-        now = datetime.datetime.now(datetime.UTC).date()
-        diff = 1 - now.weekday()
-        days = diff + 7 if diff <= 0 else diff
-
-        if days == 0:  # today is Tuesday
-            days = 7
-
-        next_reset = now + datetime.timedelta(days=days)  # 1 is Tuesday
-
-        return datetime.datetime.combine(
-            next_reset, datetime.time(hour=8, minute=0, second=0, microsecond=0), tzinfo=datetime.UTC
+        time_ = datetime.time(hour=8, minute=0, second=0, microsecond=0)
+        next_ = resolve_next_weekday(
+            target=Weekday.tuesday,
+            current_week_included=True,
+            before_time=time_,
         )
+
+        return datetime.datetime.combine(next_, time_, tzinfo=datetime.UTC)
 
     def _get_weekly_reset_embed(self) -> discord.Embed:
         next_weekly = self._get_weekly_reset_time()
