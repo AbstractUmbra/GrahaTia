@@ -361,7 +361,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         fmt: str = MISSING
 
         try:
-            embed = await fashion_report_cog._gen_fashion_embed()
+            embed = await fashion_report_cog._gen_fashion_embed(dt=now)
         except ValueError:
             # no report yet.
             fmt = (

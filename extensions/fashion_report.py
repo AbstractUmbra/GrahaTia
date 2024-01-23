@@ -87,23 +87,22 @@ class FashionReport(BaseCog):
         return data
 
     @cache()
-    async def filter_submissions(self) -> KaiyokoSubmission:
+    async def filter_submissions(self, *, dt: datetime.datetime) -> KaiyokoSubmission:
         submissions = await self.get_kaiyoko_submissions()
 
-        now = datetime.datetime.now(datetime.UTC)
         for submission in submissions["data"]["children"]:
             if match := FASHION_REPORT_PATTERN.search(submission["data"]["title"]):
-                if self.weeks_since_start(now) != int(match["week_num"]):
+                if self.weeks_since_start(dt) != int(match["week_num"]):
                     continue
 
                 created = datetime.datetime.fromtimestamp(submission["data"]["created_utc"], tz=datetime.UTC)
-                if (now - created) > datetime.timedelta(days=7):
+                if (dt - created) > datetime.timedelta(days=7):
                     continue
 
-                wd = now.isoweekday()
+                wd = dt.isoweekday()
                 reset_time = datetime.time(hour=8, minute=0, second=0)
                 is_available = (
-                    (wd == 5 and now.time() > reset_time) or wd == 1 or wd >= 6 or (wd == 2 and now.time() < reset_time)
+                    (wd == 5 and dt.time() > reset_time) or wd == 1 or wd >= 6 or (wd == 2 and dt.time() < reset_time)
                 )
 
                 if is_available:
@@ -115,14 +114,14 @@ class FashionReport(BaseCog):
                     fmt = "Judging becomes available"
                     colour = discord.Colour.dark_orange()
 
-                if (diff == 0 and now.time() < reset_time) or (diff == 5 and now.time() > reset_time):
+                if (diff == 0 and dt.time() < reset_time) or (diff == 5 and dt.time() > reset_time):
                     days = 0
                 else:
                     days = diff + 7 if diff <= 0 else diff
 
-                upcoming_event = now + datetime.timedelta(days=days)
+                upcoming_event = dt + datetime.timedelta(days=days)
                 upcoming_event = upcoming_event.replace(hour=8, minute=0, second=0, microsecond=0)
-                reset_str = self.humanify_delta(td=(upcoming_event - now), format_=fmt)
+                reset_str = self.humanify_delta(td=(upcoming_event - dt), format_=fmt)
 
                 return KaiyokoSubmission(
                     f"Fashion Report details for week of {match['date']} (Week {match['week_num']})",
@@ -134,8 +133,10 @@ class FashionReport(BaseCog):
 
         raise ValueError("Unabled to fetch the reddit post details.")
 
-    async def _gen_fashion_embed(self) -> discord.Embed:
-        submission: KaiyokoSubmission = await self.filter_submissions()
+    async def _gen_fashion_embed(self, *, dt: datetime.datetime | None = None) -> discord.Embed:
+        dt = dt or datetime.datetime.now(datetime.UTC)
+
+        submission: KaiyokoSubmission = await self.filter_submissions(dt=dt)
 
         embed = discord.Embed(title=submission.prose, url=submission.url, colour=submission.colour)
         full_timestmap = discord.utils.format_dt(submission.dt, "F")
@@ -158,7 +159,7 @@ class FashionReport(BaseCog):
 
     @tasks.loop(time=datetime.time(hour=15, tzinfo=datetime.UTC))
     async def reset_cache(self) -> None:
-        self.filter_submissions.invalidate(self)
+        self.filter_submissions.invalidate_containing(repr(self))
 
 
 async def setup(bot: Graha) -> None:
