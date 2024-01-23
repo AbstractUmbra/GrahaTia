@@ -717,7 +717,7 @@ class Stats(commands.Cog):
         else:
             message = record.message
 
-        msg = textwrap.shorten(f"{emoji} {time.format_dt(dt)}\n{message}", width=1990)
+        msg = textwrap.shorten(f"{emoji} {discord.utils.format_dt(dt, 'F')}\n{message}", width=1990)
         if record.name == "discord.gateway":
             username = "Gateway"
             avatar_url = "https://i.imgur.com/4PnCKB3.png"
