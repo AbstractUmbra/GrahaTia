@@ -86,7 +86,7 @@ class FashionReport(BaseCog):
 
         return data
 
-    @cache()
+    @cache(ignore_kwargs=True)
     async def filter_submissions(self, *, dt: datetime.datetime) -> KaiyokoSubmission:
         submissions = await self.get_kaiyoko_submissions()
 
@@ -158,7 +158,7 @@ class FashionReport(BaseCog):
 
     @tasks.loop(time=datetime.time(hour=15, tzinfo=datetime.UTC))
     async def reset_cache(self) -> None:
-        self.filter_submissions.invalidate_containing(repr(self))
+        self.filter_submissions.invalidate(self)
 
 
 async def setup(bot: Graha) -> None:
