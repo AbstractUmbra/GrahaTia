@@ -119,8 +119,7 @@ class FashionReport(BaseCog):
                 else:
                     days = diff + 7 if diff <= 0 else diff
 
-                upcoming_event = dt + datetime.timedelta(days=days)
-                upcoming_event = upcoming_event.replace(hour=8, minute=0, second=0, microsecond=0)
+                upcoming_event = (dt + datetime.timedelta(days=days)).replace(hour=8, minute=0, second=0, microsecond=0)
                 reset_str = self.humanify_delta(td=(upcoming_event - dt), format_=fmt)
 
                 return KaiyokoSubmission(
@@ -131,7 +130,7 @@ class FashionReport(BaseCog):
                     colour,
                 )
 
-        raise ValueError("Unabled to fetch the reddit post details.")
+        raise ValueError("Unable to fetch the reddit post details.")
 
     async def _gen_fashion_embed(self, *, dt: datetime.datetime | None = None) -> discord.Embed:
         dt = dt or datetime.datetime.now(datetime.UTC)
