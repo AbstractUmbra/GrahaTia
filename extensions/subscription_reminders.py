@@ -17,6 +17,7 @@ from utilities.containers.event_subscription import (
     MisconfiguredSubscription,
 )
 from utilities.shared.cache import cache
+from utilities.shared.converters import WebhookTransformer  # noqa: TCH001
 from utilities.shared.ui import BaseView
 
 if TYPE_CHECKING:
@@ -73,6 +74,7 @@ class EventSubView(BaseView):
             thread_id = None
 
         await self.cog._set_subscriptions(interaction.guild.id, resolved_flags, channel_id, thread_id)
+        self.cog.get_sub_config.invalidate(self.cog, interaction.guild.id)
 
         await interaction.edit_original_response(
             content="Your subscription choices have been recorded, thank you!", view=None
@@ -192,8 +194,8 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         self.get_sub_config.invalidate(self, config.guild_id)
 
-    @cache()
-    async def get_sub_config(self, guild_id: int) -> EventSubConfig:
+    @cache(ignore_kwargs=True)
+    async def get_sub_config(self, guild_id: int, *, webhook: discord.Webhook | None = None) -> EventSubConfig:
         query = """
                 SELECT *
                 FROM event_remind_subscriptions
@@ -204,6 +206,8 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         if not record:
             LOGGER.info("[EventSub] -> [Create] :: Creating new subscription config for guild: %s", guild_id)
+            if webhook:
+                return EventSubConfig.with_webhook(self.bot, guild_id=guild_id, webhook=webhook)
             return EventSubConfig(self.bot, guild_id=guild_id)
 
         return EventSubConfig.from_record(self.bot, record=record)
@@ -218,7 +222,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
     @app_commands.command(name="select")
     @app_commands.guild_only()
     @app_commands.default_permissions(manage_channels=True, manage_webhooks=True)
-    async def select_subscriptions(self, interaction: Interaction) -> None:
+    async def select_subscriptions(
+        self, interaction: Interaction, webhook: app_commands.Transform[discord.Webhook, WebhookTransformer] | None = None
+    ) -> None:
         """Open a selection of subscriptions for this channel!"""
         assert interaction.guild  # guarded in check
         if not isinstance(interaction.channel, (discord.TextChannel, discord.VoiceChannel, discord.Thread)):
@@ -228,7 +234,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         await interaction.response.defer()
 
-        config = await self.get_sub_config(interaction.guild.id)
+        config = await self.get_sub_config(interaction.guild.id, webhook=webhook)
 
         options = self.POSSIBLE_SUBSCRIPTIONS[:]
 

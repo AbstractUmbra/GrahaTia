@@ -88,6 +88,10 @@ class EventSubConfig:
             webhook_id=record["webhook_id"],
         )
 
+    @classmethod
+    def with_webhook(cls, bot: Graha, /, *, guild_id: int, webhook: discord.Webhook) -> Self:
+        return cls(bot, guild_id=guild_id, webhook_id=webhook.id)
+
     @property
     def guild(self) -> Guild | None:
         if self.guild_id:
