@@ -59,8 +59,6 @@ class Resets(BaseCog, name="Reset Information"):
             return Region.OCE, 128
 
     def _get_cactpot_reset_data(self, region_or_dc: Datacenter | Region, /) -> tuple[datetime.datetime, Region]:
-        date = resolve_next_weekday(target=Weekday.saturday, current_week_included=True)
-
         tz = zoneinfo.ZoneInfo("America/Los_Angeles")
 
         value = region_or_dc.value if isinstance(region_or_dc, Datacenter) else region_or_dc
@@ -75,6 +73,9 @@ class Resets(BaseCog, name="Reset Information"):
             case Region.OCE:
                 time = datetime.time(hour=1, tzinfo=tz)
 
+        date = resolve_next_weekday(
+            source=datetime.datetime.now(tz), target=Weekday.saturday, current_week_included=True, before_time=time
+        )
         return datetime.datetime.combine(date.date(), time, tzinfo=tz), value
 
     def _get_cactpot_embed(self, datacenter: Datacenter | Region, /) -> discord.Embed:
