@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
+import zoneinfo
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import discord
@@ -49,7 +50,7 @@ class EventSubView(BaseView):
     async def on_timeout(self) -> None:
         return
 
-    @discord.ui.select(max_values=5, min_values=1)  # type: ignore # pyright bug
+    @discord.ui.select(min_values=1, max_values=8)  # type: ignore # pyright bug
     async def sub_selection(self, interaction: Interaction, item: discord.ui.Select[Self]) -> None:
         assert interaction.guild  # guarded in earlier check
         await interaction.response.defer()
@@ -102,9 +103,27 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             emoji="\U0001f41f",
         ),
         discord.SelectOption(
-            label="Jumbo Cactpot",
+            label="Jumbo Cactpot NA",
             value="16",
-            description="Opt into reminders about Jumbo Cactpot callouts.",
+            description="Opt into reminders about Jumbo Cactpot callouts for NA datacenters.",
+            emoji="\U0001f340",
+        ),
+        discord.SelectOption(
+            label="Jumbo Cactpot EU",
+            value="32",
+            description="Opt into reminders about Jumbo Cactpot callouts for EU datacenters.",
+            emoji="\U0001f340",
+        ),
+        discord.SelectOption(
+            label="Jumbo Cactpot JP",
+            value="64",
+            description="Opt into reminders about Jumbo Cactpot callouts for JP datacenters.",
+            emoji="\U0001f340",
+        ),
+        discord.SelectOption(
+            label="Jumbo Cactpot OCE",
+            value="128",
+            description="Opt into reminders about Jumbo Cactpot callouts for OCE datacenters.",
             emoji="\U0001f340",
         ),
     ]
@@ -146,7 +165,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                     thread_id = EXCLUDED.thread_id;
                 """
 
-        subscription_bits = BitString.from_int(subscription_value, length=6)
+        subscription_bits = BitString.from_int(subscription_value, length=10)
         await self.bot.pool.execute(
             query,
             guild_id,
@@ -274,7 +293,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(1, length=6))  # type: ignore # reee
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(1, length=10))  # type: ignore # reee
 
         if not records:
             return
@@ -318,7 +337,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(2, length=6))  # type: ignore # reee
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(2, length=10))  # type: ignore # reee
 
         if not records:
             LOGGER.info("[EventSub] -> [Weekly reset] :: No records found to notify.")
@@ -358,7 +377,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(4, length=6))  # type: ignore # stub shenanigans
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(4, length=10))  # type: ignore # stub shenanigans
         if not records:
             return
 
@@ -407,7 +426,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(8, length=6))  # type: ignore
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(8, length=10))  # type: ignore
         if not records:
             return
 
@@ -431,9 +450,16 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         await self.handle_dispatch(to_send)
 
-    @tasks.loop(time=datetime.time(hour=18, minute=45, tzinfo=datetime.UTC))
+    @tasks.loop(
+        time=[
+            datetime.time(hour=0, minute=45, tzinfo=zoneinfo.ZoneInfo("America/Los_Angeles")),
+            datetime.time(hour=3, minute=45, tzinfo=zoneinfo.ZoneInfo("America/Los_Angeles")),
+            datetime.time(hour=10, minute=45, tzinfo=zoneinfo.ZoneInfo("America/Los_Angeles")),
+            datetime.time(hour=17, minute=45, tzinfo=zoneinfo.ZoneInfo("America/Los_Angeles")),
+        ]
+    )
     async def jumbo_cactpot_loop(self) -> None:
-        now = datetime.datetime.now(datetime.UTC)
+        now = datetime.datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles"))
         if now.weekday() != 5:  # saturday
             LOGGER.warning("[EventSub] -> [Jumbo Cactpot] :: Tried to run on a non-Saturday.")
             return
@@ -443,7 +469,8 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             LOGGER.error("[EventSub] -> [Jumbo Cactpot] :: Could not load the resets Cog.")
             return
 
-        embed = resets._get_cactpot_embed()
+        region, bitstring_value = resets._get_next_datacenter_cactpot_data(now)
+        embed = resets._get_cactpot_embed(region)
 
         query = """
                 SELECT *
@@ -451,7 +478,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(4, length=6))  # type: ignore # stub shenanigans
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
+            query, BitString.from_int(bitstring_value, length=10)
+        )  # type: ignore # stub shenanigans
 
         for record in records:
             conf = EventSubConfig.from_record(self.bot, record=record)

@@ -7,12 +7,14 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 from __future__ import annotations
 
 import datetime
+import zoneinfo
 from typing import TYPE_CHECKING, ClassVar
 
 import discord
 from discord.ext import commands
 
 from utilities.cog import GrahaBaseCog as BaseCog
+from utilities.containers.cactpot import Datacenter, Region
 from utilities.shared.time import Weekday, resolve_next_weekday
 
 if TYPE_CHECKING:
@@ -43,17 +45,45 @@ class Resets(BaseCog, name="Reset Information"):
     def __init__(self, bot: Graha) -> None:
         super().__init__(bot)
 
-    def _get_cactpot_reset_time(self) -> datetime.datetime:
-        date = resolve_next_weekday(target=Weekday.saturday, current_week_included=True)
-        return date.replace(hour=19, minute=0, second=0, microsecond=0, tzinfo=datetime.UTC)
+    def _get_next_datacenter_cactpot_data(self, dt: datetime.datetime | None = None) -> tuple[Region, int]:
+        # assuming we're calling this on a saturday and also the tz will be los angeles (PST)
+        now = dt or datetime.datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles"))
 
-    def _get_cactpot_embed(self) -> discord.Embed:
-        next_ = self._get_cactpot_reset_time()
+        if now.hour > 11 and now.hour < 18:
+            return Region.NA, 16
+        elif now.hour > 4 and now.hour < 11:
+            return Region.EU, 32
+        elif now.hour > 1 and now.hour < 4:
+            return Region.JP, 64
+        else:
+            return Region.OCE, 128
+
+    def _get_cactpot_reset_data(self, region_or_dc: Datacenter | Region, /) -> tuple[datetime.datetime, Region]:
+        date = resolve_next_weekday(target=Weekday.saturday, current_week_included=True)
+
+        tz = zoneinfo.ZoneInfo("America/Los_Angeles")
+
+        value = region_or_dc.value if isinstance(region_or_dc, Datacenter) else region_or_dc
+
+        match value:
+            case Region.NA:
+                time = datetime.time(hour=18, tzinfo=tz)
+            case Region.EU:
+                time = datetime.time(hour=11, tzinfo=tz)
+            case Region.JP:
+                time = datetime.time(hour=4, tzinfo=tz)
+            case Region.OCE:
+                time = datetime.time(hour=1, tzinfo=tz)
+
+        return datetime.datetime.combine(date.date(), time, tzinfo=tz), value
+
+    def _get_cactpot_embed(self, datacenter: Datacenter | Region, /) -> discord.Embed:
+        next_, region = self._get_cactpot_reset_data(datacenter)
 
         next_full_fmt = discord.utils.format_dt(next_, "F")
         next_rel_fmt = discord.utils.format_dt(next_, "R")
 
-        fmt = f"Cashing out is available at {next_full_fmt} ({next_rel_fmt})"
+        fmt = f"Cashing out is available at {next_full_fmt} ({next_rel_fmt}) for {region.resolved_name()} datacenters!"
 
         embed = discord.Embed(title="Jumbo Cactpot cashout!", colour=discord.Colour.random())
         embed.set_thumbnail(
