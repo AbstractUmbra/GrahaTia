@@ -450,6 +450,22 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         await self.handle_dispatch(to_send)
 
+    @ocean_fishing_loop.before_loop
+    async def ocean_fishing_before_loop(self) -> None:
+        await self.bot.wait_until_ready()
+
+        now = datetime.datetime.now(datetime.UTC)
+        then = now + datetime.timedelta(hours=1) if now.hour % 2 == 0 else now
+
+        if then.minute >= 45:
+            # exceeded warning time, alert on next
+            then += datetime.timedelta(hours=2)
+        then = then.replace(minute=45, second=0, microsecond=0)
+
+        LOGGER.info("[EventSub] -> [OceanFishing] :: Sleeping until %s", then)
+        await discord.utils.sleep_until(then)
+        LOGGER.info("[EventSub] -> [OceanFishing] :: Woken up at %s", then)
+
     @tasks.loop(
         time=[
             datetime.time(hour=0, minute=45, tzinfo=zoneinfo.ZoneInfo("America/Los_Angeles")),
@@ -489,7 +505,6 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             await webhook.send(embed=embed, thread=conf.thread)
 
     @jumbo_cactpot_loop.before_loop
-    @ocean_fishing_loop.before_loop
     @weekly_reset_loop.before_loop
     @daily_reset_loop.before_loop
     @fashion_report_loop.before_loop
