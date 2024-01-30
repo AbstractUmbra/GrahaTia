@@ -277,11 +277,11 @@ class OceanFishing(GrahaBaseCog):
         ]
 
     @commands.command(name="oceanfishing", aliases=["of", "fishing"])
-    async def ocean_fishing_times(self, ctx: Context, *, route: Route = Route.indigo) -> None:
+    async def ocean_fishing_times(self, ctx: Context) -> None:
         """Shows your local time against the current ocean fishing schedule windows."""
         now = datetime.datetime.now(datetime.UTC)
 
-        await ctx.send(embed=self._generate_ocean_fishing_embed(now, route=route))
+        await ctx.send(embeds=self._generate_both_embeds(now))
 
 
 async def setup(bot: Graha) -> None:
