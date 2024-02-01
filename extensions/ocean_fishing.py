@@ -281,7 +281,10 @@ class OceanFishing(GrahaBaseCog):
         """Shows your local time against the current ocean fishing schedule windows."""
         now = datetime.datetime.now(datetime.UTC)
 
-        await ctx.send(embeds=self._generate_both_embeds(now))
+        await ctx.send(
+            content="You can view Lulu's helpful tools on Ocean Fishing data [here](https://ffxiv.pf-n.co/ocean-fishing)!",
+            embeds=self._generate_both_embeds(now),
+        )
 
 
 async def setup(bot: Graha) -> None:
