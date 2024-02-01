@@ -122,28 +122,9 @@ class Voyage(NamedTuple):
     def __str__(self) -> str:
         return self.details
 
-    def registration_opens(self) -> datetime.datetime:
-        return self.start_time - datetime.timedelta(minutes=15)
-
-    def has_set_sail(self, dt: datetime.datetime | None = None, /) -> bool:
-        dt = dt or datetime.datetime.now(datetime.UTC)
-        return self.start_time < dt
-
-    def can_register(self, dt: datetime.datetime | None = None, /) -> bool:
-        open = self.registration_opens()
-        dt = dt or datetime.datetime.now(datetime.UTC)
-        if 0 < (dt - open).total_seconds() <= 900:
-            return True
-
-        return False
-
-    def stops(self) -> str:
-        routes: list[tuple[str, str]] = []
-
-        for stop, time in zip(STOP_MAPPING[self.d], STOP_TIME_MAPPING[self.t]):
-            routes.append((stop.value, time))
-
-        return "\n".join([f"{item[1]}: {item[0]}" for item in routes])
+    @property
+    def sets_sail(self) -> datetime.datetime:
+        return self.start_time + datetime.timedelta(minutes=15)
 
     @property
     def destination(self) -> str:
@@ -156,6 +137,28 @@ class Voyage(NamedTuple):
     @property
     def details(self) -> str:
         return f"{self.destination!r} at {self.time.lower()}"
+
+    def has_set_sail(self, dt: datetime.datetime | None = None, /) -> bool:
+        dt = dt or datetime.datetime.now(datetime.UTC)
+        return self.sets_sail < dt
+
+    def can_register(self, dt: datetime.datetime | None = None, /) -> bool:
+        dt = dt or datetime.datetime.now(datetime.UTC)
+        return self.has_set_sail(dt)
+
+    def formatted_start_times(self) -> tuple[str, str]:
+        return discord.utils.format_dt(self.start_time), discord.utils.format_dt(self.start_time, "R")
+
+    def formatted_sail_times(self) -> tuple[str, str]:
+        return discord.utils.format_dt(self.sets_sail), discord.utils.format_dt(self.sets_sail, "R")
+
+    def stops(self) -> str:
+        routes: list[tuple[str, str]] = []
+
+        for stop, time in zip(STOP_MAPPING[self.d], STOP_TIME_MAPPING[self.t]):
+            routes.append((stop.value, time))
+
+        return "\n".join([f"{item[1]}: {item[0]}" for item in routes])
 
 
 class OceanFishing(GrahaBaseCog):
@@ -220,7 +223,7 @@ class OceanFishing(GrahaBaseCog):
 
         return upcoming_voyages
 
-    def calculate_voyages(self, *, route: Route, dt: datetime.datetime, count: int = 144) -> list[Voyage]:
+    def calculate_voyages(self, route: Route, /, *, dt: datetime.datetime, count: int = 144) -> list[Voyage]:
         start_index = math.floor((dt - datetime.timedelta(minutes=45)).timestamp() / 7200)
         upcoming_voyages: list[Voyage] = []
 
@@ -235,35 +238,30 @@ class OceanFishing(GrahaBaseCog):
     def _generate_ocean_fishing_embed(self, dt: datetime.datetime, /, *, route: Route) -> discord.Embed:
         embed = discord.Embed(colour=discord.Colour.random(), title=f"Ocean Fishing availability ({route.value} route)")
 
-        current, next_ = self.calculate_voyages(route=route, dt=dt, count=2)
+        current, next_ = self.calculate_voyages(route, dt=dt, count=2)
         now = datetime.datetime.now(datetime.UTC)
+
+        current_start_time, current_start_time_rel = current.formatted_start_times()
+        current_sail_time, current_sail_time_rel = current.formatted_sail_times()
+        next_start_time, next_start_time_rel = next_.formatted_start_times()
+        next_sail_time, next_sail_time_rel = next_.formatted_sail_times()
 
         current_fmt = current.stops() + "\n\n"
         if current.has_set_sail(now):
             current_fmt += "The registration window for this has closed and the voyage is underway.\n\n"
         elif current.can_register(now):
-            closes = discord.utils.format_dt(current.start_time)
-            closes_rel = discord.utils.format_dt(current.start_time, "R")
             current_fmt += (
                 "The registration window for this voyage is currently open if you wish to join. Registration will close at"
-                f" {closes} ({closes_rel}).\n\n"
+                f" {current_sail_time} ({current_sail_time_rel}).\n\n"
             )
         else:
-            registration_opens = current.registration_opens()
-            registration_opens_formatted = discord.utils.format_dt(registration_opens)
-            registration_opens_formatted_rel = discord.utils.format_dt(registration_opens, "R")
             current_fmt += (
-                "The registration window for this voyage will open at"
-                f" {registration_opens_formatted} ({registration_opens_formatted_rel})."
+                "The registration window for this voyage will open at" f" {current_start_time} ({current_start_time_rel})."
             )
         embed.add_field(name="Current Route", value=current_fmt, inline=False)
 
-        next_dt = discord.utils.format_dt(next_.start_time)
-        next_dt_rel = discord.utils.format_dt(next_.start_time, "R")
-        next_fmt = f"Leaves at {next_dt} ({next_dt_rel}) with a route of:-\n{next_.stops()}\n\n"
-        next_window_fmt = discord.utils.format_dt(next_.registration_opens())
-        next_window_fmt_rel = discord.utils.format_dt(next_.registration_opens(), "R")
-        next_fmt += f"Registration opens at {next_window_fmt} ({next_window_fmt_rel})."
+        next_fmt = f"Sets sail at {next_sail_time} ({next_sail_time_rel}) with a route of:-\n{next_.stops()}\n\n"
+        next_fmt += f"Registration opens at {next_start_time} ({next_start_time_rel})."
         embed.add_field(name="Next Route", value=next_fmt, inline=False)
 
         embed.set_footer(text="The route is named after the final stop.")
