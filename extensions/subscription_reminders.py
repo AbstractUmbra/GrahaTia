@@ -446,7 +446,14 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 await self._delete_subscription(conf)
                 return
 
-            to_send.append(self.dispatcher(webhook=webhook, embeds=embeds, config=conf))
+            to_send.append(
+                self.dispatcher(
+                    content="You can view Lulu's helpful tools on Ocean Fishing data [here](https://ffxiv.pf-n.co/ocean-fishing)!",
+                    webhook=webhook,
+                    embeds=embeds,
+                    config=conf,
+                )
+            )
 
         await self.handle_dispatch(to_send)
 
