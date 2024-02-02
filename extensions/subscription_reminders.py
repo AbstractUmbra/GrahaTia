@@ -390,7 +390,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         except ValueError:
             # no report yet.
             fmt = (
-                "Kaiyoko's post is not up yet. Please use `gt fr` later for their insight, or have a look on their Twitter"
+                "Kaiyoko's post on the Fashion Report data is not up yet. Please use `gt fr` later for their insight, or have a look on their Twitter"
                 " page for the post:-\n<https://twitter.com/KaiyokoStar>"
             )
             embed = MISSING
@@ -409,7 +409,8 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 await self._delete_subscription(conf)
                 return
 
-            to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], content=fmt, config=conf))
+            embeds = [embed] if embed else []
+            to_send.append(self.dispatcher(webhook=webhook, embeds=embeds, content=fmt, config=conf))
 
         await self.handle_dispatch(to_send)
 
