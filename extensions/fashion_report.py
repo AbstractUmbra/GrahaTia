@@ -145,6 +145,12 @@ class FashionReport(BaseCog):
 
         return embed
 
+    @commands.is_owner()
+    @commands.command(hidden=True)
+    async def fr_cache(self, ctx: Context) -> None:
+        invalidated = self.filter_submissions.invalidate(self)
+        return await ctx.message.add_reaction(ctx.tick(invalidated))
+
     @commands.command(name="fashionreport", aliases=["fr", "fashion-report"])
     async def fashion_report(self, ctx: Context) -> None:
         """Fetch the latest fashion report data from /u/Kaiyoko."""
