@@ -273,7 +273,12 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         await interaction.followup.send("Sorry, there was an error processing this command!")
 
     async def dispatcher(
-        self, *, webhook: discord.Webhook, embeds: Sequence[discord.Embed], content: str = MISSING, config: EventSubConfig
+        self,
+        *,
+        webhook: discord.Webhook,
+        embeds: Sequence[discord.Embed],
+        content: str = MISSING,
+        config: EventSubConfig,
     ) -> None:
         try:
             await webhook.send(content=content, embeds=embeds, thread=config.thread, avatar_url=self.avatar_url)
@@ -506,11 +511,15 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             query, BitString.from_int(bitstring_value, length=10)
         )  # type: ignore # stub shenanigans
 
+        to_send: list[Coroutine[Any, Any, None]] = []
+
         for record in records:
             conf = EventSubConfig.from_record(self.bot, record=record)
             webhook = await conf.get_webhook()
 
-            await webhook.send(embed=embed, thread=conf.thread)
+            to_send.append(self.dispatcher(embeds=[embed], webhook=webhook, config=conf))
+
+        await self.handle_dispatch(to_send)
 
     @jumbo_cactpot_loop.before_loop
     @weekly_reset_loop.before_loop
