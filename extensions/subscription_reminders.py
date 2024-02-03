@@ -144,6 +144,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         self.fashion_report_loop.start()
         self.ocean_fishing_loop.start()
         self.jumbo_cactpot_loop.start()
+        self.gate_loop.start()
 
     async def cog_unload(self) -> None:
         self.daily_reset_loop.cancel()
@@ -151,6 +152,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         self.fashion_report_loop.cancel()
         self.ocean_fishing_loop.cancel()
         self.jumbo_cactpot_loop.cancel()
+        self.gate_loop.cancel()
 
     async def _set_subscriptions(
         self,
@@ -530,8 +532,6 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         ]
     )
     async def gate_loop(self) -> None:
-        await self.bot.wait_until_ready()
-
         now = datetime.datetime.now(datetime.UTC)
         gates_cog: GATEs | None = self.bot.get_cog("GATEs")  # type: ignore # cog downcasting
         if not gates_cog:
@@ -562,6 +562,21 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], config=conf))
 
         await self.handle_dispatch(to_send)
+
+    @gate_loop.before_loop
+    async def gate_before_loop(self) -> None:
+        await self.bot.wait_until_ready()
+
+        gate_cog: GATEs | None = self.bot.get_cog("GATEs")  # type: ignore # cog downcasting
+        if not gate_cog:
+            return
+
+        next_, _ = gate_cog._resolve_next_gate()
+        sleep = next_ - datetime.timedelta(minutes=10)
+
+        LOGGER.info("[EventSub] -> [GATEs] :: Sleeping until %s", sleep)
+        await discord.utils.sleep_until(sleep)
+        LOGGER.info("[EventSub] -> [GATEs] :: Woken up at %s", sleep)
 
     @ocean_fishing_loop.before_loop
     async def ocean_fishing_before_loop(self) -> None:
