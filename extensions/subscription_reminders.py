@@ -238,6 +238,18 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         return EventSubConfig.from_record(self.bot, record=record)
 
+    async def _resolve_webhook_from_cache(
+        self, config: EventSubConfig, *, log_key: str = "[General Access]"
+    ) -> discord.Webhook | None:
+        try:
+            wh = await config.get_webhook()
+        except MisconfiguredSubscription:
+            LOGGER.error("[EventSub] -> [Delete] %s :: Subscription %r is misconfigured. Deleting.", log_key, config)
+            await self._delete_subscription(config)
+            return
+
+        return wh
+
     @commands.Cog.listener()
     async def on_guild_leave(self, guild: discord.Guild) -> None:
         config = await self.get_sub_config(guild.id)
@@ -323,12 +335,10 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         to_send: list[Coroutine[Any, Any, None]] = []
         for record in records:
             conf = await self.get_sub_config(record["guild_id"])
-            try:
-                webhook = await conf.get_webhook()
-            except MisconfiguredSubscription:
-                LOGGER.warning("[EventSub] -> [Delete] ([DailyReset]) :: Subscription %r is misconfigured. Deleting.", conf)
-                await self._delete_subscription(conf)
-                return
+            webhook = await self._resolve_webhook_from_cache(conf, log_key="[(DailyReset)]")
+
+            if not webhook:
+                continue
 
             to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], config=conf))
 
@@ -370,12 +380,10 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         to_send: list[Coroutine[Any, Any, None]] = []
         for record in records:
             conf = await self.get_sub_config(record["guild_id"])
-            try:
-                webhook = await conf.get_webhook()
-            except MisconfiguredSubscription:
-                LOGGER.warning("[EventSub] -> [Delete] ([WeeklyReset]) :: Subscription %r is misconfigured. Deleting.", conf)
-                await self._delete_subscription(conf)
-                return
+            webhook = await self._resolve_webhook_from_cache(conf, log_key="[(WeeklyReset)]")
+
+            if not webhook:
+                continue
 
             to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], config=conf))
 
@@ -417,15 +425,10 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         for record in records:
             conf = await self.get_sub_config(record["guild_id"])
-            try:
-                webhook = await conf.get_webhook()
-            except MisconfiguredSubscription:
-                LOGGER.warning(
-                    "[EventSub] -> [Delete] ([FashionReport]) :: Subscription %r is misconfigured. Deleting.", conf
-                )
-                # todo: resolve a way to let people know it was messed up.
-                await self._delete_subscription(conf)
-                return
+            webhook = await self._resolve_webhook_from_cache(conf, log_key="[(FashionReport)]")
+
+            if not webhook:
+                continue
 
             embeds = [embed] if embed else []
             to_send.append(self.dispatcher(webhook=webhook, embeds=embeds, content=fmt, config=conf))
@@ -458,14 +461,10 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         to_send: list[Coroutine[Any, Any, None]] = []
         for record in records:
             conf = await self.get_sub_config(record["guild_id"])
-            try:
-                webhook = await conf.get_webhook()
-            except MisconfiguredSubscription:
-                LOGGER.warning(
-                    "[EventSub] -> [Delete] ([OceanFishing]) :: Subscription %r is misconfigured. Deleting.", conf
-                )
-                await self._delete_subscription(conf)
-                return
+            webhook = await self._resolve_webhook_from_cache(conf, log_key="[(OceanFishing)]")
+
+            if not webhook:
+                continue
 
             to_send.append(
                 self.dispatcher(
@@ -477,22 +476,6 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             )
 
         await self.handle_dispatch(to_send)
-
-    @ocean_fishing_loop.before_loop
-    async def ocean_fishing_before_loop(self) -> None:
-        await self.bot.wait_until_ready()
-
-        now = datetime.datetime.now(datetime.UTC)
-        then = now + datetime.timedelta(hours=1) if now.hour % 2 == 0 else now
-
-        if then.minute >= 45:
-            # exceeded warning time, alert on next
-            then += datetime.timedelta(hours=2)
-        then = then.replace(minute=45, second=0, microsecond=0)
-
-        LOGGER.info("[EventSub] -> [OceanFishing] :: Sleeping until %s", then)
-        await discord.utils.sleep_until(then)
-        LOGGER.info("[EventSub] -> [OceanFishing] :: Woken up at %s", then)
 
     @tasks.loop(
         time=[
@@ -529,8 +512,11 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         to_send: list[Coroutine[Any, Any, None]] = []
 
         for record in records:
-            conf = EventSubConfig.from_record(self.bot, record=record)
-            webhook = await conf.get_webhook()
+            conf = await self.get_sub_config(record["guild_id"])
+            webhook = await self._resolve_webhook_from_cache(conf, log_key="[EventSub] -> [Delete]")
+
+            if not webhook:
+                continue
 
             to_send.append(self.dispatcher(embeds=[embed], webhook=webhook, config=conf))
 
@@ -567,12 +553,31 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         to_send: list[Coroutine[Any, Any, None]] = []
 
         for record in records:
-            conf = EventSubConfig.from_record(self.bot, record=record)
-            webhook = await conf.get_webhook()
+            conf = await self.get_sub_config(record["guild_id"])
+            webhook = await self._resolve_webhook_from_cache(conf, log_key="[EventSub] -> [Delete] ([GATEs])")
+
+            if not webhook:
+                continue
 
             to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], config=conf))
 
         await self.handle_dispatch(to_send)
+
+    @ocean_fishing_loop.before_loop
+    async def ocean_fishing_before_loop(self) -> None:
+        await self.bot.wait_until_ready()
+
+        now = datetime.datetime.now(datetime.UTC)
+        then = now + datetime.timedelta(hours=1) if now.hour % 2 == 0 else now
+
+        if then.minute >= 45:
+            # exceeded warning time, alert on next
+            then += datetime.timedelta(hours=2)
+        then = then.replace(minute=45, second=0, microsecond=0)
+
+        LOGGER.info("[EventSub] -> [OceanFishing] :: Sleeping until %s", then)
+        await discord.utils.sleep_until(then)
+        LOGGER.info("[EventSub] -> [OceanFishing] :: Woken up at %s", then)
 
     @jumbo_cactpot_loop.before_loop
     @weekly_reset_loop.before_loop
