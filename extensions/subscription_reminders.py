@@ -172,7 +172,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                     thread_id = EXCLUDED.thread_id;
                 """
 
-        subscription_bits = BitString.from_int(subscription_value, length=10)
+        subscription_bits = BitString.from_int(subscription_value, length=10, bitorder="little")
         await self.bot.pool.execute(
             query,
             guild_id,
@@ -305,7 +305,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(1, length=10))  # type: ignore # reee
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
+            query, BitString.from_int(1, length=10, bitorder="little")
+        )  # type: ignore # reee
 
         if not records:
             return
@@ -349,7 +351,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(2, length=10))  # type: ignore # reee
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
+            query, BitString.from_int(2, length=10, bitorder="little")
+        )  # type: ignore # reee
 
         if not records:
             LOGGER.info("[EventSub] -> [Weekly reset] :: No records found to notify.")
@@ -389,7 +393,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(4, length=10))  # type: ignore # stub shenanigans
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
+            query, BitString.from_int(4, length=10, bitorder="little")
+        )  # type: ignore # stub shenanigans
         if not records:
             return
 
@@ -439,7 +445,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(8, length=10))  # type: ignore
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
+            query, BitString.from_int(8, length=10, bitorder="little")
+        )  # type: ignore
         if not records:
             return
 
@@ -515,7 +523,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 """
 
         records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
-            query, BitString.from_int(bitstring_value, length=10)
+            query, BitString.from_int(bitstring_value, length=10, bitorder="little")
         )  # type: ignore # stub shenanigans
 
         to_send: list[Coroutine[Any, Any, None]] = []
@@ -552,7 +560,9 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(256, length=10))  # type: ignore # stub shenanigans
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
+            query, BitString.from_int(256, length=10, bitorder="little")
+        )  # type: ignore # stub shenanigans
 
         to_send: list[Coroutine[Any, Any, None]] = []
 
