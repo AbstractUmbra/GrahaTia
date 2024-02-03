@@ -549,7 +549,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         query = """
                 SELECT *
                 FROM event_remind_subscriptions
-                WHERE subscription & $1 = $1;
+                WHERE subscriptions & $1 = $1;
                 """
 
         records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(256, length=10))  # type: ignore # stub shenanigans
