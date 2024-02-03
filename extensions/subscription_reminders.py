@@ -51,7 +51,7 @@ class EventSubView(BaseView):
     async def on_timeout(self) -> None:
         return
 
-    @discord.ui.select(min_values=1, max_values=8)  # type: ignore # pyright bug
+    @discord.ui.select(min_values=1, max_values=9)  # type: ignore # pyright bug
     async def sub_selection(self, interaction: Interaction, item: discord.ui.Select[Self]) -> None:
         assert interaction.guild  # guarded in earlier check
         await interaction.response.defer()
