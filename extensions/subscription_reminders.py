@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
     from bot import Graha
     from extensions.fashion_report import FashionReport as FashionReportCog
+    from extensions.gates import GATEs
     from extensions.ocean_fishing import OceanFishing as OceanFishingCog
     from extensions.resets import Resets as ResetsCog
     from utilities.context import Interaction
@@ -125,6 +126,12 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             value="128",
             description="Opt into reminders about Jumbo Cactpot callouts for OCE datacenters.",
             emoji="\U0001f340",
+        ),
+        discord.SelectOption(
+            label="GATEs",
+            value="256",
+            description="Opt into reminders about GATE events opening.",
+            emoji="\U0001f3b2",
         ),
     ]
     __cog_is_app_commands_group__ = True
@@ -518,6 +525,42 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             webhook = await conf.get_webhook()
 
             to_send.append(self.dispatcher(embeds=[embed], webhook=webhook, config=conf))
+
+        await self.handle_dispatch(to_send)
+
+    @tasks.loop(
+        time=[
+            datetime.time(minute=10, tzinfo=datetime.UTC),
+            datetime.time(minute=30, tzinfo=datetime.UTC),
+            datetime.time(minute=50, tzinfo=datetime.UTC),
+        ]
+    )
+    async def gate_loop(self) -> None:
+        await self.bot.wait_until_ready()
+
+        now = datetime.datetime.now(datetime.UTC)
+        gates_cog: GATEs | None = self.bot.get_cog("GATEs")  # type: ignore # cog downcasting
+        if not gates_cog:
+            LOGGER.error("[EventSub] -> [GATEs] :: Could not load the GATEs cog.")
+            return
+
+        embed = gates_cog.generate_gate_embed(now)
+
+        query = """
+                SELECT *
+                FROM event_remind_subscriptions
+                WHERE subscription & $1 = $1;
+                """
+
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(256, length=10))  # type: ignore # stub shenanigans
+
+        to_send: list[Coroutine[Any, Any, None]] = []
+
+        for record in records:
+            conf = EventSubConfig.from_record(self.bot, record=record)
+            webhook = await conf.get_webhook()
+
+            to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], config=conf))
 
         await self.handle_dispatch(to_send)
 

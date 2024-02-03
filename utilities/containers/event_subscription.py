@@ -44,6 +44,9 @@ class EventSubConfig:
         "daily_role_id",
         "weekly_role_id",
         "fashion_report_role_id",
+        "jumbo_cactpot_role_id",
+        "ocean_fishing_role_id",
+        "gate_role_id",
         "webhook_id",
     )
 
@@ -59,6 +62,9 @@ class EventSubConfig:
         daily_role_id: int | None = None,
         weekly_role_id: int | None = None,
         fashion_report_role_id: int | None = None,
+        jumbo_cactpot_role_id: int | None = None,
+        ocean_fishing_role_id: int | None = None,
+        gate_role_id: int | None = None,
         webhook_id: int | None = None,
     ) -> None:
         self._bot: Graha = bot
@@ -69,6 +75,9 @@ class EventSubConfig:
         self.daily_role_id: int | None = daily_role_id
         self.weekly_role_id: int | None = weekly_role_id
         self.fashion_report_role_id: int | None = fashion_report_role_id
+        self.jumbo_cactpot_role_id: int | None = jumbo_cactpot_role_id
+        self.ocean_fishing_role_id: int | None = ocean_fishing_role_id
+        self.gate_role_id: int | None = gate_role_id
         self.webhook_id: int | None = webhook_id
 
     def __repr__(self) -> str:
@@ -85,6 +94,9 @@ class EventSubConfig:
             daily_role_id=record["daily_role_id"],
             weekly_role_id=record["weekly_role_id"],
             fashion_report_role_id=record["fashion_report_role_id"],
+            jumbo_cactpot_role_id=record["jumbo_cactpot_role_id"],
+            ocean_fishing_role_id=record["ocean_fishing_role_id"],
+            gate_role_id=record["gate_role_id"],
             webhook_id=record["webhook_id"],
         )
 
@@ -131,8 +143,23 @@ class EventSubConfig:
 
     @property
     def fashion_report_role(self) -> Role | None:
-        if self.guild and self.weekly_role_id:
-            return self.guild.get_role(self.weekly_role_id)
+        if self.guild and self.fashion_report_role_id:
+            return self.guild.get_role(self.fashion_report_role_id)
+
+    @property
+    def ocean_fishing_role(self) -> Role | None:
+        if self.guild and self.ocean_fishing_role_id:
+            return self.guild.get_role(self.ocean_fishing_role_id)
+
+    @property
+    def jumbo_cactpot_role(self) -> Role | None:
+        if self.guild and self.jumbo_cactpot_role_id:
+            return self.guild.get_role(self.jumbo_cactpot_role_id)
+
+    @property
+    def gate_role(self) -> Role | None:
+        if self.guild and self.gate_role_id:
+            return self.guild.get_role(self.gate_role_id)
 
     async def _create_or_replace_webhook(self) -> discord.Webhook:
         if not self.channel:
