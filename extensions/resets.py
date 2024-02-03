@@ -86,7 +86,7 @@ class Resets(BaseCog, name="Reset Information"):
 
         fmt = f"Cashing out is available at {next_full_fmt} ({next_rel_fmt}) for {region.resolved_name()} datacenters!"
 
-        embed = discord.Embed(title="Jumbo Cactpot cashout!", colour=discord.Colour.random())
+        embed = discord.Embed(title=f"[{region.name}] Jumbo Cactpot cashout!", colour=discord.Colour.random())
         embed.set_thumbnail(
             url="https://media.discordapp.net/attachments/872373121292853248/991352363577250003/unknown.png?width=198&height=262",
         )
