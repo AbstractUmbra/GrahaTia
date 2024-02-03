@@ -50,18 +50,18 @@ class GATEs(Cog):
     }
 
     def _resolve_next_gate(self, dt: datetime.datetime | None = None) -> tuple[datetime.datetime, list[GATE]]:
-        dt = (dt or datetime.datetime.now(datetime.UTC)).replace(second=0, microsecond=0)
+        resolved = (dt or datetime.datetime.now(datetime.UTC)).replace(second=0, microsecond=0)
 
-        if 0 < dt.minute < 20:
+        if 0 <= resolved.minute < 20:
             min_ = 20
-        elif 20 < dt.minute < 40:
+        elif 20 <= resolved.minute < 40:
             min_ = 40
-        elif dt.minute >= 40:
-            return dt.replace(hour=dt.hour + 1, minute=0), self.GATES[0]
+        elif resolved.minute >= 40:
+            return resolved.replace(hour=resolved.hour + 1, minute=0), self.GATES[0]
         else:
             min_ = 0
 
-        return dt.replace(minute=min_), self.GATES[min_]
+        return resolved.replace(minute=min_), self.GATES[min_]
 
     def _resolve_leap_of_faith(self, minute: GateSpawnMinute) -> LeapOfFaith:
         if minute == 0:
