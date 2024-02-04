@@ -531,13 +531,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         await self.handle_dispatch(to_send)
 
-    @tasks.loop(
-        time=[
-            datetime.time(minute=10, tzinfo=datetime.UTC),
-            datetime.time(minute=30, tzinfo=datetime.UTC),
-            datetime.time(minute=50, tzinfo=datetime.UTC),
-        ]
-    )
+    @tasks.loop(minutes=20)
     async def gate_loop(self) -> None:
         now = datetime.datetime.now(datetime.UTC)
 
@@ -574,6 +568,22 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], config=conf))
 
         await self.handle_dispatch(to_send)
+
+    @gate_loop.before_loop
+    async def before_gate_loop(self) -> None:
+        await self.bot.wait_until_ready()
+
+        gate_cog: GATEs | None = self.bot.get_cog("GATEs")  # type: ignore # cog downcasting
+        if not gate_cog:
+            LOGGER.error("[EventSub] -> [Pre-GATEs] :: Can't load the cog. Cancelling loop.")
+            self.gate_loop.cancel()
+            return
+
+        next_time, _ = gate_cog._resolve_next_gate()
+
+        LOGGER.info("[EventSub] -> [Pre-GATEs] :: Sleeping until %s", next_time)
+        await discord.utils.sleep_until(next_time)
+        LOGGER.info("[EventSub] -> [Pre-GATEs] :: Woke up at %s", datetime.datetime.now(datetime.UTC))
 
     @ocean_fishing_loop.before_loop
     async def ocean_fishing_before_loop(self) -> None:
