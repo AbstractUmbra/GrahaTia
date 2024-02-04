@@ -57,7 +57,7 @@ class GATEs(Cog):
         elif 20 <= resolved.minute < 40:
             min_ = 40
         elif resolved.minute >= 40:
-            return resolved.replace(hour=resolved.hour + 1, minute=0), self.GATES[0]
+            return (resolved + datetime.timedelta(hours=1)).replace(minute=0), self.GATES[0]
         else:
             min_ = 0
 

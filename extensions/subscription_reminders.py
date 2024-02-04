@@ -324,6 +324,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         )  # type: ignore # reee
 
         if not records:
+            LOGGER.warning("[EventSub] -> [DailyReset] :: No subscriptions. Exiting.")
             return
 
         resets_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # ree
@@ -368,13 +369,13 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         )  # type: ignore # reee
 
         if not records:
-            LOGGER.info("[EventSub] -> [Weekly reset] :: No records found to notify.")
+            LOGGER.warning("[EventSub] -> [WeeklyReset] :: No subscriptions. Exiting.")
             return
 
         resets_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # ree
 
         if not resets_cog:
-            LOGGER.error("[EventSub] -> [Weekly reset] :: Resets cog is not available.")
+            LOGGER.error("[EventSub] -> [WeeklyReset] :: Resets cog is not available.")
             return
 
         embed = resets_cog._get_weekly_reset_embed()
@@ -407,6 +408,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             query, BitString.from_int(4, length=10, bitorder="little")
         )  # type: ignore # stub shenanigans
         if not records:
+            LOGGER.warning("[EventSub] -> [FashionReport] :: No subscriptions. Exiting.")
             return
 
         fashion_report_cog: FashionReportCog = self.bot.get_cog("FashionReport")  # type: ignore # weird
@@ -439,11 +441,6 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
     @tasks.loop(hours=2)
     async def ocean_fishing_loop(self) -> None:
-        ocean_fishing_cog: OceanFishingCog | None = self.bot.get_cog("OceanFishing")  # type: ignore
-        if not ocean_fishing_cog:
-            LOGGER.error("[EventSub] -> [Ocean Fishing] :: No ocean fishing cog available.")
-            return
-
         query = """
                 SELECT *
                 FROM event_remind_subscriptions
@@ -454,10 +451,15 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             query, BitString.from_int(8, length=10, bitorder="little")
         )  # type: ignore
         if not records:
+            LOGGER.warning("[EventSub] -> [OceanFishing] :: No subscriptions. Exiting.")
+            return
+
+        ocean_fishing_cog: OceanFishingCog | None = self.bot.get_cog("OceanFishing")  # type: ignore
+        if not ocean_fishing_cog:
+            LOGGER.error("[EventSub] -> [Ocean Fishing] :: No ocean fishing cog available.")
             return
 
         now = datetime.datetime.now(datetime.UTC)
-
         embeds = ocean_fishing_cog._generate_both_embeds(now)
 
         to_send: list[Coroutine[Any, Any, None]] = []
@@ -493,6 +495,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             LOGGER.warning("[EventSub] -> [Jumbo Cactpot] :: Tried to run on a non-Saturday.")
             return
 
+        # we need to get the Cog first here to calculate the next occurring cactpot loot
         resets: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # cog downcasting
         if not resets:
             LOGGER.error("[EventSub] -> [Jumbo Cactpot] :: Could not load the resets Cog.")
@@ -510,6 +513,10 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
             query, BitString.from_int(bitstring_value, length=10, bitorder="little")
         )  # type: ignore # stub shenanigans
+
+        if not records:
+            LOGGER.warning("[EventSub] -> [JumboCactpot] :: No subscriptions. Exiting.")
+            return
 
         to_send: list[Coroutine[Any, Any, None]] = []
 
@@ -533,12 +540,6 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
     )
     async def gate_loop(self) -> None:
         now = datetime.datetime.now(datetime.UTC)
-        gates_cog: GATEs | None = self.bot.get_cog("GATEs")  # type: ignore # cog downcasting
-        if not gates_cog:
-            LOGGER.error("[EventSub] -> [GATEs] :: Could not load the GATEs cog.")
-            return
-
-        embed = gates_cog.generate_gate_embed(now)
 
         query = """
                 SELECT *
@@ -550,11 +551,22 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             query, BitString.from_int(256, length=10, bitorder="little")
         )  # type: ignore # stub shenanigans
 
+        if not records:
+            LOGGER.warning("[EventSub] -> [GATEs] :: No subscriptions. Exiting.")
+            return
+
+        gates_cog: GATEs | None = self.bot.get_cog("GATEs")  # type: ignore # cog downcasting
+        if not gates_cog:
+            LOGGER.error("[EventSub] -> [GATEs] :: Could not load the GATEs cog.")
+            return
+
+        embed = gates_cog.generate_gate_embed(now)
+
         to_send: list[Coroutine[Any, Any, None]] = []
 
         for record in records:
             conf = await self.get_sub_config(record["guild_id"])
-            webhook = await self._resolve_webhook_from_cache(conf, log_key="[EventSub] -> [Delete] ([GATEs])")
+            webhook = await self._resolve_webhook_from_cache(conf, log_key="([GATEs])")
 
             if not webhook:
                 continue
@@ -562,21 +574,6 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], config=conf))
 
         await self.handle_dispatch(to_send)
-
-    @gate_loop.before_loop
-    async def gate_before_loop(self) -> None:
-        await self.bot.wait_until_ready()
-
-        gate_cog: GATEs | None = self.bot.get_cog("GATEs")  # type: ignore # cog downcasting
-        if not gate_cog:
-            return
-
-        next_, _ = gate_cog._resolve_next_gate()
-        sleep = next_ - datetime.timedelta(minutes=10)
-
-        LOGGER.info("[EventSub] -> [GATEs] :: Sleeping until %s", sleep)
-        await discord.utils.sleep_until(sleep)
-        LOGGER.info("[EventSub] -> [GATEs] :: Woken up at %s", sleep)
 
     @ocean_fishing_loop.before_loop
     async def ocean_fishing_before_loop(self) -> None:
@@ -594,6 +591,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         await discord.utils.sleep_until(then)
         LOGGER.info("[EventSub] -> [OceanFishing] :: Woken up at %s", then)
 
+    @gate_loop.before_loop
     @jumbo_cactpot_loop.before_loop
     @weekly_reset_loop.before_loop
     @daily_reset_loop.before_loop
