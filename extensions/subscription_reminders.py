@@ -415,15 +415,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         fmt: str = MISSING
 
-        try:
-            embed = await fashion_report_cog._gen_fashion_embed(dt=now + datetime.timedelta(minutes=15))
-        except ValueError:
-            # no report yet.
-            fmt = (
-                "Kaiyoko's post on the Fashion Report data is not up yet. Please use `gt fr` later for their insight, or have a look on their Twitter"
-                " page for the post:-\n<https://twitter.com/KaiyokoStar>"
-            )
-            embed = MISSING
+        embed = await fashion_report_cog.generate_fashion_embed(dt=now + datetime.timedelta(minutes=15))
 
         to_send: list[Coroutine[Any, Any, None]] = []
 
@@ -579,7 +571,8 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             self.gate_loop.cancel()
             return
 
-        next_time, _ = gate_cog._resolve_next_gate()
+        next_iter = datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=10)
+        next_time, _ = gate_cog._resolve_next_gate(dt=next_iter)
         next_time -= datetime.timedelta(minutes=10)
 
         LOGGER.info("[EventSub] -> [Pre-GATEs] :: Sleeping until %s", next_time)
