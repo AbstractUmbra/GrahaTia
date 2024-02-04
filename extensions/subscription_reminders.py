@@ -94,7 +94,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         discord.SelectOption(
             label="Fashion Report",
             value="4",
-            description="Opt into reminders about Fashion Report check-in!",
+            description="Opt into reminders about Fashion Report check-ins and information from Kaiyoko when available!",
             emoji="\U00002728",
         ),
         discord.SelectOption(

@@ -63,7 +63,7 @@ class FashionReport(BaseCog):
 
     async def _wait_for_report(self, *, dt: datetime.datetime | None = None) -> None:
         dt = dt or datetime.datetime.now(datetime.UTC)
-        if self.report_fut.done() or self.report_fut.cancelled():
+        if self.report_fut.done():
             return
 
         LOGGER.info("[FashionReport] :: Starting loop to gain report.")
