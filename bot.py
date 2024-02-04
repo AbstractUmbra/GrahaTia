@@ -110,7 +110,6 @@ class LogHandler:
     def __enter__(self: Self) -> Self:
         logging.getLogger("discord").setLevel(logging.INFO)
         logging.getLogger("discord.http").setLevel(logging.INFO)
-        logging.getLogger("discord.ext.tasks").setLevel(logging.WARNING)
         logging.getLogger("discord.state").addFilter(RemoveNoise())
 
         self.log.setLevel(logging.INFO)

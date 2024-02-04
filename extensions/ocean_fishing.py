@@ -246,7 +246,7 @@ class OceanFishing(GrahaBaseCog):
         next_start_time, next_start_time_rel = next_.formatted_start_times()
         next_sail_time, next_sail_time_rel = next_.formatted_sail_times()
 
-        current_fmt = f"Sets sail at {current_sail_time} ({current_sail_time_rel})" + current.stops() + "\n\n"
+        current_fmt = f"Sets sail at {current_sail_time} ({current_sail_time_rel})\n" + current.stops() + "\n\n"
         if current.has_set_sail(now):
             current_fmt += "The registration window for this has closed and the voyage is underway.\n\n"
         elif current.can_register(now):

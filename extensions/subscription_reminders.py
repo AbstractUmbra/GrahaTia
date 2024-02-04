@@ -601,7 +601,6 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         await discord.utils.sleep_until(then)
         LOGGER.info("[EventSub] -> [OceanFishing] :: Woken up at %s", then)
 
-    @gate_loop.before_loop
     @jumbo_cactpot_loop.before_loop
     @weekly_reset_loop.before_loop
     @daily_reset_loop.before_loop
