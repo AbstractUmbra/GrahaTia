@@ -580,6 +580,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             return
 
         next_time, _ = gate_cog._resolve_next_gate()
+        next_time -= datetime.timedelta(minutes=10)
 
         LOGGER.info("[EventSub] -> [Pre-GATEs] :: Sleeping until %s", next_time)
         await discord.utils.sleep_until(next_time)
