@@ -174,7 +174,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                     thread_id = EXCLUDED.thread_id;
                 """
 
-        subscription_bits = BitString.from_int(subscription_value, length=10, bitorder="little")
+        subscription_bits = BitString.from_int(subscription_value, length=10)
         await self.bot.pool.execute(
             query,
             guild_id,
@@ -319,9 +319,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
-            query, BitString.from_int(1, length=10, bitorder="little")
-        )  # type: ignore # reee
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(1, length=10))  # type: ignore # reee
 
         if not records:
             LOGGER.warning("[EventSub] -> [DailyReset] :: No subscriptions. Exiting.")
@@ -364,9 +362,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
-            query, BitString.from_int(2, length=10, bitorder="little")
-        )  # type: ignore # reee
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(2, length=10))  # type: ignore # reee
 
         if not records:
             LOGGER.warning("[EventSub] -> [WeeklyReset] :: No subscriptions. Exiting.")
@@ -404,9 +400,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
-            query, BitString.from_int(4, length=10, bitorder="little")
-        )  # type: ignore # stub shenanigans
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(4, length=10))  # type: ignore # stub shenanigans
         if not records:
             LOGGER.warning("[EventSub] -> [FashionReport] :: No subscriptions. Exiting.")
             return
@@ -415,7 +409,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
 
         fmt: str = MISSING
 
-        embed = await fashion_report_cog.generate_fashion_embed(dt=now + datetime.timedelta(minutes=15))
+        embed = await fashion_report_cog.generate_fashion_embed(dt=now + datetime.timedelta(minutes=30))
 
         to_send: list[Coroutine[Any, Any, None]] = []
 
@@ -439,9 +433,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
-            query, BitString.from_int(8, length=10, bitorder="little")
-        )  # type: ignore
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(8, length=10))  # type: ignore
         if not records:
             LOGGER.warning("[EventSub] -> [OceanFishing] :: No subscriptions. Exiting.")
             return
@@ -503,7 +495,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 """
 
         records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
-            query, BitString.from_int(bitstring_value, length=10, bitorder="little")
+            query, BitString.from_int(bitstring_value, length=10)
         )  # type: ignore # stub shenanigans
 
         if not records:
@@ -533,9 +525,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
-            query, BitString.from_int(256, length=10, bitorder="little")
-        )  # type: ignore # stub shenanigans
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(256, length=10))  # type: ignore # stub shenanigans
 
         if not records:
             LOGGER.warning("[EventSub] -> [GATEs] :: No subscriptions. Exiting.")
