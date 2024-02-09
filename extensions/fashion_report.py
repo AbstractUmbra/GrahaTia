@@ -111,7 +111,7 @@ class FashionReport(BaseCog):
 
         return weeks
 
-    def humanify_delta(self, *, td: datetime.timedelta, format_: str) -> str:
+    def humanify_delta(self, *, td: datetime.timedelta, format_: str, with_seconds: bool = False) -> str:
         seconds = round(td.total_seconds())
 
         days, seconds = divmod(seconds, 60 * 60 * 24)
@@ -122,7 +122,10 @@ class FashionReport(BaseCog):
         if days:
             fmt += f"{plural(days):day}, "
 
-        fmt += f"{plural(hours):hour}, {plural(minutes):minute} and {plural(seconds):second}."
+        if with_seconds:
+            fmt += f"{plural(hours):hour}, {plural(minutes):minute} and {plural(seconds):second}."
+        else:
+            fmt += f"{plural(hours):hour} and {plural(minutes):minute}."
 
         return fmt
 
@@ -154,7 +157,7 @@ class FashionReport(BaseCog):
 
                 if is_available:
                     diff = 2 - wd  # next tuesday
-                    fmt = "No longer submissible"
+                    fmt = "Judging ends"
                     colour = discord.Colour.green()
                 else:
                     diff = 5 - wd  # next friday
@@ -167,7 +170,10 @@ class FashionReport(BaseCog):
                     days = diff + 7 if diff <= 0 else diff
 
                 upcoming_event = (dt + datetime.timedelta(days=days)).replace(hour=8, minute=0, second=0, microsecond=0)
-                reset_str = self.humanify_delta(td=(upcoming_event - dt), format_=fmt)
+                reset_str = (
+                    self.humanify_delta(td=(upcoming_event - dt), format_=fmt)
+                    + f"\n{discord.utils.format_dt(upcoming_event, 'F')} ({discord.utils.format_dt(upcoming_event, 'R')})"
+                )
 
                 return KaiyokoSubmission(
                     f"Fashion Report details for week of {match['date']} (Week {match['week_num']})",
@@ -185,9 +191,7 @@ class FashionReport(BaseCog):
         submission: KaiyokoSubmission = await self.report_fut
 
         embed = discord.Embed(title=submission.prose, url=submission.url, colour=submission.colour)
-        full_timestmap = discord.utils.format_dt(submission.dt, "F")
-        relative_timestmap = discord.utils.format_dt(submission.dt, "R")
-        embed.description = f"{submission.reset}\nThis switches at {full_timestmap} ({relative_timestmap})."
+        embed.description = submission.reset
         embed.set_image(url=submission.url)
 
         return embed
