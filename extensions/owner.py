@@ -106,12 +106,8 @@ class Admin(BaseCog):
         await ctx.message.add_reaction(ctx.tick(True))
 
     async def _git_pull(self) -> list[str]:
-        try:
-            process = await asyncio.create_subprocess_shell("git pull", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            result = await process.communicate()
-        except NotImplementedError:
-            process = subprocess.Popen("git pull", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            result = await self.bot.loop.run_in_executor(None, process.communicate)
+        process = await asyncio.create_subprocess_shell("git pull", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = await process.communicate()
 
         return [output.decode() for output in result]
 
