@@ -19,6 +19,7 @@ from utilities.cog import GrahaBaseCog as BaseCog
 from utilities.context import Context as BaseContext
 from utilities.shared.cache import cache
 from utilities.shared.formats import plural
+from utilities.shared.time import Weekday, resolve_next_weekday
 
 if TYPE_CHECKING:
     from bot import Graha
@@ -61,9 +62,30 @@ class FashionReport(BaseCog):
         self.report_fut: asyncio.Future[KaiyokoSubmission] = asyncio.Future()
         self._report_task: asyncio.Task[None] = asyncio.create_task(self._wait_for_report())
 
-    async def _wait_for_report(self, *, dt: datetime.datetime | None = None) -> None:
+    def cog_unload(self) -> None:
+        self._report_task.cancel("Unloading FashionReport cog.")
+        self.reset_cache.cancel()
+
+    def _reset_state(self) -> bool:
+        self.report_fut = asyncio.Future()
+        self._report_task = asyncio.create_task(self._wait_for_report())
+        return self._filter_submissions.invalidate(self)
+
+    def _resolve_next_window(self, dt: datetime.datetime | None = None) -> datetime.datetime:
         dt = dt or datetime.datetime.now(datetime.UTC)
+
+        next_weekday = Weekday.friday if 1 < dt.weekday() <= 4 else Weekday.tuesday
+        return resolve_next_weekday(
+            source=dt,
+            target=next_weekday,
+            current_week_included=True,
+            before_time=datetime.time(hour=8, tzinfo=datetime.UTC),
+        )
+
+    async def _wait_for_report(self) -> None:
+        dt = datetime.datetime.now(datetime.UTC)
         if self.report_fut.done():
+            LOGGER.warning("[FashionReport] :: Future already set, is the cache stale?")
             return
 
         LOGGER.info("[FashionReport] :: Starting loop to gain report.")
@@ -78,6 +100,8 @@ class FashionReport(BaseCog):
                 LOGGER.info("[FashionReport] :: Found report, setting future.")
                 self.report_fut.set_result(submission)
                 break
+
+        LOGGER.info("[FashionReport] :: gotten report at %s", datetime.datetime.now(datetime.UTC))
 
     def weeks_since_start(self, dt: datetime.datetime) -> int:
         td = dt - self.FASHION_REPORT_START
@@ -171,21 +195,27 @@ class FashionReport(BaseCog):
     @commands.is_owner()
     @commands.command(hidden=True)
     async def fr_cache(self, ctx: Context) -> None:
-        invalidated = self._filter_submissions.invalidate(self)
+        invalidated = self._reset_state()
         return await ctx.message.add_reaction(ctx.tick(invalidated))
 
     @commands.command(name="fashionreport", aliases=["fr", "fashion-report"])
     async def fashion_report(self, ctx: Context) -> None:
         """Fetch the latest fashion report data from /u/Kaiyoko."""
-        embed = await self.generate_fashion_embed()
+
+        if self.report_fut.done():
+            embed = await self.generate_fashion_embed()
+        else:
+            await ctx.send("Sorry, the post for this week isn't up yet, I'll reply when it is!")
+            embed = await self.generate_fashion_embed()
+            await ctx.message.reply(embed=embed)
+            return
 
         await ctx.send(embed=embed)
 
-    @tasks.loop(time=datetime.time(hour=15, tzinfo=datetime.UTC))
+    @tasks.loop(time=[datetime.time(hour=8, tzinfo=datetime.UTC), datetime.time(hour=15, tzinfo=datetime.UTC)])
     async def reset_cache(self) -> None:
         LOGGER.warning("[FashionReport] :: Resetting cache and state.")
-        self._filter_submissions.invalidate(self)
-        self.report_fut = asyncio.Future()
+        self._reset_state()
 
 
 async def setup(bot: Graha) -> None:
