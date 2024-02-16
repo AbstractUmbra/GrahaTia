@@ -66,9 +66,17 @@ class FashionReport(BaseCog):
         self._report_task.cancel("Unloading FashionReport cog.")
         self.reset_cache.cancel()
 
-    def _reset_state(self) -> bool:
+    def _reset_state(self, *, dt: datetime.datetime | None = None) -> bool:
         self.report_fut = asyncio.Future()
-        self._report_task = asyncio.create_task(self._wait_for_report())
+        self._report_task.cancel()
+
+        try:
+            self._report_task.exception()
+        except (asyncio.CancelledError, asyncio.InvalidStateError):
+            pass
+
+        dt = dt or self._resolve_next_window(dt)
+        self._report_task = asyncio.create_task(self._wait_for_report(dt=dt))
         return self._filter_submissions.invalidate(self)
 
     def _resolve_next_window(self, dt: datetime.datetime | None = None) -> datetime.datetime:
@@ -82,8 +90,8 @@ class FashionReport(BaseCog):
             before_time=datetime.time(hour=8, tzinfo=datetime.UTC),
         )
 
-    async def _wait_for_report(self) -> None:
-        dt = datetime.datetime.now(datetime.UTC)
+    async def _wait_for_report(self, *, dt: datetime.datetime | None = None) -> None:
+        dt = dt or datetime.datetime.now(datetime.UTC)
         if self.report_fut.done():
             LOGGER.warning("[FashionReport] :: Future already set, is the cache stale?")
             return
@@ -185,9 +193,7 @@ class FashionReport(BaseCog):
 
         raise ValueError("Unable to fetch the reddit post details.")
 
-    async def generate_fashion_embed(self, *, dt: datetime.datetime | None = None) -> discord.Embed:
-        dt = dt or datetime.datetime.now(datetime.UTC)
-
+    async def generate_fashion_embed(self) -> discord.Embed:
         submission: KaiyokoSubmission = await self.report_fut
 
         embed = discord.Embed(title=submission.prose, url=submission.url, colour=submission.colour)
