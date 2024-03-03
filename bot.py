@@ -283,16 +283,15 @@ class Graha(commands.Bot):
     @overload
     def _log_spammer(
         self, ctx: Context, message: discord.Message, retry_after: float, *, autoblock: Literal[True]
-    ) -> Coroutine[None, None, discord.WebhookMessage]:
-        ...
+    ) -> Coroutine[None, None, discord.WebhookMessage]: ...
 
     @overload
-    def _log_spammer(self, ctx: Context, message: discord.Message, retry_after: float, *, autoblock: Literal[False]) -> None:
-        ...
+    def _log_spammer(
+        self, ctx: Context, message: discord.Message, retry_after: float, *, autoblock: Literal[False]
+    ) -> None: ...
 
     @overload
-    def _log_spammer(self, ctx: Context, message: discord.Message, retry_after: float, *, autoblock: bool = ...) -> None:
-        ...
+    def _log_spammer(self, ctx: Context, message: discord.Message, retry_after: float, *, autoblock: bool = ...) -> None: ...
 
     def _log_spammer(
         self, ctx: Context, message: discord.Message, retry_after: float, *, autoblock: bool = False
@@ -393,12 +392,17 @@ class Graha(commands.Bot):
 
 
 async def main() -> None:
-    async with Graha() as bot, aiohttp.ClientSession() as session, LogHandler() as log_handler, asyncpg.create_pool(
-        dsn=CONFIG["database"]["dsn"],
-        command_timeout=60,
-        max_inactive_connection_lifetime=0,
-        init=db_init,
-    ) as pool:
+    async with (
+        Graha() as bot,
+        aiohttp.ClientSession() as session,
+        LogHandler() as log_handler,
+        asyncpg.create_pool(
+            dsn=CONFIG["database"]["dsn"],
+            command_timeout=60,
+            max_inactive_connection_lifetime=0,
+            init=db_init,
+        ) as pool,
+    ):
         bot.pool = pool
         bot.log_handler = log_handler
         bot.log_handler.info("\n" * 5)
