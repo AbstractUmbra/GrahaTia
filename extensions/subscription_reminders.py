@@ -212,9 +212,8 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         query = """
                 DELETE FROM event_remind_subscriptions
                 WHERE guild_id = $1;
-                DELETE FROM webhooks
-                WHERE guild_id = $1;
                 """
+        # webhooks are cascade delete
 
         LOGGER.info("[EventSub] -> [Delete] :: From guild: %r", config.guild_id)
 
