@@ -409,7 +409,8 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         fmt: str = MISSING
 
         fashion_report_cog._reset_state(dt=now + datetime.timedelta(minutes=30))
-        embed = await fashion_report_cog.generate_fashion_embed()
+        await fashion_report_cog._report_task
+        embed = fashion_report_cog.generate_fashion_embed()
 
         to_send: list[Coroutine[Any, Any, None]] = []
 

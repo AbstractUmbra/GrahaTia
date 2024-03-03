@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
 import discord
 from discord.ext import commands, tasks
+from discord.utils import MISSING
 
 from utilities.cog import GrahaBaseCog as BaseCog
 from utilities.context import Context as BaseContext
@@ -59,7 +60,7 @@ class FashionReport(BaseCog):
     def __init__(self, bot: Graha) -> None:
         super().__init__(bot)
         self.reset_cache.start()
-        self.report_fut: asyncio.Future[KaiyokoSubmission] = asyncio.Future()
+        self.current_report: KaiyokoSubmission = MISSING
         self._report_task: asyncio.Task[None] = asyncio.create_task(self._wait_for_report())
 
     def cog_unload(self) -> None:
@@ -67,7 +68,7 @@ class FashionReport(BaseCog):
         self.reset_cache.cancel()
 
     def _reset_state(self, *, dt: datetime.datetime | None = None) -> bool:
-        self.report_fut = asyncio.Future()
+        self.current_report = MISSING
         self._report_task.cancel()
 
         try:
@@ -92,8 +93,8 @@ class FashionReport(BaseCog):
 
     async def _wait_for_report(self, *, dt: datetime.datetime | None = None) -> None:
         dt = dt or datetime.datetime.now(datetime.UTC)
-        if self.report_fut.done():
-            LOGGER.warning("[FashionReport] :: Future already set, is the cache stale?")
+        if self.current_report is not MISSING:
+            LOGGER.warning("[FashionReport] :: Report already cached, is the cache stale?")
             return
 
         LOGGER.info("[FashionReport] :: Starting loop to gain report.")
@@ -106,7 +107,7 @@ class FashionReport(BaseCog):
                 continue
             else:
                 LOGGER.info("[FashionReport] :: Found report, setting future.")
-                self.report_fut.set_result(submission)
+                self.current_report = submission
                 break
 
         LOGGER.info("[FashionReport] :: gotten report at %s", datetime.datetime.now(datetime.UTC))
@@ -193,8 +194,9 @@ class FashionReport(BaseCog):
 
         raise ValueError("Unable to fetch the reddit post details.")
 
-    async def generate_fashion_embed(self) -> discord.Embed:
-        submission: KaiyokoSubmission = await self.report_fut
+    def generate_fashion_embed(self) -> discord.Embed:
+        # guarded
+        submission = self.current_report
 
         embed = discord.Embed(title=submission.prose, url=submission.url, colour=submission.colour)
         embed.description = submission.reset
@@ -212,15 +214,16 @@ class FashionReport(BaseCog):
     async def fashion_report(self, ctx: Context) -> None:
         """Fetch the latest fashion report data from /u/Kaiyoko."""
 
-        if self.report_fut.done():
-            embed = await self.generate_fashion_embed()
+        if self.current_report:
+            embed = self.generate_fashion_embed()
+            send = ctx.send
         else:
             await ctx.send("Sorry, the post for this week isn't up yet, I'll reply when it is!")
-            embed = await self.generate_fashion_embed()
-            await ctx.message.reply(embed=embed)
-            return
+            await self._report_task
+            embed = self.generate_fashion_embed()
+            send = ctx.message.reply
 
-        await ctx.send(embed=embed)
+        await send(embed=embed)
 
     @tasks.loop(time=[datetime.time(hour=8, tzinfo=datetime.UTC), datetime.time(hour=15, tzinfo=datetime.UTC)])
     async def reset_cache(self) -> None:
