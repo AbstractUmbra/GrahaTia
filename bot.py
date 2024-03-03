@@ -419,6 +419,13 @@ async def main() -> None:
 
 if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        import uvloop
+    except ModuleNotFoundError:
+        module = asyncio
+    else:
+        module = uvloop
+
+    try:
+        module.run(main())
     except KeyboardInterrupt:
         pass

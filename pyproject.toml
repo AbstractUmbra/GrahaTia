@@ -27,6 +27,7 @@ asyncpg-stubs = "*"
 
 [tool.poetry.group.speed.dependencies]
 orjson = "*"
+uvloop = "*"
 
 [tool.ruff]
 line-length = 125
