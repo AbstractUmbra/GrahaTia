@@ -69,11 +69,12 @@ class FashionReport(BaseCog):
 
     def _reset_state(self, *, dt: datetime.datetime | None = None) -> bool:
         self.current_report = MISSING
-        self._report_task.cancel()
+        self._report_task.cancel("Manual cache reset.")
 
         try:
             self._report_task.exception()
         except (asyncio.CancelledError, asyncio.InvalidStateError):
+            LOGGER.warning("[FashionReport] -> {Reset State} :: Task was in error state.")
             pass
 
         dt = dt or self._resolve_next_window(dt)
@@ -88,7 +89,7 @@ class FashionReport(BaseCog):
             source=dt,
             target=next_weekday,
             current_week_included=True,
-            before_time=datetime.time(hour=8, tzinfo=datetime.UTC),
+            # before_time=datetime.time(hour=8, tzinfo=datetime.UTC),
         )
 
     async def _wait_for_report(self, *, dt: datetime.datetime | None = None) -> None:
@@ -99,14 +100,18 @@ class FashionReport(BaseCog):
 
         LOGGER.info("[FashionReport] :: Starting loop to gain report.")
 
+        tries = 0
         while True:
+            tries += 1
             try:
                 submission = await self._filter_submissions(dt=dt)
             except ValueError:
-                await asyncio.sleep(60 * 10)
+                to_sleep = 60 * tries
+                LOGGER.warning("[FashionReport] :: Submission not found, sleeping for %s", to_sleep)
+                await asyncio.sleep(to_sleep)
                 continue
             else:
-                LOGGER.info("[FashionReport] :: Found report, setting future.")
+                LOGGER.info("[FashionReport] :: Found report, setting attribute.")
                 self.current_report = submission
                 break
 
@@ -191,6 +196,8 @@ class FashionReport(BaseCog):
                     submission["data"]["url"],
                     colour,
                 )
+        else:
+            LOGGER.warning("[FashionReport] :: Can't find any submissions from Kaiyoko.")
 
         raise ValueError("Unable to fetch the reddit post details.")
 
@@ -204,13 +211,7 @@ class FashionReport(BaseCog):
 
         return embed
 
-    @commands.is_owner()
-    @commands.command(hidden=True)
-    async def fr_cache(self, ctx: Context) -> None:
-        invalidated = self._reset_state()
-        return await ctx.message.add_reaction(ctx.tick(invalidated))
-
-    @commands.command(name="fashionreport", aliases=["fr", "fashion-report"])
+    @commands.group(name="fashionreport", aliases=["fr", "fashion-report"], invoke_without_command=True)
     async def fashion_report(self, ctx: Context) -> None:
         """Fetch the latest fashion report data from /u/Kaiyoko."""
 
@@ -225,8 +226,18 @@ class FashionReport(BaseCog):
 
         await send(embed=embed)
 
-    @tasks.loop(time=[datetime.time(hour=8, tzinfo=datetime.UTC), datetime.time(hour=15, tzinfo=datetime.UTC)])
+    @commands.is_owner()
+    @fashion_report.command(name="cache", aliases=["cache-reset"], hidden=True)
+    async def fr_cache(self, ctx: Context) -> None:
+        invalidated = self._reset_state()
+        return await ctx.message.add_reaction(ctx.tick(invalidated))
+
+    @tasks.loop(time=datetime.time(hour=8, tzinfo=datetime.UTC))
     async def reset_cache(self) -> None:
+        if datetime.datetime.now(datetime.UTC).weekday() != 4:
+            LOGGER.warning("[FashionReport] :: Tried to reset cache on non-Friday.")
+            return
+
         LOGGER.warning("[FashionReport] :: Resetting cache and state.")
         self._reset_state()
 
