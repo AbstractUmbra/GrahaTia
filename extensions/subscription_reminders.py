@@ -261,6 +261,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
     @app_commands.command(name="select")
     @app_commands.guild_only()
     @app_commands.default_permissions(manage_channels=True, manage_webhooks=True)
+    @app_commands.describe(webhook="The existing webhook you wish for me to use for notifications.")
     async def select_subscriptions(
         self, interaction: Interaction, webhook: app_commands.Transform[discord.Webhook, WebhookTransformer] | None = None
     ) -> None:
@@ -268,7 +269,7 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
         assert interaction.guild  # guarded in check
         if not isinstance(interaction.channel, (discord.TextChannel, discord.VoiceChannel, discord.Thread)):
             return await interaction.response.send_message(
-                "Sorry, but I can't process subscriptions in this channel. Please use a normal text channel or a thread."
+                "Sorry, but I can't process subscriptions in this channel. Please use a normal text/voice channel or a thread."
             )
 
         await interaction.response.defer()
