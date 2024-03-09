@@ -92,6 +92,8 @@ inline-quotes = "single"
 
 [tool.pyright]
 include = ["bot.py", "utilities/**/*.py", "extensions/**/*.py"]
+venv = ".venv"
+venvPath = "."
 useLibraryCodeForTypes = true
 typeCheckingMode = "basic"
 pythonVersion = "3.11"
