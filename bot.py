@@ -28,6 +28,13 @@ from discord.ext import commands
 from discord.utils import _ColourFormatter as ColourFormatter, stream_supports_colour
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
+try:
+    import uvloop
+except ModuleNotFoundError:
+    HAS_UVLOOP = False
+else:
+    HAS_UVLOOP = True
+
 from extensions import EXTENSIONS
 from utilities.context import Context
 from utilities.prefix import callable_prefix as _callable_prefix
@@ -418,14 +425,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    try:
-        import uvloop
-    except ModuleNotFoundError:
-        module = asyncio
-    else:
-        module = uvloop
-
-    try:
-        module.run(main())
-    except KeyboardInterrupt:
-        pass
+    runner = uvloop.run if HAS_UVLOOP else asyncio.run
+    runner(main())

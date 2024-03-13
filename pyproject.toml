@@ -6,7 +6,9 @@ authors = ["Alex Nørgaard <umbra@abstractumbra.dev>"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-"discord.py" = { version = "^2", extras = ["speed"] }
+"discord.py" = { git = "https://github.com/Rapptz/discord.py.git", extras = [
+    "speedup",
+], rev = "master" }
 discord-ext-menus = { git = "https://github.com/Rapptz/discord-ext-menus", rev = "master" }
 jishaku = "*"
 "mystbin.py" = "*"
