@@ -20,6 +20,8 @@ tomli = "*"
 python-dateutil = "*"
 psutil = "*"
 pygit2 = "*"
+beautifulsoup4 = "*"
+lxml = "*"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
@@ -36,7 +38,6 @@ line-length = 125
 target-version = "py312"
 
 [tool.ruff.lint]
-exclude = ["docs/extensions/*.py"]
 select = [
     "C4",
     "F",
