@@ -5,9 +5,9 @@ description = "A helper bot for organizing your FFXIV needs."
 authors = ["Alex Nørgaard <umbra@abstractumbra.dev>"]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 "discord.py" = { git = "https://github.com/Rapptz/discord.py.git", extras = [
-    "speedup",
+    "speed",
 ], rev = "master" }
 discord-ext-menus = { git = "https://github.com/Rapptz/discord-ext-menus", rev = "master" }
 jishaku = "*"
@@ -33,7 +33,7 @@ uvloop = "*"
 
 [tool.ruff]
 line-length = 125
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 exclude = ["docs/extensions/*.py"]
@@ -98,7 +98,7 @@ venv = ".venv"
 venvPath = "."
 useLibraryCodeForTypes = true
 typeCheckingMode = "basic"
-pythonVersion = "3.11"
+pythonVersion = "3.12"
 strictListInference = true
 strictDictionaryInference = true
 strictSetInference = true
@@ -112,7 +112,6 @@ reportGeneralTypeIssues = "error"
 reportDuplicateImport = "error"
 reportUntypedFunctionDecorator = "error"
 reportUnnecessaryTypeIgnoreComment = "warning"
-
 
 [build-system]
 requires = ["poetry-core>=1.0.2b2"]
