@@ -227,3 +227,8 @@ class EventSubConfig:
         if ret == "DELETE 0":
             return False
         return True
+
+    async def update_webhook_channel(self, channel: discord.TextChannel | discord.Thread) -> discord.Webhook:
+        webhook = await self.get_webhook()
+
+        return await webhook.edit(channel=channel)
