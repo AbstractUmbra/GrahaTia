@@ -12,25 +12,34 @@ import logging
 import re
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
+import bs4
 import discord
 from discord.ext import commands, tasks
 from discord.utils import MISSING
+from jishaku.functools import executor_function
 
-from utilities.cog import GrahaBaseCog as BaseCog
 from utilities.context import Context as BaseContext
 from utilities.shared.cache import cache
+from utilities.shared.cog import BaseCog
 from utilities.shared.formats import plural
 from utilities.shared.time import Weekday, resolve_next_weekday
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from bot import Graha
     from utilities.containers.event_subscription import EventSubConfig
-    from utilities.shared._types.xiv.reddit.kaiyoko import TopLevelListingResponse
 
 FASHION_REPORT_PATTERN: re.Pattern[str] = re.compile(
     r"Fashion Report - Full Details - For Week of (?P<date>[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}) \(Week (?P<week_num>[0-9]{3})\)"
 )
 LOGGER = logging.getLogger(__name__)
+
+MIMIC_HEADERS: Mapping[str, str] = {
+    "Accept": "application/json",
+    "Accept-Language": "en-US,en;q=0.5",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
+}
 
 
 class Context(BaseContext):
@@ -41,11 +50,19 @@ class KaiyokoSubmission(NamedTuple):
     prose: str
     reset: str
     dt: datetime.datetime
-    url: str
+    post_url: str
+    image_url: str
     colour: discord.Colour
 
 
-class FashionReport(BaseCog):
+class KaiyokoHTML(NamedTuple):
+    match: re.Match[str]
+    child: bs4.PageElement
+    post_url: str
+    image_url: str
+
+
+class FashionReport(BaseCog["Graha"]):
     FASHION_REPORT_START: ClassVar[datetime.datetime] = datetime.datetime(
         year=2018,
         month=1,
@@ -143,61 +160,96 @@ class FashionReport(BaseCog):
 
         return fmt
 
-    async def get_kaiyoko_submissions(self) -> TopLevelListingResponse:
-        headers = {"User-Agent": "Graha Discord Bot (by /u/AbstractUmbra)"}
-        async with self.bot.session.get("https://old.reddit.com/user/kaiyoko/submitted.json", headers=headers) as resp:
-            data: TopLevelListingResponse = await resp.json()
+    @executor_function
+    def _scrape_kaiyoko_page(self, page_html: str, *, dt: datetime.datetime) -> KaiyokoHTML:
+        soup = bs4.BeautifulSoup(page_html, "lxml")
 
-        return data
+        posts = soup.find("div", id="posts")
+        if not posts or not isinstance(posts, bs4.Tag):
+            raise ValueError("Seems the HTML is malformed.")
 
-    @cache(ignore_kwargs=True)
-    async def _filter_submissions(self, *, dt: datetime.datetime) -> KaiyokoSubmission:
-        submissions = await self.get_kaiyoko_submissions()
+        children = posts.find_all("div", {"class": "post"})
+        if not children:
+            raise ValueError("Seems the inner HTML is malformed?")
 
-        for submission in submissions["data"]["children"]:
-            if match := FASHION_REPORT_PATTERN.search(submission["data"]["title"]):
+        for child in children:
+            child: bs4.PageElement
+            title = child.find_next("h2", {"class": "post_title"})
+            if title and isinstance(title, bs4.Tag):
+                post_a_tag, *_ = title.select("a:not(.post_flair)")
+                post_title = post_a_tag.text
+                post_url = post_a_tag.attrs["href"]
+                match = FASHION_REPORT_PATTERN.search(post_title)
+                if not match:
+                    continue
+
                 if self.weeks_since_start(dt) != int(match["week_num"]):
                     continue
 
-                created = datetime.datetime.fromtimestamp(submission["data"]["created_utc"], tz=datetime.UTC)
-                if (dt - created) > datetime.timedelta(days=7):
-                    continue
+                media_content_tag = child.find_next("div", {"class": "post_media_content"})
+                assert isinstance(media_content_tag, bs4.Tag)
+                media_content_image_tag = media_content_tag.find_next("image")
+                assert isinstance(media_content_image_tag, bs4.Tag)
+                image_url = media_content_image_tag.attrs["href"]
 
-                wd = dt.isoweekday()
-                reset_time = datetime.time(hour=8, minute=0, second=0)
-                is_available = (
-                    (wd == 5 and dt.time() > reset_time) or wd == 1 or wd >= 6 or (wd == 2 and dt.time() < reset_time)
-                )
+                return KaiyokoHTML(match, child, f"https://reddit.com{post_url}", f"https://libreddit.bus-hit.me{image_url}")
 
-                if is_available:
-                    diff = 2 - wd  # next tuesday
-                    fmt = "Judging ends"
-                    colour = discord.Colour.green()
-                else:
-                    diff = 5 - wd  # next friday
-                    fmt = "Judging becomes available"
-                    colour = discord.Colour.dark_orange()
+        raise ValueError("Can't find any posts for Fashion Report.")  # should be unreachable
 
-                if (diff == 0 and dt.time() < reset_time) or (diff == 5 and dt.time() > reset_time):
-                    days = 0
-                else:
-                    days = diff + 7 if diff <= 0 else diff
+    async def get_kaiyoko_submissions(self) -> str:
+        async with self.bot.session.get(
+            "https://libreddit.bus-hit.me/user/kaiyoko/submitted", headers=MIMIC_HEADERS
+        ) as resp:
+            return await resp.text()
 
-                upcoming_event = (dt + datetime.timedelta(days=days)).replace(hour=8, minute=0, second=0, microsecond=0)
-                reset_str = (
-                    self.humanify_delta(td=(upcoming_event - dt), format_=fmt)
-                    + f"\n{discord.utils.format_dt(upcoming_event, 'F')} ({discord.utils.format_dt(upcoming_event, 'R')})"
-                )
+    @cache(ignore_kwargs=True)
+    async def _filter_submissions(self, *, dt: datetime.datetime) -> KaiyokoSubmission:
+        html = await self.get_kaiyoko_submissions()
+        node = await self._scrape_kaiyoko_page(html, dt=dt)
 
-                return KaiyokoSubmission(
-                    f"Fashion Report details for week of {match['date']} (Week {match['week_num']})",
-                    reset_str,
-                    upcoming_event,
-                    submission["data"]["url"],
-                    colour,
-                )
+        header = node.child.find_next("p", {"class": "post_header"})
+        assert isinstance(header, bs4.Tag)
+        span = header.find_next("span", {"class": "created"})
+        assert isinstance(span, bs4.Tag)
+        dt_fmt = span.attrs["title"]
+
+        created = datetime.datetime.strptime(dt_fmt, "%b %d %Y, %H:%M:%S UTC").replace(tzinfo=datetime.UTC)
+
+        if (dt - created) > datetime.timedelta(days=7):
+            raise ValueError("Invalid HTML node found.")
+
+        wd = dt.isoweekday()
+        reset_time = datetime.time(hour=8, minute=0, second=0)
+        is_available = (wd == 5 and dt.time() > reset_time) or wd == 1 or wd >= 6 or (wd == 2 and dt.time() < reset_time)
+
+        if is_available:
+            diff = 2 - wd  # next tuesday
+            fmt = "Judging ends"
+            colour = discord.Colour.green()
         else:
-            LOGGER.warning("[FashionReport] :: Can't find any submissions from Kaiyoko.")
+            diff = 5 - wd  # next friday
+            fmt = "Judging becomes available"
+            colour = discord.Colour.dark_orange()
+
+        if (diff == 0 and dt.time() < reset_time) or (diff == 5 and dt.time() > reset_time):
+            days = 0
+        else:
+            days = diff + 7 if diff <= 0 else diff
+
+        upcoming_event = (dt + datetime.timedelta(days=days)).replace(hour=8, minute=0, second=0, microsecond=0)
+        reset_str = (
+            self.humanify_delta(td=(upcoming_event - dt), format_=fmt)
+            + f"\n{discord.utils.format_dt(upcoming_event, 'F')} ({discord.utils.format_dt(upcoming_event, 'R')})"
+        )
+
+        return KaiyokoSubmission(
+            f"Fashion Report details for week of {node.match['date']} (Week {node.match['week_num']})",
+            reset_str,
+            upcoming_event,
+            node.post_url,
+            node.image_url,
+            colour,
+        )
 
         raise ValueError("Unable to fetch the reddit post details.")
 
@@ -205,9 +257,9 @@ class FashionReport(BaseCog):
         # guarded
         submission = self.current_report
 
-        embed = discord.Embed(title=submission.prose, url=submission.url, colour=submission.colour)
+        embed = discord.Embed(title=submission.prose, url=submission.post_url, colour=submission.colour)
         embed.description = submission.reset
-        embed.set_image(url=submission.url)
+        embed.set_image(url=submission.image_url)
 
         return embed
 
