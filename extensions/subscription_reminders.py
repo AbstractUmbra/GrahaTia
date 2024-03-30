@@ -12,12 +12,12 @@ from discord import SelectOption, app_commands
 from discord.ext import commands, tasks
 from discord.utils import MISSING
 
-from utilities.cog import GrahaBaseCog
 from utilities.containers.event_subscription import (
     EventSubConfig,
     MisconfiguredSubscription,
 )
 from utilities.shared.cache import cache
+from utilities.shared.cog import BaseCog
 from utilities.shared.converters import WebhookTransformer  # noqa: TCH001
 from utilities.shared.ui import BaseView
 
@@ -51,7 +51,7 @@ class EventSubView(BaseView):
     async def on_timeout(self) -> None:
         return
 
-    @discord.ui.select(min_values=1, max_values=9)  # type: ignore # pyright bug
+    @discord.ui.select(min_values=1, max_values=9)
     async def sub_selection(self, interaction: Interaction, item: discord.ui.Select[Self]) -> None:
         assert interaction.guild  # guarded in earlier check
         await interaction.response.defer()
@@ -83,7 +83,7 @@ class EventSubView(BaseView):
         )
 
 
-class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
+class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     POSSIBLE_SUBSCRIPTIONS: ClassVar[list[discord.SelectOption]] = [
         discord.SelectOption(
             label="Daily Resets", value="1", description="Opt into reminders about daily resets!", emoji="\U0001f4bf"
@@ -292,6 +292,12 @@ class EventSubscriptions(GrahaBaseCog, group_name="subscription"):
             await interaction.response.defer(ephemeral=True, thinking=False)
 
         await interaction.followup.send("Sorry, there was an error processing this command!")
+
+    @app_commands.command(name="change-channel")
+    @app_commands.guild_only()
+    @app_commands.default_permissions(manage_channels=True, manage_webhooks=True)
+    @app_commands.describe(channel="The channel to redirect the webhook posts to.")
+    async def update_webhook_channel(self, interaction: Interaction, channel: discord.TextChannel) -> None: ...
 
     async def dispatcher(
         self,

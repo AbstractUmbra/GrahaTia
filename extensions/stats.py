@@ -30,6 +30,7 @@ from discord.ext import commands, menus, tasks
 
 from utilities import formats, time
 from utilities.context import Context
+from utilities.shared.cog import BaseCog
 from utilities.shared.formats import to_codeblock
 from utilities.shared.paginator import FieldPageSource, RoboPages
 
@@ -82,11 +83,11 @@ def object_at(addr: int) -> Any | None:
     return None
 
 
-class Stats(commands.Cog):
+class Stats(BaseCog["Graha"]):
     """Bot usage statistics."""
 
     def __init__(self, bot: Graha) -> None:
-        self.bot: Graha = bot
+        super().__init__(bot)
         self.process: psutil.Process = psutil.Process()
         self._batch_lock = asyncio.Lock()
         self._data_batch: list[DataBatchEntry] = []

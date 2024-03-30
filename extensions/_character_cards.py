@@ -11,7 +11,7 @@ from discord import app_commands
 from discord.app_commands.commands import _populate_choices
 
 from utilities import fuzzy
-from utilities.cog import GrahaBaseCog as BaseCog
+from utilities.shared.cog import BaseCog
 from utilities.shared.formats import from_json
 
 if TYPE_CHECKING:
@@ -35,7 +35,7 @@ class APIError(Exception):
         self.reason = reason
 
 
-class CharacterCards(BaseCog):
+class CharacterCards(BaseCog["Graha"]):
     URL: ClassVar[yarl.URL] = yarl.URL("https://xiv-character-cards.drakon.cloud/")
     worlds: dict[str, list[str]]
     datacenters: list[app_commands.Choice[str]]

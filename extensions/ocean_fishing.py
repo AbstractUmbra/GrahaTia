@@ -8,7 +8,7 @@ import discord
 from discord.enums import Enum
 from discord.ext import commands
 
-from utilities.cog import GrahaBaseCog
+from utilities.shared.cog import BaseCog
 
 if TYPE_CHECKING:
     from bot import Graha
@@ -161,7 +161,7 @@ class Voyage(NamedTuple):
         return "\n".join([f"{item[1]}: {item[0]}" for item in routes])
 
 
-class OceanFishing(GrahaBaseCog):
+class OceanFishing(BaseCog["Graha"]):
     STARTING_EPOCH: ClassVar[datetime.datetime] = datetime.datetime.fromtimestamp(1593302400, tz=datetime.UTC)
 
     def __init__(self, bot: Graha, /) -> None:

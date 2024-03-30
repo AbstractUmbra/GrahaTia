@@ -11,7 +11,7 @@ from __future__ import annotations
 import datetime
 import secrets
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeAlias, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, overload
 
 import discord
 from discord.ext import commands
@@ -40,7 +40,7 @@ __all__ = (
 )
 
 T = TypeVar("T")
-Interaction: TypeAlias = discord.Interaction["Graha"]
+Interaction = discord.Interaction["Graha"]
 
 
 # For typing purposes, `Context.db` returns a Protocol type

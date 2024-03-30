@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, ClassVar, Literal, TypeAlias
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 import discord
 from discord.enums import Enum
 from discord.ext import commands
 
-from utilities.cog import GrahaBaseCog as Cog
+from utilities.shared.cog import BaseCog
 from utilities.shared.formats import ts
 
 if TYPE_CHECKING:
     from bot import Graha
     from utilities.context import Context
 
-GateSpawnMinute: TypeAlias = Literal[0, 20, 40]
+type GateSpawnMinute = Literal[0, 20, 40]
 
 
 class LeapOfFaith(Enum):
@@ -42,7 +42,7 @@ class GATE(Enum):
         return self.name.replace("_", " ").title()
 
 
-class GATEs(Cog):
+class GATEs(BaseCog["Graha"]):
     GATES: ClassVar[dict[GateSpawnMinute, list[GATE]]] = {
         0: [GATE.cliffhanger, GATE.air_force_one, GATE.leap_of_faith],
         20: [GATE.any_way_the_wind_blows, GATE.the_slice_is_right, GATE.leap_of_faith],

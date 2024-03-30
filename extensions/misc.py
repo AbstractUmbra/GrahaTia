@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import commands
 
-from utilities.cog import GrahaBaseCog as BaseCog
+from utilities.shared.cog import BaseCog
 from utilities.shared.formats import to_codeblock
 from utilities.shared.time import ordinal
 
@@ -30,7 +30,7 @@ TZ_NAME_MAPPING = {
 }
 
 
-class Misc(BaseCog):
+class Misc(BaseCog["Graha"]):
     def _clean_dt(self, dt: datetime.datetime) -> str:
         ord_ = ordinal(dt.day)
         fmt = dt.strftime(f"%H:%M on %A, {ord_} of %B %Y")

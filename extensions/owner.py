@@ -20,7 +20,7 @@ from discord.ext import commands
 from discord.ext.commands import Greedy  # noqa: TCH002
 
 from utilities import formats
-from utilities.cog import GrahaBaseCog as BaseCog
+from utilities.shared.cog import BaseCog
 
 if TYPE_CHECKING:
     from asyncpg import Record
@@ -51,7 +51,7 @@ class ModuleConverter(commands.Converter[str]):
         return ".".join(extension_path.parts).removesuffix(".py")
 
 
-class Admin(BaseCog):
+class Admin(BaseCog["Graha"]):
     """Admin-only commands that make the bot dynamic."""
 
     def cleanup_code(self, content: str) -> str:

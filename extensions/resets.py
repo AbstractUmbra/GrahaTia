@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING, ClassVar
 import discord
 from discord.ext import commands
 
-from utilities.cog import GrahaBaseCog as BaseCog
 from utilities.containers.cactpot import Datacenter, Region
+from utilities.shared.cog import BaseCog
 from utilities.shared.time import Weekday, resolve_next_weekday
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from utilities.context import Context
 
 
-class Resets(BaseCog, name="Reset Information"):
+class Resets(BaseCog["Graha"], name="Reset Information"):
     DAILIES: ClassVar[list[str]] = [
         "Beast Tribe",
         "Duty Roulettes",
