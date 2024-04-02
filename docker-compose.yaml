@@ -11,7 +11,3 @@ services:
       - ./extensions/:/app/extensions/:ro
       - ./.git/:/app/.git
       - ./.safe-gitconfig/:/root/.gitconfig
-
-networks:
-  main:
-    external: true
