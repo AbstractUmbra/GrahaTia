@@ -11,6 +11,13 @@ sentry_dsn = "..."
 [misc]
 mystbin_token = "..."
 
+[reddit]
+client_id = "..."
+client_secret = "..."
+username = "..."
+password = "..."
+user_agent = "..."
+
 [conditional_access]
 # this key is removable
 server_id = [123, 456]

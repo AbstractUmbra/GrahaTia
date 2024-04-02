@@ -12,34 +12,26 @@ import logging
 import re
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
-import bs4
 import discord
 from discord.ext import commands, tasks
 from discord.utils import MISSING
-from jishaku.functools import executor_function
 
 from utilities.context import Context as BaseContext
 from utilities.shared.cache import cache
 from utilities.shared.cog import BaseCog
 from utilities.shared.formats import plural
+from utilities.shared.reddit import AuthHandler
 from utilities.shared.time import Weekday, resolve_next_weekday
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from bot import Graha
     from utilities.containers.event_subscription import EventSubConfig
+    from utilities.shared._types.xiv.reddit.kaiyoko import TopLevelListingResponse
 
 FASHION_REPORT_PATTERN: re.Pattern[str] = re.compile(
     r"Fashion Report - Full Details - For Week of (?P<date>[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}) \(Week (?P<week_num>[0-9]{3})\)"
 )
 LOGGER = logging.getLogger(__name__)
-
-MIMIC_HEADERS: Mapping[str, str] = {
-    "Accept": "application/json",
-    "Accept-Language": "en-US,en;q=0.5",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
-}
 
 
 class Context(BaseContext):
@@ -50,19 +42,12 @@ class KaiyokoSubmission(NamedTuple):
     prose: str
     reset: str
     dt: datetime.datetime
-    post_url: str
-    image_url: str
+    url: str
     colour: discord.Colour
 
 
-class KaiyokoHTML(NamedTuple):
-    match: re.Match[str]
-    child: bs4.PageElement
-    post_url: str
-    image_url: str
-
-
 class FashionReport(BaseCog["Graha"]):
+    AuthHandler: AuthHandler
     FASHION_REPORT_START: ClassVar[datetime.datetime] = datetime.datetime(
         year=2018,
         month=1,
@@ -79,6 +64,9 @@ class FashionReport(BaseCog["Graha"]):
         self.reset_cache.start()
         self.current_report: KaiyokoSubmission = MISSING
         self._report_task: asyncio.Task[None] = asyncio.create_task(self._wait_for_report())
+
+    async def cog_load(self) -> None:
+        self._auth_handler = await AuthHandler().refresh(session=self.bot.session, config=self.bot.config["reddit"])
 
     def cog_unload(self) -> None:
         self._report_task.cancel("Unloading FashionReport cog.")
@@ -110,6 +98,10 @@ class FashionReport(BaseCog["Graha"]):
         )
 
     async def _wait_for_report(self, *, dt: datetime.datetime | None = None) -> None:
+        while not hasattr(self, "_auth_handler"):
+            await asyncio.sleep(1)
+            continue
+
         dt = dt or datetime.datetime.now(datetime.UTC)
         if self.current_report is not MISSING:
             LOGGER.warning("[FashionReport] :: Report already cached, is the cache stale?")
@@ -160,63 +152,36 @@ class FashionReport(BaseCog["Graha"]):
 
         return fmt
 
-    @executor_function
-    def _scrape_kaiyoko_page(self, page_html: str, *, dt: datetime.datetime) -> KaiyokoHTML:
-        soup = bs4.BeautifulSoup(page_html, "lxml")
-
-        posts = soup.find("div", id="posts")
-        if not posts or not isinstance(posts, bs4.Tag):
-            raise ValueError("Seems the HTML is malformed.")
-
-        children = posts.find_all("div", {"class": "post"})
-        if not children:
-            raise ValueError("Seems the inner HTML is malformed?")
-
-        for child in children:
-            child: bs4.PageElement
-            title = child.find_next("h2", {"class": "post_title"})
-            if title and isinstance(title, bs4.Tag):
-                post_a_tag, *_ = title.select("a:not(.post_flair)")
-                post_title = post_a_tag.text
-                post_url = post_a_tag.attrs["href"]
-                match = FASHION_REPORT_PATTERN.search(post_title)
-                if not match:
-                    continue
-
-                if self.weeks_since_start(dt) != int(match["week_num"]):
-                    continue
-
-                media_content_tag = child.find_next("div", {"class": "post_media_content"})
-                assert isinstance(media_content_tag, bs4.Tag)
-                media_content_image_tag = media_content_tag.find_next("image")
-                assert isinstance(media_content_image_tag, bs4.Tag)
-                image_url = media_content_image_tag.attrs["href"]
-
-                return KaiyokoHTML(match, child, f"https://reddit.com{post_url}", f"https://libreddit.bus-hit.me{image_url}")
-
-        raise ValueError("Can't find any posts for Fashion Report.")  # should be unreachable
-
-    async def get_kaiyoko_submissions(self) -> str:
+    async def get_kaiyoko_submissions(self) -> TopLevelListingResponse:
         async with self.bot.session.get(
-            "https://libreddit.bus-hit.me/user/kaiyoko/submitted", headers=MIMIC_HEADERS
+            "https://oauth.reddit.com/user/kaiyoko/submitted",
+            headers={"User-Agent": self.bot.config["reddit"]["user_agent"], "Authorization": self._auth_handler.to_bearer()},
+            params={"limit": 10},
         ) as resp:
-            return await resp.text()
+            return await resp.json()
 
     @cache(ignore_kwargs=True)
     async def _filter_submissions(self, *, dt: datetime.datetime) -> KaiyokoSubmission:
-        html = await self.get_kaiyoko_submissions()
-        node = await self._scrape_kaiyoko_page(html, dt=dt)
+        submissions = await self.get_kaiyoko_submissions()
 
-        header = node.child.find_next("p", {"class": "post_header"})
-        assert isinstance(header, bs4.Tag)
-        span = header.find_next("span", {"class": "created"})
-        assert isinstance(span, bs4.Tag)
-        dt_fmt = span.attrs["title"]
+        for submission in submissions["data"]["children"]:
+            match = FASHION_REPORT_PATTERN.search(submission["data"]["title"])
+            if not match:
+                continue
 
-        created = datetime.datetime.strptime(dt_fmt, "%b %d %Y, %H:%M:%S UTC").replace(tzinfo=datetime.UTC)
+            if self.weeks_since_start(dt) != int(match["week_num"]):
+                LOGGER.warning(
+                    "[FashionReport] -> {Submission Filtering} :: Found a submission, but doesn't match the expected week (wanted %s but got %s)",
+                    self.weeks_since_start(dt),
+                    match["week_num"],
+                )
+                continue
 
-        if (dt - created) > datetime.timedelta(days=7):
-            raise ValueError("Invalid HTML node found.")
+            created = datetime.datetime.fromtimestamp(submission["data"]["created_utc"], tz=datetime.UTC)
+            if (dt - created) < datetime.timedelta(days=7):
+                break
+        else:
+            raise ValueError("No submissions matches")
 
         wd = dt.isoweekday()
         reset_time = datetime.time(hour=8, minute=0, second=0)
@@ -243,11 +208,10 @@ class FashionReport(BaseCog["Graha"]):
         )
 
         return KaiyokoSubmission(
-            f"Fashion Report details for week of {node.match['date']} (Week {node.match['week_num']})",
+            f"Fashion Report details for week of {match['date']} (Week {match['week_num']})",
             reset_str,
             upcoming_event,
-            node.post_url,
-            node.image_url,
+            submission["data"]["url"],
             colour,
         )
 
@@ -257,9 +221,9 @@ class FashionReport(BaseCog["Graha"]):
         # guarded
         submission = self.current_report
 
-        embed = discord.Embed(title=submission.prose, url=submission.post_url, colour=submission.colour)
+        embed = discord.Embed(title=submission.prose, url=submission.url, colour=submission.colour)
         embed.description = submission.reset
-        embed.set_image(url=submission.image_url)
+        embed.set_image(url=submission.url)
 
         return embed
 
