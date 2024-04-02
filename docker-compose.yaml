@@ -1,16 +1,9 @@
-networks:
-  main:
-    external: true
-    name: main
-
 services:
   bot:
     container_name: graha-bot
     extra_hosts:
       - "database:host-gateway"
     image: ghcr.io/abstractumbra/graha:latest
-    networks:
-      main:
     restart: unless-stopped
     volumes:
       - ./configs/:/app/configs/:ro
@@ -19,4 +12,6 @@ services:
       - ./.git/:/app/.git
       - ./.safe-gitconfig/:/root/.gitconfig
 
-version: "3"
+networks:
+  main:
+    external: true
