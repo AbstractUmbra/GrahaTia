@@ -66,6 +66,8 @@ class FashionReport(BaseCog["Graha"]):
         self._report_task: asyncio.Task[None] = asyncio.create_task(self._wait_for_report())
 
     async def cog_load(self) -> None:
+        # we don't add this on init since loading this Cog will fail if this method errors,
+        # so if the api request doesn't work, we don't start this extension.
         self._auth_handler = await AuthHandler().refresh(session=self.bot.session, config=self.bot.config["reddit"])
 
     def cog_unload(self) -> None:
@@ -98,6 +100,8 @@ class FashionReport(BaseCog["Graha"]):
         )
 
     async def _wait_for_report(self, *, dt: datetime.datetime | None = None) -> None:
+        # this is a small hack, but it waits for cog_load to finish, essentially.
+        # I could use an asyncio.Event but that seems overkill.
         while not hasattr(self, "_auth_handler"):
             await asyncio.sleep(1)
             continue
@@ -158,6 +162,9 @@ class FashionReport(BaseCog["Graha"]):
             headers={"User-Agent": self.bot.config["reddit"]["user_agent"], "Authorization": self._auth_handler.to_bearer()},
             params={"limit": 10},
         ) as resp:
+            if not 200 <= resp.status < 300:
+                raise ValueError("The API request to Reddit has failed.")
+
             return await resp.json()
 
     @cache(ignore_kwargs=True)
