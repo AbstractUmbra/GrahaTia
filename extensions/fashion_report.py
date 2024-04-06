@@ -68,7 +68,7 @@ class FashionReport(BaseCog["Graha"]):
     async def cog_load(self) -> None:
         # we don't add this on init since loading this Cog will fail if this method errors,
         # so if the api request doesn't work, we don't start this extension.
-        self._auth_handler = await AuthHandler().refresh(session=self.bot.session, config=self.bot.config["reddit"])
+        self._auth_handler = await AuthHandler(session=self.bot.session, config=self.bot.config["reddit"]).refresh()
 
     def cog_unload(self) -> None:
         self._report_task.cancel("Unloading FashionReport cog.")
@@ -157,9 +157,11 @@ class FashionReport(BaseCog["Graha"]):
         return fmt
 
     async def get_kaiyoko_submissions(self) -> TopLevelListingResponse:
+        token = (await self._auth_handler.refresh()).to_bearer()
+
         async with self.bot.session.get(
             "https://oauth.reddit.com/user/kaiyoko/submitted",
-            headers={"User-Agent": self.bot.config["reddit"]["user_agent"], "Authorization": self._auth_handler.to_bearer()},
+            headers={"User-Agent": self.bot.config["reddit"]["user_agent"], "Authorization": token},
             params={"limit": 10},
         ) as resp:
             if not 200 <= resp.status < 300:
