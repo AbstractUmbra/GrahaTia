@@ -64,15 +64,18 @@ class FashionReport(BaseCog["Graha"]):
         self.reset_cache.start()
         self.current_report: KaiyokoSubmission = MISSING
         self._report_task: asyncio.Task[None] = asyncio.create_task(self._wait_for_report())
+        self._ready: asyncio.Event = asyncio.Event()
 
     async def cog_load(self) -> None:
         # we don't add this on init since loading this Cog will fail if this method errors,
         # so if the api request doesn't work, we don't start this extension.
         self._auth_handler = await AuthHandler(session=self.bot.session, config=self.bot.config["reddit"]).refresh()
+        self._ready.set()
 
     def cog_unload(self) -> None:
         self._report_task.cancel("Unloading FashionReport cog.")
         self.reset_cache.cancel()
+        self._ready.clear()
 
     def _reset_state(self, *, dt: datetime.datetime | None = None) -> bool:
         self.current_report = MISSING
@@ -100,11 +103,7 @@ class FashionReport(BaseCog["Graha"]):
         )
 
     async def _wait_for_report(self, *, dt: datetime.datetime | None = None) -> None:
-        # this is a small hack, but it waits for cog_load to finish, essentially.
-        # I could use an asyncio.Event but that seems overkill.
-        while not hasattr(self, "_auth_handler"):
-            await asyncio.sleep(1)
-            continue
+        await self._ready.wait()
 
         dt = dt or datetime.datetime.now(datetime.UTC)
         if self.current_report is not MISSING:
@@ -119,7 +118,7 @@ class FashionReport(BaseCog["Graha"]):
             try:
                 submission = await self._filter_submissions(dt=dt)
             except ValueError:
-                to_sleep = 60 * tries
+                to_sleep = 5 * tries
                 LOGGER.warning("[FashionReport] :: Submission not found, sleeping for %s", to_sleep)
                 await asyncio.sleep(to_sleep)
                 continue
@@ -223,8 +222,6 @@ class FashionReport(BaseCog["Graha"]):
             submission["data"]["url"],
             colour,
         )
-
-        raise ValueError("Unable to fetch the reddit post details.")
 
     def generate_fashion_embed(self) -> discord.Embed:
         # guarded
