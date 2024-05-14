@@ -251,7 +251,6 @@ class Context(commands.Context["Graha"], Generic[CogT]):
         ephemeral: bool = ...,
         silent: bool = ...,
         paste: bool = ...,
-        paste_language: str = "txt",
         wait: Literal[True],
     ) -> discord.Message: ...
 
@@ -276,7 +275,6 @@ class Context(commands.Context["Graha"], Generic[CogT]):
         ephemeral: bool = ...,
         silent: bool = ...,
         paste: bool = ...,
-        paste_language: str = "txt",
         wait: Literal[False],
     ) -> None: ...
 
@@ -301,7 +299,6 @@ class Context(commands.Context["Graha"], Generic[CogT]):
         ephemeral: bool = ...,
         silent: bool = ...,
         paste: bool = ...,
-        paste_language: str = "txt",
         wait: bool = ...,
     ) -> None: ...
 
@@ -325,22 +322,20 @@ class Context(commands.Context["Graha"], Generic[CogT]):
         ephemeral: bool = False,
         silent: bool = False,
         paste: bool = False,
-        paste_language: str = "txt",
         wait: bool = False,
     ) -> discord.Message | None:
         content = str(content) if content is not None else None
         if (paste and content) or (content and len(content) >= 2000):
             password = secrets.token_urlsafe(10)
-            paste_key = await create_paste(
+            paste_url = await create_paste(
                 content=content,
                 password=password,
                 expiry=(datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=2)),
-                language=paste_language,
-                session=self.session,
+                mb_client=self.bot.mb_client,
             )
             content = (
                 "Sorry, the output was too large but I posted it to mystb.in for you here:"
-                f" https://paste.abstractumbra.dev/{paste_key}"
+                f" {paste_url}.\nThe password is: `{password}`."
             )
 
         sent = await super().send(  # type: ignore

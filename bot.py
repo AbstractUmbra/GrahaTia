@@ -392,7 +392,7 @@ class Graha(commands.Bot):
                         f.write(f"{last_log}\n")
 
     async def setup_hook(self) -> None:
-        self.mb_client = mystbin.Client(session=self.session, token=CONFIG["misc"]["mystbin_token"])
+        self.mb_client = mystbin.Client(session=self.session)
         self.start_time: datetime.datetime = datetime.datetime.now(datetime.UTC)
         self.bot_app_info = await self.application_info()
         self.owner_id = self.bot_app_info.owner.id
