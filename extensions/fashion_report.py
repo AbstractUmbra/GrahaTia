@@ -32,6 +32,7 @@ FASHION_REPORT_PATTERN: re.Pattern[str] = re.compile(
     r"Fashion Report - Full Details - For Week of (?P<date>[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}) \(Week (?P<week_num>[0-9]{3})\)"
 )
 LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 
 class Context(BaseContext):
@@ -44,6 +45,7 @@ class KaiyokoSubmission(NamedTuple):
     dt: datetime.datetime
     url: str
     colour: discord.Colour
+    created_at: datetime.datetime
 
 
 class FashionReport(BaseCog["Graha"]):
@@ -77,7 +79,7 @@ class FashionReport(BaseCog["Graha"]):
         self.reset_cache.cancel()
         self._ready.clear()
 
-    def _reset_state(self, *, dt: datetime.datetime | None = None) -> bool:
+    def _reset_state(self) -> bool:
         self.current_report = MISSING
         self._report_task.cancel("Manual cache reset.")
 
@@ -87,8 +89,7 @@ class FashionReport(BaseCog["Graha"]):
             LOGGER.warning("[FashionReport] -> {Reset State} :: Task was in error state.")
             pass
 
-        dt = dt or self._resolve_next_window(dt)
-        self._report_task = asyncio.create_task(self._wait_for_report(dt=dt))
+        self._report_task = asyncio.create_task(self._wait_for_report())
         return self._filter_submissions.invalidate(self)
 
     def _resolve_next_window(self, dt: datetime.datetime | None = None) -> datetime.datetime:
@@ -102,32 +103,34 @@ class FashionReport(BaseCog["Graha"]):
             # before_time=datetime.time(hour=8, tzinfo=datetime.UTC),
         )
 
-    async def _wait_for_report(self, *, dt: datetime.datetime | None = None) -> None:
+    async def _wait_for_report(self) -> None:
         await self._ready.wait()
 
-        dt = dt or datetime.datetime.now(datetime.UTC)
         if self.current_report is not MISSING:
             LOGGER.warning("[FashionReport] :: Report already cached, is the cache stale?")
             return
 
         LOGGER.info("[FashionReport] :: Starting loop to gain report.")
 
-        tries = 0
         while True:
-            tries += 1
+            dt = self._resolve_next_window()
             try:
                 submission = await self._filter_submissions(dt=dt)
             except ValueError:
-                to_sleep = 5 * tries
-                LOGGER.warning("[FashionReport] :: Submission not found, sleeping for %s", to_sleep)
-                await asyncio.sleep(to_sleep)
+                LOGGER.warning("[FashionReport] :: Submission not found, sleeping for 5m.")
+                LOGGER.debug("[FashionReport] :: Next window would be %r", dt.isoformat())
+                await asyncio.sleep(300)
                 continue
             else:
                 LOGGER.info("[FashionReport] :: Found report, setting attribute.")
                 self.current_report = submission
                 break
 
-        LOGGER.info("[FashionReport] :: gotten report at %s", datetime.datetime.now(datetime.UTC))
+        LOGGER.info(
+            "[FashionReport] :: gotten report at %r (report created at %r)",
+            datetime.datetime.now(datetime.UTC).isoformat(),
+            submission.created_at.isoformat(),
+        )
 
     def weeks_since_start(self, dt: datetime.datetime) -> int:
         td = dt - self.FASHION_REPORT_START
@@ -164,6 +167,7 @@ class FashionReport(BaseCog["Graha"]):
             params={"limit": 10},
         ) as resp:
             if not 200 <= resp.status < 300:
+                LOGGER.error("The API request to Reddit has failed with status code: '%s'", resp.status)
                 raise ValueError("The API request to Reddit has failed.")
 
             return await resp.json()
@@ -175,6 +179,9 @@ class FashionReport(BaseCog["Graha"]):
         for submission in submissions["data"]["children"]:
             match = FASHION_REPORT_PATTERN.search(submission["data"]["title"])
             if not match:
+                LOGGER.debug(
+                    "[FashionReport] :: Kaiyoko entry found but is not a fashion report: %r", submission["data"]["title"]
+                )
                 continue
 
             if self.weeks_since_start(dt) != int(match["week_num"]):
@@ -187,6 +194,10 @@ class FashionReport(BaseCog["Graha"]):
 
             created = datetime.datetime.fromtimestamp(submission["data"]["created_utc"], tz=datetime.UTC)
             if (dt - created) < datetime.timedelta(days=7):
+                LOGGER.debug(
+                    "[FashionReport] -> {Submission Filtering} :: Found fashion report entry, current: %r",
+                    created.isoformat(),
+                )
                 break
         else:
             raise ValueError("No submissions matches")
@@ -221,6 +232,7 @@ class FashionReport(BaseCog["Graha"]):
             upcoming_event,
             submission["data"]["url"],
             colour,
+            created,
         )
 
     def generate_fashion_embed(self) -> discord.Embed:

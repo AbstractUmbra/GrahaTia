@@ -415,7 +415,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
         fmt: str = MISSING
 
-        fashion_report_cog._reset_state(dt=now + datetime.timedelta(minutes=30))
+        fashion_report_cog._reset_state()
         await fashion_report_cog._report_task
         embed = fashion_report_cog.generate_fashion_embed()
 
