@@ -50,13 +50,16 @@ class Yokai(Enum):
     Noko = 8
     Venoct = 9
     Kyubi = 10
-    Robonyan_Ftype = 11
+    Robonyan_F__type = 11
     Blizzaria = 12
     Manjimutt = 13
     Lord_Enma = 14
     Lord_Ananta = 15
     Zazel = 16
     Damona = 17
+
+    def clean_name(self) -> str:
+        return self.name.replace("__", "-").replace("_", " ")
 
 
 class YokaiWatch(commands.GroupCog, name="yokai-watch"):
@@ -86,7 +89,8 @@ class YokaiWatch(commands.GroupCog, name="yokai-watch"):
         ]
 
     def _populate_yokai(self) -> list[app_commands.Choice[str]]:
-        return [app_commands.Choice(name=n.title(), value=n.title()) for n in self.config["yokai"]]
+        yokai = [Yokai[n] for n in self.config["yokai"]]
+        return [app_commands.Choice(name=n.clean_name(), value=n.clean_name()) for n in yokai]
 
     def _resolve_id_to_entry(self, yokai_id: int) -> YokaiType:
         for yokai in self.config["yokai"].values():
