@@ -40,6 +40,7 @@ from utilities.context import Context
 from utilities.prefix import callable_prefix as _callable_prefix
 from utilities.shared.async_config import Config
 from utilities.shared.db import db_init
+from utilities.shared.reddit import RedditHandler
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -377,6 +378,26 @@ class Graha(commands.Bot):
         if guild.id in self._blacklist_data:
             await guild.leave()
 
+    async def create_paste(
+        self,
+        *,
+        content: str | None = None,
+        files: list[tuple[str, str]] | None = None,
+        password: str | None = None,
+        expires: datetime.datetime | None = None,
+    ) -> str:
+        if not content and not files:
+            raise ValueError("Either `content` or `files` must be provided.")
+
+        if content:
+            post_files = [mystbin.File(filename="output.py", content=content)]
+        elif files:
+            post_files = [mystbin.File(filename=name, content=content) for name, content in files]
+
+        paste = await self.mb_client.create_paste(files=post_files, password=password, expires=expires)
+
+        return paste.url
+
     async def start(self) -> None:
         try:
             await super().start(token=self.config["bot"]["token"], reconnect=True)
@@ -393,6 +414,7 @@ class Graha(commands.Bot):
 
     async def setup_hook(self) -> None:
         self.mb_client = mystbin.Client(session=self.session)
+        self.reddit = RedditHandler(session=self.session, config=self.config["reddit"])
         self.start_time: datetime.datetime = datetime.datetime.now(datetime.UTC)
         self.bot_app_info = await self.application_info()
         self.owner_id = self.bot_app_info.owner.id

@@ -20,7 +20,7 @@ from utilities.context import Context as BaseContext
 from utilities.shared.cache import cache
 from utilities.shared.cog import BaseCog
 from utilities.shared.formats import plural
-from utilities.shared.reddit import AuthHandler
+from utilities.shared.reddit import RedditHandler
 from utilities.shared.time import Weekday, resolve_next_weekday
 
 if TYPE_CHECKING:
@@ -49,7 +49,7 @@ class KaiyokoSubmission(NamedTuple):
 
 
 class FashionReport(BaseCog["Graha"]):
-    AuthHandler: AuthHandler
+    AuthHandler: RedditHandler
     FASHION_REPORT_START: ClassVar[datetime.datetime] = datetime.datetime(
         year=2018,
         month=1,
@@ -71,7 +71,7 @@ class FashionReport(BaseCog["Graha"]):
     async def cog_load(self) -> None:
         # we don't add this on init since loading this Cog will fail if this method errors,
         # so if the api request doesn't work, we don't start this extension.
-        self._auth_handler = await AuthHandler(session=self.bot.session, config=self.bot.config["reddit"]).refresh()
+        self._auth_handler = await RedditHandler(session=self.bot.session, config=self.bot.config["reddit"]).refresh()
         self._ready.set()
 
     def cog_unload(self) -> None:
@@ -158,23 +158,9 @@ class FashionReport(BaseCog["Graha"]):
 
         return fmt
 
-    async def get_kaiyoko_submissions(self) -> TopLevelListingResponse:
-        token = (await self._auth_handler.refresh()).to_bearer()
-
-        async with self.bot.session.get(
-            "https://oauth.reddit.com/user/kaiyoko/submitted",
-            headers={"User-Agent": self.bot.config["reddit"]["user_agent"], "Authorization": token},
-            params={"limit": 10},
-        ) as resp:
-            if not 200 <= resp.status < 300:
-                LOGGER.error("The API request to Reddit has failed with status code: '%s'", resp.status)
-                raise ValueError("The API request to Reddit has failed.")
-
-            return await resp.json()
-
     @cache(ignore_kwargs=True)
     async def _filter_submissions(self, *, dt: datetime.datetime) -> KaiyokoSubmission:
-        submissions = await self.get_kaiyoko_submissions()
+        submissions: TopLevelListingResponse = await self.bot.reddit.get("https://oauth.reddit.com/user/kaiyoko/submitted")
 
         for submission in submissions["data"]["children"]:
             match = FASHION_REPORT_PATTERN.search(submission["data"]["title"])
