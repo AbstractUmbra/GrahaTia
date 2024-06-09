@@ -110,6 +110,12 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             emoji="\U0001f340",
         ),
         discord.SelectOption(
+            label="Jumbo Cactpot NA (Dynamis)",
+            value="512",
+            description="Opt into reminders about Jumbo Cactpot callouts for NA datacenters.",
+            emoji="\U0001f340",
+        ),
+        discord.SelectOption(
             label="Jumbo Cactpot EU",
             value="32",
             description="Opt into reminders about Jumbo Cactpot callouts for EU datacenters.",
@@ -475,10 +481,11 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
     @tasks.loop(
         time=[
-            datetime.time(hour=0, minute=45, tzinfo=zoneinfo.ZoneInfo("America/Los_Angeles")),
-            datetime.time(hour=3, minute=45, tzinfo=zoneinfo.ZoneInfo("America/Los_Angeles")),
-            datetime.time(hour=10, minute=45, tzinfo=zoneinfo.ZoneInfo("America/Los_Angeles")),
-            datetime.time(hour=17, minute=45, tzinfo=zoneinfo.ZoneInfo("America/Los_Angeles")),
+            datetime.time(hour=11, minute=45, tzinfo=datetime.UTC),  # ja
+            datetime.time(hour=0, minute=45, tzinfo=datetime.UTC),  # na (not dynamis)
+            datetime.time(hour=1, minute=45, tzinfo=datetime.UTC),  # na (dynamis)
+            datetime.time(hour=18, minute=45, tzinfo=datetime.UTC),  # eu
+            datetime.time(hour=8, minute=45, tzinfo=datetime.UTC),  # oce
         ]
     )
     async def jumbo_cactpot_loop(self) -> None:

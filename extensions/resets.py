@@ -7,7 +7,6 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 from __future__ import annotations
 
 import datetime
-import zoneinfo
 from typing import TYPE_CHECKING, ClassVar
 
 import discord
@@ -46,37 +45,40 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
         super().__init__(bot)
 
     def _get_next_datacenter_cactpot_data(self, dt: datetime.datetime | None = None) -> tuple[Region, int]:
-        # assuming we're calling this on a saturday and also the tz will be los angeles (PST)
-        now = dt or datetime.datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles"))
+        # assuming we're calling this on a saturday
+        now = dt or datetime.datetime.now(datetime.UTC)
 
-        if now.hour > 11 and now.hour < 18:
-            return Region.NA, 16
-        elif now.hour > 4 and now.hour < 11:
-            return Region.EU, 32
-        elif now.hour > 1 and now.hour < 4:
+        if now.hour in (0, 1):
+            if now.hour == 0:
+                return Region.NA, 16
+            else:
+                return Region.NA_D, 512
+        elif now.hour > 1 and now.hour < 9:
+            return Region.OCE, 128
+        elif now.hour > 9 and now.hour < 12:
             return Region.JP, 64
         else:
-            return Region.OCE, 128
+            return Region.EU, 32
 
     def _get_cactpot_reset_data(self, region_or_dc: Datacenter | Region, /) -> tuple[datetime.datetime, Region]:
-        tz = zoneinfo.ZoneInfo("America/Los_Angeles")
-
         value = region_or_dc.value if isinstance(region_or_dc, Datacenter) else region_or_dc
 
         match value:
             case Region.NA:
-                time = datetime.time(hour=18, tzinfo=tz)
+                time = datetime.time(hour=0, tzinfo=datetime.UTC)
+            case Region.NA_D:
+                time = datetime.time(hour=1, tzinfo=datetime.UTC)
             case Region.EU:
-                time = datetime.time(hour=11, tzinfo=tz)
+                time = datetime.time(hour=18, tzinfo=datetime.UTC)
             case Region.JP:
-                time = datetime.time(hour=4, tzinfo=tz)
+                time = datetime.time(hour=11, tzinfo=datetime.UTC)
             case Region.OCE:
-                time = datetime.time(hour=1, tzinfo=tz)
+                time = datetime.time(hour=8, tzinfo=datetime.UTC)
 
         date = resolve_next_weekday(
-            source=datetime.datetime.now(tz), target=Weekday.saturday, current_week_included=True, before_time=time
+            source=datetime.datetime.now(datetime.UTC), target=Weekday.saturday, current_week_included=True, before_time=time
         )
-        return datetime.datetime.combine(date.date(), time, tzinfo=tz), value
+        return datetime.datetime.combine(date.date(), time, tzinfo=datetime.UTC), value
 
     def _get_cactpot_embed(self, datacenter: Datacenter | Region, /) -> discord.Embed:
         next_, region = self._get_cactpot_reset_data(datacenter)

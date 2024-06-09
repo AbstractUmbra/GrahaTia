@@ -1,4 +1,4 @@
-from . import context as context
+from . import context as context, flags as flags
 from .shared import (
     _types as _types,
     async_config as async_config,
@@ -6,7 +6,6 @@ from .shared import (
     checks as checks,
     converters as converters,
     db as db,
-    flags as flags,
     formats as formats,
     fuzzy as fuzzy,
     markdown as markdown,

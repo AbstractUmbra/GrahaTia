@@ -12,8 +12,8 @@ import discord
 from discord import Guild, Role
 from discord.utils import MISSING
 
+from ..flags import SubscribedEventsFlags
 from ..shared.cache import cache
-from ..shared.flags import SubscribedEventsFlags
 
 if TYPE_CHECKING:
     from typing import Self
