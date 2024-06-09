@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
     from typing import Self
 
-    from utilities.shared._types.bot_config import Config as BotConfig
+    from utilities._types.bot_config import Config as BotConfig
 
 LOGGER = logging.getLogger("root.graha")
 jishaku.Flags.HIDE = True
@@ -162,6 +162,7 @@ class Graha(commands.Bot):
     global_log: logging.Logger
     command_types_used: Counter[bool]
     mb_client: mystbin.Client
+    reddit: RedditHandler
     bot_app_info: discord.AppInfo
     _original_help_command: commands.HelpCommand | None  # for help command overriding
     _stats_cog_gateway_handler: logging.Handler
@@ -414,7 +415,6 @@ class Graha(commands.Bot):
 
     async def setup_hook(self) -> None:
         self.mb_client = mystbin.Client(session=self.session)
-        self.reddit = RedditHandler(session=self.session, config=self.config["reddit"])
         self.start_time: datetime.datetime = datetime.datetime.now(datetime.UTC)
         self.bot_app_info = await self.application_info()
         self.owner_id = self.bot_app_info.owner.id
@@ -437,6 +437,7 @@ async def main() -> None:
         bot.log_handler.info("\n" * 5)
 
         bot.session = session
+        bot.reddit = RedditHandler(session=session, config=CONFIG["reddit"])
 
         await bot.load_extension("jishaku")
         for extension in EXTENSIONS:
