@@ -11,6 +11,7 @@ import datetime
 import json
 import logging
 import pathlib
+import tomllib
 import traceback
 from collections import Counter, deque
 from logging.handlers import RotatingFileHandler
@@ -22,7 +23,6 @@ import discord
 import jishaku
 import mystbin
 import sentry_sdk
-import tomli
 from discord import app_commands
 from discord.ext import commands
 from discord.utils import _ColourFormatter as ColourFormatter, stream_supports_colour
@@ -56,7 +56,7 @@ jishaku.Flags.NO_DM_TRACEBACK = True
 
 _config_path = pathlib.Path("configs/config.toml")
 with _config_path.open("rb") as fp:
-    CONFIG: BotConfig = tomli.load(fp)  # type: ignore # can't narrow this legally.
+    CONFIG: BotConfig = tomllib.load(fp)  # type: ignore # can't narrow this legally.
 
 
 class GrahaCommandTree(app_commands.CommandTree):
