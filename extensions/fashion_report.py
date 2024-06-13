@@ -96,12 +96,7 @@ class FashionReport(BaseCog["Graha"]):
         dt = dt or datetime.datetime.now(datetime.UTC)
 
         next_weekday = Weekday.friday if 1 < dt.weekday() <= 4 else Weekday.tuesday
-        return resolve_next_weekday(
-            source=dt,
-            target=next_weekday,
-            current_week_included=True,
-            # before_time=datetime.time(hour=8, tzinfo=datetime.UTC),
-        )
+        return resolve_next_weekday(source=dt, target=next_weekday, current_week_included=True)
 
     async def _wait_for_report(self) -> None:
         await self._ready.wait()
