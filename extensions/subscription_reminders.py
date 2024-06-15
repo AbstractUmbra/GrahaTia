@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
-import zoneinfo
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import discord
@@ -106,12 +105,6 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         discord.SelectOption(
             label="Jumbo Cactpot NA",
             value="16",
-            description="Opt into reminders about Jumbo Cactpot callouts for NA datacenters.",
-            emoji="\U0001f340",
-        ),
-        discord.SelectOption(
-            label="Jumbo Cactpot NA (Dynamis)",
-            value="512",
             description="Opt into reminders about Jumbo Cactpot callouts for NA datacenters.",
             emoji="\U0001f340",
         ),
@@ -482,14 +475,13 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     @tasks.loop(
         time=[
             datetime.time(hour=11, minute=45, tzinfo=datetime.UTC),  # ja
-            datetime.time(hour=0, minute=45, tzinfo=datetime.UTC),  # na (not dynamis)
             datetime.time(hour=1, minute=45, tzinfo=datetime.UTC),  # na (dynamis)
             datetime.time(hour=18, minute=45, tzinfo=datetime.UTC),  # eu
             datetime.time(hour=8, minute=45, tzinfo=datetime.UTC),  # oce
         ]
     )
     async def jumbo_cactpot_loop(self) -> None:
-        now = datetime.datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles"))
+        now = datetime.datetime.now(datetime.UTC)
         if now.weekday() != 5:  # saturday
             LOGGER.warning("[EventSub] -> [Jumbo Cactpot] :: Tried to run on a non-Saturday.")
             return
