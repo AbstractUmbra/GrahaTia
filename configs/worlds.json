@@ -36,11 +36,14 @@
                     "Halicarnassus",
                     "Maduin",
                     "Marilith",
-                    "Seraph"
+                    "Seraph",
+                    "Cuchulainn",
+                    "Golem",
+                    "Kraken",
+                    "Rafflesia"
                 ]
             }
-        ],
-        "zoneinfo_tz": "America/Los_Angeles"
+        ]
     },
     "EU": {
         "datacenters": [
@@ -68,7 +71,8 @@
                 "Shadow": [
                     "Innocence",
                     "Pixie",
-                    "Titania"
+                    "Titania",
+                    "Tycoon"
                 ]
             }
         ],

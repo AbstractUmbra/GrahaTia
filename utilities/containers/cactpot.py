@@ -11,7 +11,6 @@ class Region(Enum):
     NA = 2
     JP = 3
     OCE = 4
-    NA_D = 5
 
     def resolved_name(self) -> str:
         return str(self.name)
@@ -23,7 +22,7 @@ class Datacenter(Enum):
     aether = Region.NA
     primal = Region.NA
     crystal = Region.NA
-    dynamis = Region.NA_D
+    dynamis = Region.NA
     elemental = Region.JP
     gaia = Region.JP
     mana = Region.JP

@@ -48,11 +48,8 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
         # assuming we're calling this on a saturday
         now = dt or datetime.datetime.now(datetime.UTC)
 
-        if now.hour in (0, 1):
-            if now.hour == 0:
-                return Region.NA, 16
-            else:
-                return Region.NA_D, 512
+        if now.hour == 1:
+            return Region.NA, 16
         elif now.hour > 1 and now.hour < 9:
             return Region.OCE, 128
         elif now.hour > 9 and now.hour < 12:
@@ -65,8 +62,6 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
 
         match value:
             case Region.NA:
-                time = datetime.time(hour=0, tzinfo=datetime.UTC)
-            case Region.NA_D:
                 time = datetime.time(hour=1, tzinfo=datetime.UTC)
             case Region.EU:
                 time = datetime.time(hour=18, tzinfo=datetime.UTC)
