@@ -92,8 +92,8 @@ class FashionReport(BaseCog["Graha"]):
         self._report_task = asyncio.create_task(self._wait_for_report())
         return self._filter_submissions.invalidate(self)
 
-    def _resolve_next_window(self, dt: datetime.datetime | None = None) -> datetime.datetime:
-        dt = dt or datetime.datetime.now(datetime.UTC)
+    def _resolve_next_window(self) -> datetime.datetime:
+        dt = datetime.datetime.now(datetime.UTC)
 
         next_weekday = Weekday.friday if 1 < dt.weekday() <= 4 else Weekday.tuesday
         return resolve_next_weekday(source=dt, target=next_weekday, current_week_included=True)
@@ -155,7 +155,12 @@ class FashionReport(BaseCog["Graha"]):
 
     @cache(ignore_kwargs=True)
     async def _filter_submissions(self, *, dt: datetime.datetime) -> KaiyokoSubmission:
-        submissions: TopLevelListingResponse = await self.bot.reddit.get("https://oauth.reddit.com/user/kaiyoko/submitted")
+        try:
+            submissions: TopLevelListingResponse = await self.bot.reddit.get(
+                "https://oauth.reddit.com/user/kaiyoko/submitted"
+            )
+        except ValueError as err:
+            raise ValueError("[Fashion Report] -> {Submission Filtering} :: Reddit API request failed") from err
 
         for submission in submissions["data"]["children"]:
             match = FASHION_REPORT_PATTERN.search(submission["data"]["title"])
