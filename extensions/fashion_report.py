@@ -19,7 +19,6 @@ from discord.utils import MISSING
 from utilities.context import Context as BaseContext
 from utilities.shared.cache import cache
 from utilities.shared.cog import BaseCog
-from utilities.shared.formats import plural
 from utilities.shared.reddit import RedditHandler
 from utilities.shared.time import Weekday, resolve_next_weekday
 
@@ -41,11 +40,10 @@ class Context(BaseContext):
 
 class KaiyokoSubmission(NamedTuple):
     prose: str
-    reset: str
     dt: datetime.datetime
     url: str
-    colour: discord.Colour
     created_at: datetime.datetime
+    is_available: bool
 
 
 class FashionReport(BaseCog["Graha"]):
@@ -135,24 +133,6 @@ class FashionReport(BaseCog["Graha"]):
 
         return weeks
 
-    def humanify_delta(self, *, td: datetime.timedelta, format_: str, with_seconds: bool = False) -> str:
-        seconds = round(td.total_seconds())
-
-        days, seconds = divmod(seconds, 60 * 60 * 24)
-        hours, seconds = divmod(seconds, 60 * 60)
-        minutes, seconds = divmod(seconds, 60)
-
-        fmt = f"{format_} in "
-        if days:
-            fmt += f"{plural(days):day}, "
-
-        if with_seconds:
-            fmt += f"{plural(hours):hour}, {plural(minutes):minute} and {plural(seconds):second}."
-        else:
-            fmt += f"{plural(hours):hour} and {plural(minutes):minute}."
-
-        return fmt
-
     @cache(ignore_kwargs=True)
     async def _filter_submissions(self, *, dt: datetime.datetime) -> KaiyokoSubmission:
         try:
@@ -192,14 +172,7 @@ class FashionReport(BaseCog["Graha"]):
         reset_time = datetime.time(hour=8, minute=0, second=0)
         is_available = (wd == 5 and dt.time() > reset_time) or wd == 1 or wd >= 6 or (wd == 2 and dt.time() < reset_time)
 
-        if is_available:
-            diff = 2 - wd  # next tuesday
-            fmt = "Judging ends"
-            colour = discord.Colour.green()
-        else:
-            diff = 5 - wd  # next friday
-            fmt = "Judging becomes available"
-            colour = discord.Colour.dark_orange()
+        diff = 2 - wd if is_available else 5 - wd
 
         if (diff == 0 and dt.time() < reset_time) or (diff == 5 and dt.time() > reset_time):
             days = 0
@@ -207,26 +180,30 @@ class FashionReport(BaseCog["Graha"]):
             days = diff + 7 if diff <= 0 else diff
 
         upcoming_event = (dt + datetime.timedelta(days=days)).replace(hour=8, minute=0, second=0, microsecond=0)
-        reset_str = (
-            self.humanify_delta(td=(upcoming_event - dt), format_=fmt)
-            + f"\n{discord.utils.format_dt(upcoming_event, 'F')} ({discord.utils.format_dt(upcoming_event, 'R')})"
-        )
 
         return KaiyokoSubmission(
             f"Fashion Report details for week of {match['date']} (Week {match['week_num']})",
-            reset_str,
             upcoming_event,
             submission["data"]["url"],
-            colour,
             created,
+            is_available,
         )
 
     def generate_fashion_embed(self) -> discord.Embed:
         # guarded
         submission = self.current_report
 
-        embed = discord.Embed(title=submission.prose, url=submission.url, colour=submission.colour)
-        embed.description = submission.reset
+        embed = discord.Embed(title=submission.prose, url=submission.url)
+        dt_string = f"{discord.utils.format_dt(submission.dt, 'F')} ({discord.utils.format_dt(submission.dt, 'R')})"
+
+        if submission.is_available:
+            embed.description = f"Judging ends at {dt_string}"
+            embed.colour = discord.Colour.green()
+        else:
+            embed.description = f"Judging becomes available at {dt_string}"
+            embed.colour = discord.Colour.dark_orange()
+            embed.set_footer(text="The above image is for the previous Friday's Fashion Report!")
+
         embed.set_image(url=submission.url)
 
         return embed
