@@ -10,6 +10,7 @@ import datetime
 from typing import TYPE_CHECKING, ClassVar
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from utilities.containers.cactpot import Datacenter, Region
@@ -18,7 +19,7 @@ from utilities.shared.time import Weekday, resolve_next_weekday
 
 if TYPE_CHECKING:
     from bot import Graha
-    from utilities.context import Context
+    from utilities.context import Context, Interaction
 
 
 class Resets(BaseCog["Graha"], name="Reset Information"):
@@ -44,15 +45,13 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
     def __init__(self, bot: Graha) -> None:
         super().__init__(bot)
 
-    def _get_next_datacenter_cactpot_data(self, dt: datetime.datetime | None = None) -> tuple[Region, int]:
+    def _get_next_datacenter_cactpot_data(self, dt: datetime.datetime) -> tuple[Region, int]:
         # assuming we're calling this on a saturday
-        now = dt or datetime.datetime.now(datetime.UTC)
-
-        if now.hour == 1:
+        if dt.hour < 2:
             return Region.NA, 16
-        elif now.hour > 1 and now.hour < 9:
+        elif dt.hour > 1 and dt.hour < 9:
             return Region.OCE, 128
-        elif now.hour > 9 and now.hour < 12:
+        elif dt.hour > 9 and dt.hour < 12:
             return Region.JP, 64
         else:
             return Region.EU, 32
@@ -62,16 +61,21 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
 
         match value:
             case Region.NA:
-                time = datetime.time(hour=1, tzinfo=datetime.UTC)
+                time = datetime.time(hour=2, tzinfo=datetime.UTC)
             case Region.EU:
-                time = datetime.time(hour=18, tzinfo=datetime.UTC)
+                time = datetime.time(hour=19, tzinfo=datetime.UTC)
             case Region.JP:
-                time = datetime.time(hour=11, tzinfo=datetime.UTC)
+                time = datetime.time(hour=12, tzinfo=datetime.UTC)
             case Region.OCE:
-                time = datetime.time(hour=8, tzinfo=datetime.UTC)
+                time = datetime.time(hour=9, tzinfo=datetime.UTC)
+
+        wd = Weekday.saturday
+        # special case NA since it's technically sunday
+        if value is Region.NA:
+            wd = Weekday.sunday
 
         date = resolve_next_weekday(
-            source=datetime.datetime.now(datetime.UTC), target=Weekday.saturday, current_week_included=True, before_time=time
+            source=datetime.datetime.now(datetime.UTC), target=wd, current_week_included=True, before_time=time
         )
         return datetime.datetime.combine(date.date(), time, tzinfo=datetime.UTC), value
 
@@ -149,6 +153,15 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
         weekly = self._get_weekly_reset_embed()
 
         await ctx.send(embeds=[daily, weekly])
+
+    @app_commands.command()
+    @app_commands.describe(region="Choose a region to show the information for. Will show all regions if no choice is made.")
+    async def cactpot(self, interaction: Interaction, region: Region | None = None) -> None:
+        """Shows data on when the next Jumbo Cactpot calling is!"""
+        regions = [region] if region else Region
+        embeds = [self._get_cactpot_embed(reg) for reg in regions]
+
+        return await interaction.response.send_message(embeds=embeds)
 
 
 async def setup(bot: Graha) -> None:
