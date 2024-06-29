@@ -475,7 +475,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     @tasks.loop(
         time=[
             datetime.time(hour=11, minute=45, tzinfo=datetime.UTC),  # ja
-            datetime.time(hour=1, minute=45, tzinfo=datetime.UTC),  # na (dynamis)
+            datetime.time(hour=1, minute=45, tzinfo=datetime.UTC),  # na
             datetime.time(hour=18, minute=45, tzinfo=datetime.UTC),  # eu
             datetime.time(hour=8, minute=45, tzinfo=datetime.UTC),  # oce
         ]
