@@ -224,9 +224,7 @@ class EventSubConfig:
                 """
 
         ret = await self._bot.pool.execute(query, self.guild_id)
-        if ret == "DELETE 0":
-            return False
-        return True
+        return ret != "DELETE 0"
 
     async def update_webhook_channel(self, channel: discord.TextChannel | discord.Thread) -> discord.Webhook:
         webhook = await self.get_webhook()
