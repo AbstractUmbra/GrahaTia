@@ -65,10 +65,6 @@ class SubscribedEventsFlags(DpyFlags):
         return 1 << 4
 
     @flag_value
-    def jumbo_cactbot_na_dynamis(self) -> int:
-        return 1 << 9
-
-    @flag_value
     def jumbo_cactpot_eu(self) -> int:
         return 1 << 5
 
