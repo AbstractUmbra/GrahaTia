@@ -7,6 +7,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 from __future__ import annotations
 
 import datetime
+import logging
 from typing import TYPE_CHECKING, ClassVar
 
 import discord
@@ -20,6 +21,9 @@ from utilities.shared.time import Weekday, resolve_next_weekday
 if TYPE_CHECKING:
     from bot import Graha
     from utilities.context import Context, Interaction
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Resets(BaseCog["Graha"], name="Reset Information"):
@@ -45,15 +49,65 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
     def __init__(self, bot: Graha) -> None:
         super().__init__(bot)
 
-    def _get_next_datacenter_cactpot_data(self, dt: datetime.datetime) -> tuple[Region, int]:
-        # assuming we're calling this on a saturday
-        if dt.hour < 2:
+    async def _wait_for_next_cactpot(self, dt: datetime.datetime, /) -> tuple[Region, int]:
+        wd = dt.weekday()
+        if wd not in (5, 6):
+            LOGGER.warning(
+                "[Resets] -> {Waiting for Cactpot} :: Called on a non-weekend (at %r). Altering and waiting.", str(dt)
+            )
+            dt = resolve_next_weekday(
+                target=Weekday.saturday,
+                current_week_included=True,
+                before_time=datetime.time(hour=0, minute=0, second=0, microsecond=0, tzinfo=datetime.UTC),
+            )
+            wd = dt.weekday()
+
+        # special case sunday for NA
+        if dt.weekday() == 6:
+            when = resolve_next_weekday(
+                target=Weekday.sunday,
+                source=dt,
+                current_week_included=True,
+                before_time=datetime.time(hour=1, minute=45, second=0, microsecond=0, tzinfo=datetime.UTC),
+            ).replace(hour=1, minute=45, second=0, microsecond=0)
+
+            LOGGER.info("[Resets] -> {Waiting for Cactpot} :: Next cactpot schedule is NA (at %r).", str(when))
+            await discord.utils.sleep_until(when)
             return Region.NA, 16
-        elif dt.hour > 1 and dt.hour < 9:
+
+        # saturday here
+        if dt.hour > 1 and dt.hour < 9:
+            when = resolve_next_weekday(
+                target=Weekday.saturday,
+                source=dt,
+                current_week_included=True,
+                before_time=datetime.time(hour=8, minute=45, second=0, microsecond=0, tzinfo=datetime.UTC),
+            ).replace(hour=8, minute=45, second=0, microsecond=0)
+            LOGGER.info("[Resets] -> {Waiting for Cactpot} :: Next cactpot schedule is OCE (at %r).", str(when))
+
+            await discord.utils.sleep_until(when)
             return Region.OCE, 128
         elif dt.hour > 9 and dt.hour < 12:
+            when = resolve_next_weekday(
+                target=Weekday.saturday,
+                source=dt,
+                current_week_included=True,
+                before_time=datetime.time(hour=11, minute=45, second=0, microsecond=0, tzinfo=datetime.UTC),
+            ).replace(hour=11, minute=45, second=0, microsecond=0)
+            LOGGER.info("[Resets] -> {Waiting for Cactpot} :: Next cactpot schedule is JP (at %r).", str(when))
+
+            await discord.utils.sleep_until(when)
             return Region.JP, 64
         else:
+            when = resolve_next_weekday(
+                target=Weekday.saturday,
+                source=dt,
+                current_week_included=True,
+                before_time=datetime.time(hour=18, minute=45, second=0, microsecond=0, tzinfo=datetime.UTC),
+            ).replace(hour=18, minute=45, second=0, microsecond=0)
+            LOGGER.info("[Resets] -> {Waiting for Cactpot} :: Next cactpot schedule is EU (at %r).", str(when))
+
+            await discord.utils.sleep_until(when)
             return Region.EU, 32
 
     def _get_cactpot_reset_data(self, region_or_dc: Datacenter | Region, /) -> tuple[datetime.datetime, Region]:

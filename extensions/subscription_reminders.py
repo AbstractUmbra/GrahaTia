@@ -472,19 +472,9 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
         await self.handle_dispatch(to_send)
 
-    @tasks.loop(
-        time=[
-            datetime.time(hour=11, minute=45, tzinfo=datetime.UTC),  # ja
-            datetime.time(hour=1, minute=45, tzinfo=datetime.UTC),  # na
-            datetime.time(hour=18, minute=45, tzinfo=datetime.UTC),  # eu
-            datetime.time(hour=8, minute=45, tzinfo=datetime.UTC),  # oce
-        ]
-    )
+    @tasks.loop(seconds=0)
     async def jumbo_cactpot_loop(self) -> None:
         now = datetime.datetime.now(datetime.UTC)
-        if now.weekday() != 5:  # saturday
-            LOGGER.warning("[EventSub] -> [Jumbo Cactpot] :: Tried to run on a non-Saturday.")
-            return
 
         # we need to get the Cog first here to calculate the next occurring cactpot loot
         resets: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # cog downcasting
@@ -492,7 +482,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             LOGGER.error("[EventSub] -> [Jumbo Cactpot] :: Could not load the resets Cog.")
             return
 
-        region, bitstring_value = resets._get_next_datacenter_cactpot_data(now)
+        region, bitstring_value = await resets._wait_for_next_cactpot(now)
         embed = resets._get_cactpot_embed(region)
 
         query = """
