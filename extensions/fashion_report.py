@@ -41,10 +41,34 @@ class Context(BaseContext):
 
 class KaiyokoSubmission(NamedTuple):
     prose: str
-    dt: datetime.datetime
     url: str
     created_at: datetime.datetime
-    is_available: bool
+
+    def is_available(self) -> bool:
+        now = datetime.datetime.now(datetime.UTC)
+        wd = now.isoweekday()
+        reset_time = datetime.time(hour=8, minute=0, second=0, tzinfo=datetime.UTC)
+        # return True on the following criteria:
+        # it is Monday
+        # it is Tuesday BEFORE 8am UTC
+        # it is Friday AFTER 8am UTC
+        # it is Saturday or Sunday
+        return wd == 1 or (wd == 2 and now.time() < reset_time) or (wd == 5 and now.time() > reset_time) or wd >= 6
+
+    def next_event(self) -> datetime.datetime:
+        now = datetime.datetime.now(datetime.UTC)
+        wd = now.isoweekday()
+        reset_time = datetime.time(hour=8, minute=0, second=0)
+        is_available = self.is_available()
+
+        diff = 2 - wd if is_available else 5 - wd
+
+        if (diff == 0 and now.time() < reset_time) or (diff == 5 and now.time() > reset_time):
+            days = 0
+        else:
+            days = diff + 7 if diff <= 0 else diff
+
+        return (now + datetime.timedelta(days=days)).replace(hour=8, minute=0, second=0, microsecond=0)
 
 
 class FashionReport(BaseCog["Graha"]):
@@ -170,25 +194,10 @@ class FashionReport(BaseCog["Graha"]):
         else:
             raise ValueError("No submissions matches")
 
-        wd = dt.isoweekday()
-        reset_time = datetime.time(hour=8, minute=0, second=0)
-        is_available = (wd == 5 and dt.time() > reset_time) or wd == 1 or wd >= 6 or (wd == 2 and dt.time() < reset_time)
-
-        diff = 2 - wd if is_available else 5 - wd
-
-        if (diff == 0 and dt.time() < reset_time) or (diff == 5 and dt.time() > reset_time):
-            days = 0
-        else:
-            days = diff + 7 if diff <= 0 else diff
-
-        upcoming_event = (dt + datetime.timedelta(days=days)).replace(hour=8, minute=0, second=0, microsecond=0)
-
         return KaiyokoSubmission(
             f"Fashion Report details for week of {match['date']} (Week {match['week_num']})",
-            upcoming_event,
             submission["data"]["url"],
             created,
-            is_available,
         )
 
     def generate_fashion_embed(self) -> discord.Embed:
@@ -196,9 +205,9 @@ class FashionReport(BaseCog["Graha"]):
         submission = self.current_report
 
         embed = discord.Embed(title=submission.prose, url=submission.url)
-        dt_string = f"{discord.utils.format_dt(submission.dt, 'F')} ({discord.utils.format_dt(submission.dt, 'R')})"
+        dt_string = f"{discord.utils.format_dt(submission.next_event(), 'F')} ({discord.utils.format_dt(submission.next_event(), 'R')})"
 
-        if submission.is_available:
+        if submission.is_available():
             embed.description = f"Judging ends at {dt_string}"
             embed.colour = discord.Colour.green()
         else:
