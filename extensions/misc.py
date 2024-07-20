@@ -12,6 +12,7 @@ import zoneinfo
 from typing import TYPE_CHECKING
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from utilities.shared.cog import BaseCog
@@ -20,7 +21,7 @@ from utilities.shared.time import ordinal
 
 if TYPE_CHECKING:
     from bot import Graha
-    from utilities.context import Context
+    from utilities.context import Interaction
 
 TZ_NAME_MAPPING = {
     "UTC": "Europe (Chaos/Light)",
@@ -57,9 +58,10 @@ class Misc(BaseCog["Graha"]):
 
             await message.reply(embed=embed, mention_author=False)
 
-    @commands.command(name="invite")
-    async def invite_graha(self, ctx: Context) -> None:
-        assert ctx.bot.user
+    @app_commands.command(name="invite")
+    async def invite_graha(self, interaction: Interaction) -> None:
+        """Invite G'raha Tia to your server or as an installation!"""
+        assert interaction.client.user
 
         required_permissions = discord.Permissions(
             send_messages=True,
@@ -68,23 +70,30 @@ class Misc(BaseCog["Graha"]):
             embed_links=True,
             manage_webhooks=True,
         )
-        perms_link = discord.utils.oauth_url(ctx.bot.user.id, permissions=required_permissions)
-        clean_link = discord.utils.oauth_url(ctx.bot.user.id)
+        perms_link = discord.utils.oauth_url(interaction.client.user.id, permissions=required_permissions)
+        clean_link = discord.utils.oauth_url(interaction.client.user.id)
+        installation_link = discord.utils.oauth_url(interaction.client.user.id, scopes=["applications.commands"])
 
         fmt = (
             f"Hello, thank you for wanting to invite me.\nI like being upfront about things so [this link]({perms_link})"
             f" will invite me with the mandatory permissions I need for full features.\n[This link]({clean_link}) will"
-            " invite me with no permissions and you can update and assign permissions/roles as necessary."
+            " invite me with no permissions and you can update and assign permissions/roles as necessary.\n\n"
+            f"[This link]({installation_link}) should also allow you to invite me as an installed application, so you can use most of my commands anywhere!"
         )
 
         now = datetime.datetime.now(datetime.UTC)
         embed = discord.Embed(colour=discord.Colour.random(), description=fmt, timestamp=now)
-        embed.set_author(name=ctx.bot.user.name, icon_url=ctx.bot.user.display_avatar.url)
-        await ctx.send(embed=embed)
+        embed.set_author(name=interaction.client.user.name, icon_url=interaction.client.user.display_avatar.url)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command(name="servertime", aliases=["st", "ST"])
-    async def server_times(self, ctx: Context) -> None:
+    @app_commands.command(name="server-times")
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.describe(ephemeral="Whether to show the data privately to you, or not.")
+    async def server_times(self, interaction: Interaction, ephemeral: bool = True) -> None:
         """Shows your local time against the datacenter server times."""
+        await interaction.response.defer(ephemeral=ephemeral)
+
         utc = datetime.datetime.now(datetime.UTC)
 
         clean_utc = discord.utils.format_dt(utc, "F")
@@ -97,7 +106,7 @@ class Misc(BaseCog["Graha"]):
             _local = utc.astimezone(zoneinfo.ZoneInfo(tz))
             embed.add_field(name=name, value=self._clean_dt(_local), inline=False)
 
-        await ctx.send(embed=embed)
+        await interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
 
 async def setup(bot: Graha) -> None:

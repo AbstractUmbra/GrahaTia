@@ -13,13 +13,14 @@ import re
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
 import discord
+from discord import app_commands
 from discord.ext import commands, tasks
 from discord.utils import MISSING
 
-from utilities.context import Context as BaseContext
+from utilities.context import Context as BaseContext, Interaction
 from utilities.shared.cache import cache
 from utilities.shared.cog import BaseCog
-from utilities.shared.reddit import RedditHandler
+from utilities.shared.reddit import RedditError, RedditHandler
 from utilities.shared.time import Weekday, resolve_next_weekday
 
 if TYPE_CHECKING:
@@ -112,6 +113,7 @@ class FashionReport(BaseCog["Graha"]):
             except ValueError:
                 LOGGER.warning("[FashionReport] :: Submission not found, sleeping for 5m.")
                 LOGGER.debug("[FashionReport] :: Next window would be %r", dt.isoformat())
+                self._filter_submissions.invalidate(self)
                 await asyncio.sleep(300)
                 continue
             else:
@@ -139,8 +141,8 @@ class FashionReport(BaseCog["Graha"]):
             submissions: TopLevelListingResponse = await self.bot.reddit.get(
                 "https://oauth.reddit.com/user/kaiyoko/submitted"
             )
-        except ValueError as err:
-            raise ValueError("[Fashion Report] -> {Submission Filtering} :: Reddit API request failed") from err
+        except RedditError as err:
+            raise RedditError("[Fashion Report] -> {Submission Filtering} :: Reddit API request failed") from err
 
         for submission in submissions["data"]["children"]:
             match = FASHION_REPORT_PATTERN.search(submission["data"]["title"])
@@ -207,6 +209,20 @@ class FashionReport(BaseCog["Graha"]):
         embed.set_image(url=submission.url)
 
         return embed
+
+    @app_commands.command(name="fashion-report")
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.describe(ephemeral="Whether to show the data privately to you, or not.")
+    async def fashion_report_app_cmd(self, interaction: Interaction, ephemeral: bool = True) -> None:
+        """Get the latest available Fashion Report information from KaiyokoStar!"""
+        if not self.current_report:
+            return await interaction.response.send_message(
+                "Sorry, but I haven't found the post from Kaiyoko yet, try again later?", ephemeral=ephemeral
+            )
+
+        embed = self.generate_fashion_embed()
+        await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
 
     @commands.group(name="fashionreport", aliases=["fr", "fashion-report"], invoke_without_command=True)
     async def fashion_report(self, ctx: Context) -> None:

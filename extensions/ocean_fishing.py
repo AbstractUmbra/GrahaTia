@@ -5,14 +5,14 @@ import math
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
 import discord
+from discord import app_commands
 from discord.enums import Enum
-from discord.ext import commands
 
 from utilities.shared.cog import BaseCog
 
 if TYPE_CHECKING:
     from bot import Graha
-    from utilities.context import Context
+    from utilities.context import Interaction
 
 
 class Route(Enum):
@@ -274,14 +274,18 @@ class OceanFishing(BaseCog["Graha"]):
             self._generate_ocean_fishing_embed(dt, route=Route.ruby),
         ]
 
-    @commands.command(name="oceanfishing", aliases=["of", "fishing"])
-    async def ocean_fishing_times(self, ctx: Context) -> None:
-        """Shows your local time against the current ocean fishing schedule windows."""
+    @app_commands.command(name="ocean-fishing-window")
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.describe(ephemeral="Whether to show the data privately to you, or not.")
+    async def ocean_fishing_times(self, interaction: Interaction, ephemeral: bool = True) -> None:
+        """Shows your local time against the current ocean fishing schedule windows and their routes!"""
         now = datetime.datetime.now(datetime.UTC)
 
-        await ctx.send(
+        await interaction.response.send_message(
             content="You can view Lulu's helpful tools on Ocean Fishing data [here](https://ffxiv.pf-n.co/ocean-fishing)!",
             embeds=self._generate_both_embeds(now),
+            ephemeral=ephemeral,
         )
 
 

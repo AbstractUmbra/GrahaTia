@@ -285,18 +285,30 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             content="Please select which reminders you wish to recieve in the following dropdown!", view=view
         )
 
+    @app_commands.command(name="delete")
+    @app_commands.guild_only()
+    @app_commands.default_permissions(manage_channels=True, manage_webhooks=True)
+    async def delete_subscription(self, interaction: Interaction) -> None:
+        assert interaction.guild  # guarded by decorated check
+
+        await interaction.response.defer(thinking=True)
+
+        config = await self.get_sub_config(interaction.guild.id)
+
+        await config.delete()
+        self.get_sub_config.invalidate(self, interaction.guild.id)
+
+        await interaction.followup.send(
+            "Okay, I've removed your subscription data. You may want to delete the webhook I used for this, but that's up to you!",
+            ephemeral=False,
+        )
+
     @select_subscriptions.error
     async def on_subscription_select_error(self, interaction: Interaction, error: app_commands.AppCommandError) -> None:
         if not interaction.response.is_done():
             await interaction.response.defer(ephemeral=True, thinking=False)
 
         await interaction.followup.send("Sorry, there was an error processing this command!")
-
-    @app_commands.command(name="change-channel")
-    @app_commands.guild_only()
-    @app_commands.default_permissions(manage_channels=True, manage_webhooks=True)
-    @app_commands.describe(channel="The channel to redirect the webhook posts to.")
-    async def update_webhook_channel(self, interaction: Interaction, channel: discord.TextChannel) -> None: ...
 
     async def dispatcher(
         self,

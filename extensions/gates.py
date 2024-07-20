@@ -4,15 +4,15 @@ import datetime
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 import discord
+from discord import app_commands
 from discord.enums import Enum
-from discord.ext import commands
 
 from utilities.shared.cog import BaseCog
 from utilities.shared.formats import ts
 
 if TYPE_CHECKING:
     from bot import Graha
-    from utilities.context import Context
+    from utilities.context import Interaction
 
 type GateSpawnMinute = Literal[0, 20, 40]
 
@@ -88,11 +88,15 @@ class GATEs(BaseCog["Graha"]):
 
         return embed
 
-    @commands.command(name="gate", aliases=["GATES", "gates", "GATE"])
-    async def gate(self, ctx: Context) -> None:
+    @app_commands.command(name="next-gate")
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.describe(ephemeral="Whether to show the data privately to you, or not.")
+    async def gate(self, interaction: Interaction, ephemeral: bool = True) -> None:
+        """Shows data on the next possible selection for the GATE in the Golden Saucer."""
         now = datetime.datetime.now(datetime.UTC)
 
-        await ctx.send(embed=self.generate_gate_embed(now))
+        await interaction.response.send_message(embed=self.generate_gate_embed(now), ephemeral=ephemeral)
 
 
 async def setup(bot: Graha) -> None:

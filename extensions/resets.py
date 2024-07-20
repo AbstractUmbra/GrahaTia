@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, ClassVar
 
 import discord
 from discord import app_commands
-from discord.ext import commands
 
 from utilities.containers.cactpot import Datacenter, Region
 from utilities.shared.cog import BaseCog
@@ -20,7 +19,7 @@ from utilities.shared.time import Weekday, resolve_next_weekday
 
 if TYPE_CHECKING:
     from bot import Graha
-    from utilities.context import Context, Interaction
+    from utilities.context import Interaction
 
 
 LOGGER = logging.getLogger(__name__)
@@ -199,23 +198,45 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
 
         return embed
 
-    @commands.command(name="reset", aliases=["resets", "r"])
-    async def resets_summary(self, ctx: Context) -> None:
-        """Sends a reset information summary!"""
+    @app_commands.command(name="reset-information")
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.describe(
+        daily="Whether to show information on daily resets, or not.",
+        weekly="Whether to show information on daily resets, or not.",
+        ephemeral="Whether to show the data privately to you, or not.",
+    )
+    async def resets_summary(
+        self, interaction: Interaction, daily: bool = True, weekly: bool = True, ephemeral: bool = True
+    ) -> None:
+        """Sends a summary of the daily and weekly reset information."""
 
-        daily = self._get_daily_reset_embed()
-        weekly = self._get_weekly_reset_embed()
+        if not any([daily, weekly]):
+            return await interaction.response.send_message(
+                "Well... you need to request at least one of the daily or weekly items.", ephemeral=True
+            )
 
-        await ctx.send(embeds=[daily, weekly])
+        embeds = []
+        if daily:
+            embeds.append(self._get_daily_reset_embed())
+        if weekly:
+            embeds.append(self._get_weekly_reset_embed())
+
+        await interaction.response.send_message(embeds=embeds, ephemeral=ephemeral)
 
     @app_commands.command()
-    @app_commands.describe(region="Choose a region to show the information for. Will show all regions if no choice is made.")
-    async def cactpot(self, interaction: Interaction, region: Region | None = None) -> None:
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.describe(
+        region="Choose a region to show the information for. Will show all regions if no choice is made.",
+        ephemeral="Whether to show the data privately to you, or not.",
+    )
+    async def cactpot(self, interaction: Interaction, region: Region | None = None, ephemeral: bool = True) -> None:
         """Shows data on when the next Jumbo Cactpot calling is!"""
         regions = [region] if region else Region
         embeds = [self._get_cactpot_embed(reg) for reg in regions]
 
-        return await interaction.response.send_message(embeds=embeds)
+        return await interaction.response.send_message(embeds=embeds, ephemeral=ephemeral)
 
 
 async def setup(bot: Graha) -> None:
