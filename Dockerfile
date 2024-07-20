@@ -52,4 +52,4 @@ COPY poetry.lock pyproject.toml ./
 RUN poetry install --without=dev
 
 COPY . /app/
-ENTRYPOINT poetry run python -O bot.py
+ENTRYPOINT [ "poetry", "run", "python", "-O", "bot.py" ]
