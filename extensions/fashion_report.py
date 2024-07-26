@@ -47,7 +47,7 @@ class KaiyokoSubmission(NamedTuple):
     def is_available(self) -> bool:
         now = datetime.datetime.now(datetime.UTC)
         wd = now.isoweekday()
-        reset_time = datetime.time(hour=8, minute=0, second=0, tzinfo=datetime.UTC)
+        reset_time = datetime.time(hour=8, minute=0, second=0)
         # return True on the following criteria:
         # it is Monday
         # it is Tuesday BEFORE 8am UTC
