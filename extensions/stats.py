@@ -700,7 +700,6 @@ class Stats(BaseCog["Graha"]):
         embed.set_footer(text=f"Ray ID: {ctx.ray_id}")
 
         await self.webhook.send(embed=embed, wait=False)
-        await ctx.send(content=f"\nQuote 'Ray ID: {ctx.ray_id}' if contacting the developer.")
 
     def add_record(self, record: logging.LogRecord) -> None:
         # if self.bot.config.debug:

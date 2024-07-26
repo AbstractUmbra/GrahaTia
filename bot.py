@@ -249,7 +249,7 @@ class Graha(commands.Bot):
             if not isinstance(origin_, discord.HTTPException):
                 LOGGER.exception("in `%s` with ray id: '%s' ::\n%s", ctx.command.name, ctx.ray_id, clean, exc_info=True)
 
-            ret += "There was an error in that command. My developer has been notified."
+            ret += "There was an error in that command. My developer has been notified, but if you're contacting `hyliantwink` directly please quote 'Ray ID: `{ctx.ray_id}`'."
 
         else:
             return
