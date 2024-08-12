@@ -236,7 +236,8 @@ class OceanFishing(BaseCog["Graha"]):
         return upcoming_voyages
 
     def _generate_ocean_fishing_embed(self, dt: datetime.datetime, /, *, route: Route) -> discord.Embed:
-        embed = discord.Embed(colour=discord.Colour.random(), title=f"Ocean Fishing availability ({route.value} route)")
+        colour = discord.Colour.red() if route is Route.ruby else discord.Colour.orange()
+        embed = discord.Embed(colour=colour, title=f"Ocean Fishing availability ({route.value} route)")
 
         current, next_ = self.calculate_voyages(route, dt=dt, count=2)
         now = datetime.datetime.now(datetime.UTC)
