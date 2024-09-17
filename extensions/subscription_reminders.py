@@ -208,15 +208,8 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         self.get_sub_config.invalidate(self, guild_id)
 
     async def _delete_subscription(self, config: EventSubConfig) -> None:
-        query = """
-                DELETE FROM event_remind_subscriptions
-                WHERE guild_id = $1;
-                """
-        # webhooks are cascade delete
-
+        await config.delete()
         LOGGER.info("[EventSub] -> [Delete] :: From guild: %r", config.guild_id)
-
-        await self.bot.pool.execute(query, config.guild_id)
 
         self.get_sub_config.invalidate(self, config.guild_id)
 
@@ -295,8 +288,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
         config = await self.get_sub_config(interaction.guild.id)
 
-        await config.delete()
-        self.get_sub_config.invalidate(self, interaction.guild.id)
+        await self._delete_subscription(config)
 
         await interaction.followup.send(
             "Okay, I've removed your subscription data. You may want to delete the webhook I used for this, but that's up to you!",
