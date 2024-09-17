@@ -219,8 +219,7 @@ class EventSubConfig:
     async def delete(self) -> bool:
         query = """
                 DELETE FROM event_remind_subscriptions
-                WHERE guild_id = $1
-                ON DELETE CASCADE;
+                WHERE guild_id = $1;
                 """
 
         ret = await self._bot.pool.execute(query, self.guild_id)
