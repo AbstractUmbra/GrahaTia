@@ -262,8 +262,8 @@ class Stats(BaseCog["Graha"]):
         return f"[`{short_sha2}`](https://github.com/AbstractUmbra/Graha/commit/{commit.id}) {short} ({offset})"
 
     def get_last_commits(self, count: int = 3) -> str:
-        repo = pygit2.Repository(".git")
-        commits = list(itertools.islice(repo.walk(repo.head.target, pygit2.enums.SortMode.TOPOLOGICAL), count))
+        repo = pygit2.Repository(".git")  # pyright: ignore[reportPrivateImportUsage] module not exported by upstream
+        commits = list(itertools.islice(repo.walk(repo.head.target, pygit2.enums.SortMode.TOPOLOGICAL), count))  # pyright: ignore[reportAttributeAccessIssue] item defintion issue in upstream types
         return "\n".join(self.format_commit(c) for c in commits)
 
     @commands.command()
@@ -648,7 +648,7 @@ class Stats(BaseCog["Graha"]):
         bots = sum(m.bot for m in guild.members)
         total = guild.member_count or 1
         e.add_field(name="Members", value=str(total))
-        e.add_field(name="Bots", value=f"{bots} ({bots/total:.2%})")
+        e.add_field(name="Bots", value=f"{bots} ({bots / total:.2%})")
 
         if guild.icon:
             e.set_thumbnail(url=guild.icon.url)
@@ -717,7 +717,7 @@ class Stats(BaseCog["Graha"]):
         else:
             message = record.message
 
-        msg = textwrap.shorten(f"{emoji} {discord.utils.format_dt(dt, 'F')}\n{message}", width=1990)
+        msg = textwrap.shorten(f"{emoji} {discord.utils.format_dt(dt, "F")}\n{message}", width=1990)
         if record.name == "discord.gateway":
             username = "Gateway"
             avatar_url = "https://i.imgur.com/4PnCKB3.png"
@@ -1016,7 +1016,7 @@ class Stats(BaseCog["Graha"]):
                 """
 
         class Count:
-            __slots__ = ("success", "failed", "total")
+            __slots__ = ("failed", "success", "total")
 
             def __init__(self) -> None:
                 self.success = 0
