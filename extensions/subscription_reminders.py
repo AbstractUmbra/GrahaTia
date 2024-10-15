@@ -11,6 +11,7 @@ from discord import SelectOption, app_commands
 from discord.ext import commands, tasks
 from discord.utils import MISSING
 
+from utilities.constants import DAILY_RESET_REMINDER_TIME, WEEKLY_RESET_REMINDER_TIME
 from utilities.containers.event_subscription import (
     EventSubConfig,
     MisconfiguredSubscription,
@@ -320,7 +321,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
         # TODO handle exceptions cleanly?
 
-    @tasks.loop(time=datetime.time(hour=14, minute=45, tzinfo=datetime.UTC))
+    @tasks.loop(time=DAILY_RESET_REMINDER_TIME)
     async def daily_reset_loop(self) -> None:
         query = """
                 SELECT *
@@ -354,7 +355,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
         await self.handle_dispatch(to_send)
 
-    @tasks.loop(time=datetime.time(hour=7, minute=45, tzinfo=datetime.UTC))
+    @tasks.loop(time=WEEKLY_RESET_REMINDER_TIME)
     async def weekly_reset_loop(self) -> None:
         now = datetime.datetime.now(datetime.UTC)
         if now.weekday() != 1:  # tuesday
@@ -564,7 +565,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
         next_iter = datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=10)
         next_time, _ = gate_cog._resolve_next_gate(dt=next_iter)
-        next_time -= datetime.timedelta(minutes=10)
+        next_time -= datetime.timedelta(minutes=5)
 
         LOGGER.info("[EventSub] -> [Pre-GATEs] :: Sleeping until %s", next_time)
         await discord.utils.sleep_until(next_time)
