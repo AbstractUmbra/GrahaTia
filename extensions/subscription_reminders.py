@@ -16,6 +16,7 @@ from utilities.containers.event_subscription import (
     EventSubConfig,
     MisconfiguredSubscription,
 )
+from utilities.exceptions import NoSubmissionFound
 from utilities.shared.cache import cache
 from utilities.shared.cog import BaseCog
 from utilities.shared.converters import WebhookTransformer  # noqa: TCH001
@@ -141,6 +142,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         self.avatar_url: str = "https://static.abstractumbra.dev/images/graha.png"
         self.daily_reset_loop.start()
         self.weekly_reset_loop.start()
+        self.fashion_report_loop.add_exception_type(NoSubmissionFound)
         self.fashion_report_loop.start()
         self.ocean_fishing_loop.start()
         self.jumbo_cactpot_loop.start()

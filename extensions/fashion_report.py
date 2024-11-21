@@ -18,6 +18,7 @@ from discord.ext import commands, tasks
 from discord.utils import MISSING
 
 from utilities.context import Context as BaseContext, Interaction
+from utilities.exceptions import NoSubmissionFound
 from utilities.shared.cache import cache
 from utilities.shared.cog import BaseCog
 from utilities.shared.reddit import RedditError, RedditHandler
@@ -192,7 +193,7 @@ class FashionReport(BaseCog["Graha"]):
                 )
                 break
         else:
-            raise ValueError("No submissions matches")
+            raise NoSubmissionFound("No submissions matches")
 
         return KaiyokoSubmission(
             f"Fashion Report details for week of {match['date']} (Week {match['week_num']})",
