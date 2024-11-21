@@ -13,7 +13,7 @@ discord-ext-menus = { git = "https://github.com/Rapptz/discord-ext-menus", rev =
 jishaku = "*"
 "mystbin.py" = "*"
 asyncpg = "*"
-sentry-sdk = "*"
+sentry-sdk = { version = "*", extras = ["asyncpg", "aiohttp"] }
 lru-dict = "*"
 parsedatetime = "*"
 python-dateutil = "*"
