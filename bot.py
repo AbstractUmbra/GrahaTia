@@ -27,6 +27,8 @@ from discord import app_commands
 from discord.ext import commands
 from discord.utils import _ColourFormatter as ColourFormatter, stream_supports_colour
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
+from sentry_sdk.integrations.asyncio import AsyncioIntegration
+from sentry_sdk.integrations.sys_exit import SysExitIntegration
 
 try:
     import uvloop
@@ -127,7 +129,12 @@ class LogHandler:
         handler.setFormatter(fmt)
         self.log.addHandler(handler)
         if dsn := CONFIG["logging"].get("sentry_dsn"):
-            sentry_sdk.init(dsn=dsn, integrations=[AioHttpIntegration()])
+            sentry_sdk.init(
+                dsn=dsn,
+                traces_sample_rate=1.0,
+                profiles_sample_rate=1.0,
+                integrations=[AioHttpIntegration(), AsyncioIntegration(), SysExitIntegration()],
+            )
 
         if self.stream:
             stream_handler = logging.StreamHandler()
