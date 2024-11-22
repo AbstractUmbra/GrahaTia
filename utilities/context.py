@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from aiohttp import ClientSession
     from asyncpg import Connection
-    from typing_extensions import TypeVar  # noqa: TCH004
+    from typing_extensions import TypeVar  # noqa: TC004
 
     from bot import Graha
 

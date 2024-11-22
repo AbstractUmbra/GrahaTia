@@ -37,17 +37,17 @@ class MisconfiguredSubscription(Exception):
 class EventSubConfig:
     __slots__ = (
         "_bot",
-        "guild_id",
         "channel_id",
-        "thread_id",
-        "subscriptions",
         "daily_role_id",
-        "weekly_role_id",
         "fashion_report_role_id",
+        "gate_role_id",
+        "guild_id",
         "jumbo_cactpot_role_id",
         "ocean_fishing_role_id",
-        "gate_role_id",
+        "subscriptions",
+        "thread_id",
         "webhook_id",
+        "weekly_role_id",
     )
 
     def __init__(

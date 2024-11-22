@@ -164,16 +164,18 @@ class Stats(BaseCog["Graha"]):
 
         log.info("%s: %s in %s: %s", message.created_at, message.author, destination, content)
         async with self._batch_lock:
-            self._data_batch.append({
-                "guild": guild_id,
-                "channel": ctx.channel.id,
-                "author": ctx.author.id,
-                "used": message.created_at.isoformat(),
-                "prefix": ctx.prefix,  # type: ignore
-                "command": command,
-                "failed": ctx.command_failed,
-                "app_command": is_app_command,
-            })
+            self._data_batch.append(
+                {
+                    "guild": guild_id,
+                    "channel": ctx.channel.id,
+                    "author": ctx.author.id,
+                    "used": message.created_at.isoformat(),
+                    "prefix": ctx.prefix,  # type: ignore
+                    "command": command,
+                    "failed": ctx.command_failed,
+                    "app_command": is_app_command,
+                }
+            )
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: Context) -> None:

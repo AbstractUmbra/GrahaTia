@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Literal
 
 import discord
 from discord.ext import commands
-from discord.ext.commands import Greedy  # noqa: TCH002
+from discord.ext.commands import Greedy  # noqa: TC002
 
 from utilities import formats
 from utilities.shared.cog import BaseCog

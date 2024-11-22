@@ -19,7 +19,7 @@ from utilities.containers.event_subscription import (
 from utilities.exceptions import NoSubmissionFound
 from utilities.shared.cache import cache
 from utilities.shared.cog import BaseCog
-from utilities.shared.converters import WebhookTransformer  # noqa: TCH001
+from utilities.shared.converters import WebhookTransformer  # noqa: TC001
 from utilities.shared.ui import BaseView
 
 if TYPE_CHECKING:

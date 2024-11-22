@@ -15,8 +15,8 @@ if TYPE_CHECKING:
     from typing import Self
 
 __all__ = (
-    "flag_value",
     "SubscribedEventsFlags",
+    "flag_value",
 )
 
 

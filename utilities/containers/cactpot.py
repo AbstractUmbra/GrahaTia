@@ -1,8 +1,8 @@
 from discord.enums import Enum
 
 __all__ = (
-    "Region",
     "Datacenter",
+    "Region",
 )
 
 
