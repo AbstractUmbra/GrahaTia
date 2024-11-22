@@ -164,18 +164,16 @@ class Stats(BaseCog["Graha"]):
 
         log.info("%s: %s in %s: %s", message.created_at, message.author, destination, content)
         async with self._batch_lock:
-            self._data_batch.append(
-                {
-                    "guild": guild_id,
-                    "channel": ctx.channel.id,
-                    "author": ctx.author.id,
-                    "used": message.created_at.isoformat(),
-                    "prefix": ctx.prefix,  # type: ignore
-                    "command": command,
-                    "failed": ctx.command_failed,
-                    "app_command": is_app_command,
-                }
-            )
+            self._data_batch.append({
+                "guild": guild_id,
+                "channel": ctx.channel.id,
+                "author": ctx.author.id,
+                "used": message.created_at.isoformat(),
+                "prefix": ctx.prefix,  # type: ignore
+                "command": command,
+                "failed": ctx.command_failed,
+                "app_command": is_app_command,
+            })
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: Context) -> None:
@@ -300,8 +298,11 @@ class Stats(BaseCog["Graha"]):
         embed.add_field(name="Members", value=f"{total_members} total\n{total_unique} unique")
         embed.add_field(name="Channels", value=f"{text + voice} total\n{text} text\n{voice} voice")
 
+        cpu_count = psutil.cpu_count()
+        assert cpu_count
+
         memory_usage = self.process.memory_full_info().uss / 1024**2
-        cpu_usage = self.process.cpu_percent() / psutil.cpu_count()
+        cpu_usage = self.process.cpu_percent() / cpu_count
         embed.add_field(name="Process", value=f"{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU")
 
         version = metadata_version("discord.py")
@@ -717,7 +718,7 @@ class Stats(BaseCog["Graha"]):
         else:
             message = record.message
 
-        msg = textwrap.shorten(f"{emoji} {discord.utils.format_dt(dt, "F")}\n{message}", width=1990)
+        msg = textwrap.shorten(f"{emoji} {discord.utils.format_dt(dt, 'F')}\n{message}", width=1990)
         if record.name == "discord.gateway":
             username = "Gateway"
             avatar_url = "https://i.imgur.com/4PnCKB3.png"
@@ -769,7 +770,7 @@ class Stats(BaseCog["Graha"]):
         spam_control = self.bot._spam_cooldown_mapping
         being_spammed = [str(key) for key, value in spam_control._cache.items() if value._tokens == 0]
 
-        description.append(f'Current Spammers: {", ".join(being_spammed) if being_spammed else "None"}')
+        description.append(f"Current Spammers: {', '.join(being_spammed) if being_spammed else 'None'}")
         description.append(f"Questionable Connections: {questionable_connections}")
 
         total_warnings += questionable_connections
@@ -786,15 +787,18 @@ class Stats(BaseCog["Graha"]):
 
         bad_inner_tasks = ", ".join(hex(id(t)) for t in inner_tasks if t.done() and t._exception is not None)
         total_warnings += bool(bad_inner_tasks)
-        embed.add_field(name="Inner Tasks", value=f'Total: {len(inner_tasks)}\nFailed: {bad_inner_tasks or "None"}')
+        embed.add_field(name="Inner Tasks", value=f"Total: {len(inner_tasks)}\nFailed: {bad_inner_tasks or 'None'}")
         embed.add_field(name="Events Waiting", value=f"Total: {len(event_tasks)}", inline=False)
 
         command_waiters = len(self._data_batch)
         is_locked = self._batch_lock.locked()
         description.append(f"Commands Waiting: {command_waiters}, Batch Locked: {is_locked}")
 
+        cpu_count = psutil.cpu_count()
+        assert cpu_count
+
         memory_usage = self.process.memory_full_info().uss / 1024**2
-        cpu_usage = self.process.cpu_percent() / psutil.cpu_count()
+        cpu_usage = self.process.cpu_percent() / cpu_count
         embed.add_field(name="Process", value=f"{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU", inline=False)
 
         global_rate_limit = not self.bot.http._global_over.is_set()
