@@ -1,6 +1,6 @@
 services:
   bot:
-    container_name: graha-bot
+    container_name: graha
     extra_hosts:
       - "database:host-gateway"
     image: ghcr.io/abstractumbra/graha:latest
