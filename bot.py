@@ -29,7 +29,14 @@ from discord.utils import _ColourFormatter as ColourFormatter, stream_supports_c
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
 from sentry_sdk.integrations.sys_exit import SysExitIntegration
+
+from extensions import EXTENSIONS
+from utilities.context import Context
 from utilities.exceptions import sentry_before_send
+from utilities.prefix import callable_prefix as _callable_prefix
+from utilities.shared.async_config import Config
+from utilities.shared.db import db_init
+from utilities.shared.reddit import RedditHandler
 
 try:
     import uvloop
@@ -37,13 +44,6 @@ except ModuleNotFoundError:
     HAS_UVLOOP = False
 else:
     HAS_UVLOOP = True
-
-from extensions import EXTENSIONS
-from utilities.context import Context
-from utilities.prefix import callable_prefix as _callable_prefix
-from utilities.shared.async_config import Config
-from utilities.shared.db import db_init
-from utilities.shared.reddit import RedditHandler
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
