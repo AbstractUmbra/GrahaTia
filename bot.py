@@ -29,6 +29,7 @@ from discord.utils import _ColourFormatter as ColourFormatter, stream_supports_c
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
 from sentry_sdk.integrations.sys_exit import SysExitIntegration
+from utilities.exceptions import sentry_before_send
 
 try:
     import uvloop
@@ -134,6 +135,7 @@ class LogHandler:
                 traces_sample_rate=1.0,
                 profiles_sample_rate=1.0,
                 integrations=[AioHttpIntegration(), AsyncioIntegration(), SysExitIntegration()],
+                before_send=sentry_before_send,
             )
 
         if self.stream:
