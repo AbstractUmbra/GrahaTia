@@ -5,3 +5,4 @@ __pycache__/
 configs/config.toml
 configs/*.json
 [!__]_*.py
+compose.override.yaml
