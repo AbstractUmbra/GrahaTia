@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from utilities.shared._types.xiv.reddit.kaiyoko import TopLevelListingResponse
 
 FASHION_REPORT_PATTERN: re.Pattern[str] = re.compile(
-    r"Fashion Report - Full Details - For Week of (?P<date>[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}) \(Week (?P<week_num>[0-9]{3})\)"
+    r"Fashion Report - Full Details - For Week of (?P<date>[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}) \(Week (?P<week_num>[0-9]{3})\)",
 )
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -111,7 +111,6 @@ class FashionReport(BaseCog["Graha"]):
             self._report_task.exception()
         except (asyncio.CancelledError, asyncio.InvalidStateError):
             LOGGER.warning("[FashionReport] -> {Reset State} :: Task was in error state.")
-            pass
 
         self._report_task = asyncio.create_task(self._wait_for_report())
         return self._filter_submissions.invalidate(self)
@@ -164,7 +163,7 @@ class FashionReport(BaseCog["Graha"]):
     async def _filter_submissions(self, *, dt: datetime.datetime) -> KaiyokoSubmission:
         try:
             submissions: TopLevelListingResponse = await self.bot.reddit.get(
-                "https://oauth.reddit.com/user/kaiyoko/submitted"
+                "https://oauth.reddit.com/user/kaiyoko/submitted",
             )
         except RedditError as err:
             raise RedditError("[Fashion Report] -> {Submission Filtering} :: Reddit API request failed") from err
@@ -173,13 +172,17 @@ class FashionReport(BaseCog["Graha"]):
             match = FASHION_REPORT_PATTERN.search(submission["data"]["title"])
             if not match:
                 LOGGER.debug(
-                    "[FashionReport] :: Kaiyoko entry found but is not a fashion report: %r", submission["data"]["title"]
+                    "[FashionReport] :: Kaiyoko entry found but is not a fashion report: %r",
+                    submission["data"]["title"],
                 )
                 continue
 
             if self.weeks_since_start(dt) != int(match["week_num"]):
                 LOGGER.warning(
-                    "[FashionReport] -> {Submission Filtering} :: Found a submission, but doesn't match the expected week (wanted %s but got %s)",
+                    (
+                        "[FashionReport] -> {Submission Filtering} :: Found a submission, "
+                        "but doesn't match the expected week (wanted %s but got %s)"
+                    ),
                     self.weeks_since_start(dt),
                     match["week_num"],
                 )
@@ -206,7 +209,10 @@ class FashionReport(BaseCog["Graha"]):
         submission = self.current_report
 
         embed = discord.Embed(title=submission.prose, url=submission.url)
-        dt_string = f"{discord.utils.format_dt(submission.next_event(), 'F')} ({discord.utils.format_dt(submission.next_event(), 'R')})"
+        dt_string = (
+            f"{discord.utils.format_dt(submission.next_event(), 'F')} "
+            f"({discord.utils.format_dt(submission.next_event(), 'R')})"
+        )
 
         if submission.is_available():
             embed.description = f"Judging ends at {dt_string}"
@@ -224,15 +230,16 @@ class FashionReport(BaseCog["Graha"]):
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.describe(ephemeral="Whether to show the data privately to you, or not.")
-    async def fashion_report_app_cmd(self, interaction: Interaction, ephemeral: bool = True) -> None:
+    async def fashion_report_app_cmd(self, interaction: Interaction, ephemeral: bool = True) -> None:  # noqa: FBT001, FBT002 # required by dpy
         """Get the latest available Fashion Report information from KaiyokoStar!"""
         if not self.current_report:
             return await interaction.response.send_message(
-                "Sorry, but I haven't found the post from Kaiyoko yet, try again later?", ephemeral=ephemeral
+                "Sorry, but I haven't found the post from Kaiyoko yet, try again later?",
+                ephemeral=ephemeral,
             )
 
         embed = self.generate_fashion_embed()
-        await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
+        return await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
 
     @commands.group(name="fashionreport", aliases=["fr", "fashion-report"], invoke_without_command=True)
     async def fashion_report(self, ctx: Context) -> None:
@@ -247,7 +254,7 @@ class FashionReport(BaseCog["Graha"]):
             embed = self.generate_fashion_embed()
             send = ctx.message.reply
 
-        await send(embed=embed)
+        await send(embeds=[embed])
 
     @commands.is_owner()
     @fashion_report.command(name="cache", aliases=["cache-reset"], hidden=True)

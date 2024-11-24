@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Literal
 
 import discord
 from discord import Enum, app_commands
-from discord.app_commands.commands import _populate_choices
+from discord.app_commands.commands import _populate_choices  # we do some cheating
 from discord.enums import try_enum
 from discord.ext import commands
 
@@ -97,7 +97,8 @@ class YokaiWatch(commands.GroupCog, name="yokai-watch"):
             if yokai["id"] == yokai_id:
                 return yokai
 
-        raise ValueError(f"Yo-kai with the ID of {yokai_id} cannot be found.")
+        msg = f"Yo-kai with the ID of {yokai_id} cannot be found."
+        raise ValueError(msg)
 
     @app_commands.command(name="yokai-info")
     async def yokai_info(self, interaction: Interaction, yokai: str) -> None:
@@ -159,15 +160,21 @@ class YokaiWatch(commands.GroupCog, name="yokai-watch"):
             f"Yo-kai minions that can gain medals in this area:-\n\n{'\n'.join([y.name.replace('_', ' ') for y in yokai])}"
         )
 
-        await interaction.followup.send(embed=embed)
+        return await interaction.followup.send(embed=embed)
 
     @app_commands.command(name="info")
     async def info_command(self, interaction: Interaction) -> None:
         """Overall information about the Yo-kai Watch event!"""
+        fmt = (
+            "The Yo-kai Watch! event is a limited time event within Final Fantasy:tm: "
+            "XIV where you can collect the Yo-kai minions, "
+            "with the optional goal of then gaining Yo-kai weapons and mounts!"
+        )
+
         embed = discord.Embed(
             title="Yo-kai Watch event!",
             url=self.config["event"],
-            description="The Yo-kai Watch! event is a limited time event within Final Fantasy:tm: XIV where you can collect the Yo-kai minions, with the optional goal of then gaining Yo-kai weapons and mounts!",
+            description=fmt,
             colour=random_pastel_colour(),
         ).set_image(url=self.config["infographic"])
 

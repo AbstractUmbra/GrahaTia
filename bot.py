@@ -25,7 +25,10 @@ import mystbin
 import sentry_sdk
 from discord import app_commands
 from discord.ext import commands
-from discord.utils import _ColourFormatter as ColourFormatter, stream_supports_colour
+from discord.utils import (
+    _ColourFormatter as ColourFormatter,  # noqa: PLC2701 # we do a little cheating
+    stream_supports_colour,
+)
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
 from sentry_sdk.integrations.sys_exit import SysExitIntegration
@@ -59,7 +62,7 @@ jishaku.Flags.NO_DM_TRACEBACK = True
 
 _config_path = pathlib.Path("configs/config.toml")
 with _config_path.open("rb") as fp:
-    CONFIG: BotConfig = tomllib.load(fp)  # type: ignore # can't narrow this legally.
+    CONFIG: BotConfig = tomllib.load(fp)  # pyright: ignore[reportAssignmentType] # can't narrow this legally for some reason.
 
 
 class GrahaCommandTree(app_commands.CommandTree):
@@ -76,8 +79,16 @@ class GrahaCommandTree(app_commands.CommandTree):
         e.add_field(name="Command", value=(interaction.command and interaction.command.name) or "No command.")
         e.add_field(name="Author", value=interaction.user, inline=False)
         channel = interaction.channel
+        assert channel
+
         guild = interaction.guild
-        location_fmt = f"Channel: {channel.name} ({channel.id})"  # type: ignore
+        name, id_ = (
+            (channel.name, channel.id)
+            if isinstance(channel, discord.TextChannel)
+            else (f"DMs with {interaction.user} ({interaction.user.id})", channel.id)
+        )
+        location_fmt = f"Channel: {name} ({id_})"
+
         if guild:
             location_fmt += f"\nGuild: {guild.name} ({guild.id})"
         e.add_field(name="Location", value=location_fmt, inline=True)
@@ -123,7 +134,11 @@ class LogHandler:
 
         self.log.setLevel(logging.INFO)
         handler = RotatingFileHandler(
-            filename=self.logging_path / "Graha.log", encoding="utf-8", mode="w", maxBytes=self.max_bytes, backupCount=5
+            filename=self.logging_path / "Graha.log",
+            encoding="utf-8",
+            mode="w",
+            maxBytes=self.max_bytes,
+            backupCount=5,
         )
         dt_fmt = "%Y-%m-%d %H:%M:%S"
         fmt = logging.Formatter("[{asctime}] [{levelname:<7}] {name}: {message}", dt_fmt, style="{")
@@ -146,10 +161,10 @@ class LogHandler:
 
         return self
 
-    async def __aexit__(self, *args: Any) -> None:
+    async def __aexit__(self, *args: object) -> None:
         return self.__exit__(*args)
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(self, *args: object) -> None:
         handlers = self.log.handlers[:]
         for hdlr in handlers:
             hdlr.close()
@@ -187,14 +202,18 @@ class Graha(commands.Bot):
 
         # auto spam detection
         self._spam_cooldown_mapping: commands.CooldownMapping = commands.CooldownMapping.from_cooldown(
-            10, 12.0, commands.BucketType.user
+            10,
+            12.0,
+            commands.BucketType.user,
         )
         self._spammer_count: Counter[int] = Counter()
 
         # misc logging
         self._previous_websocket_events: deque[Any] = deque(maxlen=10)
         self._error_handling_cooldown: commands.CooldownMapping = commands.CooldownMapping.from_cooldown(
-            1, 5, commands.BucketType.user
+            1,
+            5,
+            commands.BucketType.user,
         )
         self.command_stats = Counter()
         self.socket_stats = Counter()
@@ -226,10 +245,10 @@ class Graha(commands.Bot):
         self._previous_websocket_events.append(message)
 
     async def on_ready(self) -> None:
-        self.global_log.info("Graha got a ready event at %s", datetime.datetime.now())
+        self.global_log.info("Graha got a ready event at %s", datetime.datetime.now(datetime.UTC))
 
     async def on_resume(self) -> None:
-        self.global_log.info("Graha got a resume event at %s", datetime.datetime.now())
+        self.global_log.info("Graha got a resume event at %s", datetime.datetime.now(datetime.UTC))
 
     async def on_command_error(self, ctx: Context, error: commands.CommandError) -> None:
         await ctx.message.add_reaction("\u274c")
@@ -258,7 +277,10 @@ class Graha(commands.Bot):
             if not isinstance(origin_, discord.HTTPException):
                 LOGGER.exception("in `%s` with ray id: '%s' ::\n%s", ctx.command.name, ctx.ray_id, clean, exc_info=True)
 
-            ret += "There was an error in that command. My developer has been notified, but if you're contacting `hyliantwink` directly please quote 'Ray ID: `{ctx.ray_id}`'."
+            ret += (
+                "There was an error in that command. My developer has been notified, "
+                "but if you're contacting `hyliantwink` directly please quote 'Ray ID: `{ctx.ray_id}`'."
+            )
 
         else:
             return
@@ -276,8 +298,8 @@ class Graha(commands.Bot):
             return self._prefix_data.get(guild.id, ["gt "])
 
         snowflake_proxy = discord.Object(id=0)
-        snowflake_proxy.guild = guild  # type: ignore # this is actually valid, the class just has no slots or attr to override.
-        return local_(self, snowflake_proxy)  # type: ignore # this is actually valid, the class just has no slots or attr to override.
+        snowflake_proxy.guild = guild  # type: ignore[reportArgumentType] # this is actually valid, the class just has no slots or attr to override.
+        return local_(self, snowflake_proxy)  # pyright: ignore[reportArgumentType] # this is actually valid, the class just has no slots or attr to override.
 
     async def _set_guild_prefixes(self, guild: discord.abc.Snowflake, prefixes: list[str] | None) -> None:
         if not prefixes:
@@ -288,7 +310,7 @@ class Graha(commands.Bot):
             await self._prefix_data.put(guild.id, prefixes)
 
     async def _blacklist_add(self, object_id: int) -> None:
-        await self._blacklist_data.put(object_id, True)
+        await self._blacklist_data.put(object_id, True)  # noqa: FBT003
 
     async def _blacklist_remove(self, object_id: int) -> None:
         try:
@@ -298,26 +320,41 @@ class Graha(commands.Bot):
 
     @overload
     def _log_spammer(
-        self, ctx: Context, message: discord.Message, retry_after: float, *, autoblock: Literal[True]
+        self,
+        ctx: Context,
+        message: discord.Message,
+        retry_after: float,
+        *,
+        autoblock: Literal[True],
     ) -> Coroutine[None, None, discord.WebhookMessage]: ...
 
     @overload
     def _log_spammer(
-        self, ctx: Context, message: discord.Message, retry_after: float, *, autoblock: Literal[False]
+        self,
+        ctx: Context,
+        message: discord.Message,
+        retry_after: float,
+        *,
+        autoblock: Literal[False],
     ) -> None: ...
 
     @overload
     def _log_spammer(self, ctx: Context, message: discord.Message, retry_after: float, *, autoblock: bool = ...) -> None: ...
 
     def _log_spammer(
-        self, ctx: Context, message: discord.Message, retry_after: float, *, autoblock: bool = False
+        self,
+        ctx: Context,
+        message: discord.Message,
+        retry_after: float,
+        *,
+        autoblock: bool = False,
     ) -> Coroutine[None, None, discord.WebhookMessage] | None:
         guild_name = getattr(ctx.guild, "name", "No Guild (DMs)")
         guild_id = getattr(ctx.guild, "id", None)
         fmt = "User %s (ID %s) in guild %r (ID %s) is spamming. retry_after: %.2fs"
         LOGGER.warning(fmt, message.author, message.author.id, guild_name, guild_id, retry_after)
         if not autoblock:
-            return
+            return None
 
         embed = discord.Embed(title="Autoblocked Member", colour=0xDDA453)
         embed.add_field(name="User", value=f"{message.author} (ID {message.author.id})", inline=False)
@@ -354,8 +391,7 @@ class Graha(commands.Bot):
             else:
                 self._log_spammer(ctx, message, retry_after)
             return
-        else:
-            self._spammer_count.pop(message.author.id, None)
+        self._spammer_count.pop(message.author.id, None)
 
         await self.invoke(ctx)
 
@@ -411,11 +447,11 @@ class Graha(commands.Bot):
             await super().start(token=self.config["bot"]["token"], reconnect=True)
         finally:
             path = pathlib.Path("logs/prev_events.log")
-            with path.open("w+", encoding="utf-8") as f:
+            with path.open("w+", encoding="utf-8") as f:  # noqa: ASYNC230 # very minor
                 for event in self._previous_websocket_events:
                     try:
                         last_log = json.dumps(event, ensure_ascii=True, indent=2)
-                    except Exception:
+                    except ValueError:
                         f.write(f"{event}\n")
                     else:
                         f.write(f"{last_log}\n")

@@ -80,17 +80,24 @@ class EventSubView(BaseView):
         self.cog.get_sub_config.invalidate(self.cog, interaction.guild.id)
 
         await interaction.edit_original_response(
-            content="Your subscription choices have been recorded, thank you!", view=None
+            content="Your subscription choices have been recorded, thank you!",
+            view=None,
         )
 
 
 class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     POSSIBLE_SUBSCRIPTIONS: ClassVar[list[discord.SelectOption]] = [
         discord.SelectOption(
-            label="Daily Resets", value="1", description="Opt into reminders about daily resets!", emoji="\U0001f4bf"
+            label="Daily Resets",
+            value="1",
+            description="Opt into reminders about daily resets!",
+            emoji="\U0001f4bf",
         ),
         discord.SelectOption(
-            label="Weekly Resets", value="2", description="Opt into reminders about weekly resets!", emoji="\U0001f4c0"
+            label="Weekly Resets",
+            value="2",
+            description="Opt into reminders about weekly resets!",
+            emoji="\U0001f4c0",
         ),
         discord.SelectOption(
             label="Fashion Report",
@@ -224,7 +231,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                 WHERE guild_id = $1;
                 """
 
-        record: SubscriptionEventRecord | None = await self.bot.pool.fetchrow(query, guild_id)  # type: ignore # wish I knew how to make a Record subclass
+        record: SubscriptionEventRecord | None = await self.bot.pool.fetchrow(query, guild_id)  # pyright: ignore[reportAssignmentType] # wish I knew how to make a Record subclass
 
         if not record:
             LOGGER.info("[EventSub] -> [Create] :: Creating new subscription config for guild: %s", guild_id)
@@ -235,14 +242,17 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         return EventSubConfig.from_record(self.bot, record=record)
 
     async def _resolve_webhook_from_cache(
-        self, config: EventSubConfig, *, log_key: str = "[General Access]"
+        self,
+        config: EventSubConfig,
+        *,
+        log_key: str = "[General Access]",
     ) -> discord.Webhook | None:
         try:
             wh = await config.get_webhook()
         except MisconfiguredSubscription:
-            LOGGER.error("[EventSub] -> [Delete] %s :: Subscription %r is misconfigured. Deleting.", log_key, config)
+            LOGGER.exception("[EventSub] -> [Delete] %s :: Subscription %r is misconfigured. Deleting.", log_key, config)
             await self._delete_subscription(config)
-            return
+            return None
 
         return wh
 
@@ -258,13 +268,18 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     @app_commands.default_permissions(manage_channels=True, manage_webhooks=True)
     @app_commands.describe(webhook="The existing webhook you wish for me to use for notifications.")
     async def select_subscriptions(
-        self, interaction: Interaction, webhook: app_commands.Transform[discord.Webhook, WebhookTransformer] | None = None
+        self,
+        interaction: Interaction,
+        webhook: app_commands.Transform[discord.Webhook, WebhookTransformer] | None = None,
     ) -> None:
         """Open a selection of subscriptions for this channel!"""
         assert interaction.guild  # guarded in check
         if not isinstance(interaction.channel, (discord.TextChannel, discord.VoiceChannel, discord.Thread)):
             return await interaction.response.send_message(
-                "Sorry, but I can't process subscriptions in this channel. Please use a normal text/voice channel or a thread."
+                (
+                    "Sorry, but I can't process subscriptions in this channel. "
+                    "Please use a normal text/voice channel or a thread."
+                ),
             )
 
         await interaction.response.defer()
@@ -273,12 +288,13 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
         options = self.POSSIBLE_SUBSCRIPTIONS[:]
 
-        for (_, value), option in zip(config.subscriptions, options):
+        for (_, value), option in zip(config.subscriptions, options, strict=False):
             option.default = value
 
         view = EventSubView(options=options, cog=self)
-        await interaction.followup.send(
-            content="Please select which reminders you wish to recieve in the following dropdown!", view=view
+        return await interaction.followup.send(
+            content="Please select which reminders you wish to recieve in the following dropdown!",
+            view=view,
         )
 
     @app_commands.command(name="delete")
@@ -294,7 +310,10 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         await self._delete_subscription(config)
 
         await interaction.followup.send(
-            "Okay, I've removed your subscription data. You may want to delete the webhook I used for this, but that's up to you!",
+            (
+                "Okay, I've removed your subscription data. You may want to delete the "
+                "webhook I used for this, but that's up to you!"
+            ),
             ephemeral=False,
         )
 
@@ -331,13 +350,13 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(1, length=10))  # type: ignore # reee
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(1, length=10))  # pyright: ignore[reportAssignmentType] # stub shenanigans
 
         if not records:
             LOGGER.warning("[EventSub] -> [DailyReset] :: No subscriptions. Exiting.")
             return
 
-        resets_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # ree
+        resets_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # pyright: ignore[reportAssignmentType] # cog downcasting
 
         if not resets_cog:
             LOGGER.error("[EventSub] -> [DailyReset] :: Resets cog is not available.")
@@ -374,13 +393,13 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(2, length=10))  # type: ignore # reee
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(2, length=10))  # pyright: ignore[reportAssignmentType] # stub shenanigans
 
         if not records:
             LOGGER.warning("[EventSub] -> [WeeklyReset] :: No subscriptions. Exiting.")
             return
 
-        resets_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # ree
+        resets_cog: ResetsCog | None = self.bot.get_cog("Reset Information")  # pyright: ignore[reportAssignmentType] # cog downcasting
 
         if not resets_cog:
             LOGGER.error("[EventSub] -> [WeeklyReset] :: Resets cog is not available.")
@@ -412,12 +431,15 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(4, length=10))  # type: ignore # stub shenanigans
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(4, length=10))  # pyright: ignore[reportAssignmentType] # stub shenanigans
         if not records:
             LOGGER.warning("[EventSub] -> [FashionReport] :: No subscriptions. Exiting.")
             return
 
-        fashion_report_cog: FashionReportCog = self.bot.get_cog("FashionReport")  # type: ignore # weird
+        fashion_report_cog: FashionReportCog | None = self.bot.get_cog("FashionReport")  # pyright: ignore[reportAssignmentType] # cog downcasting
+        if not fashion_report_cog:
+            LOGGER.error("[EventSub] -> [FashionReport] :: Fashion Report cog unavailable.")
+            return
 
         fmt: str = MISSING
 
@@ -447,12 +469,12 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(8, length=10))  # type: ignore
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(8, length=10))  # pyright: ignore[reportAssignmentType] # stubs
         if not records:
             LOGGER.warning("[EventSub] -> [OceanFishing] :: No subscriptions. Exiting.")
             return
 
-        ocean_fishing_cog: OceanFishingCog | None = self.bot.get_cog("OceanFishing")  # type: ignore
+        ocean_fishing_cog: OceanFishingCog | None = self.bot.get_cog("OceanFishing")  # pyright: ignore[reportAssignmentType] # cog downcasting
         if not ocean_fishing_cog:
             LOGGER.error("[EventSub] -> [Ocean Fishing] :: No ocean fishing cog available.")
             return
@@ -474,7 +496,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                     webhook=webhook,
                     embeds=embeds,
                     config=conf,
-                )
+                ),
             )
 
         await self.handle_dispatch(to_send)
@@ -484,7 +506,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         now = datetime.datetime.now(datetime.UTC)
 
         # we need to get the Cog first here to calculate the next occurring cactpot loot
-        resets: ResetsCog | None = self.bot.get_cog("Reset Information")  # type: ignore # cog downcasting
+        resets: ResetsCog | None = self.bot.get_cog("Reset Information")  # pyright: ignore[reportAssignmentType] # cog downcasting
         if not resets:
             LOGGER.error("[EventSub] -> [Jumbo Cactpot] :: Could not load the resets Cog.")
             return
@@ -499,8 +521,9 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                 """
 
         records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
-            query, BitString.from_int(bitstring_value, length=10)
-        )  # type: ignore # stub shenanigans
+            query,
+            BitString.from_int(bitstring_value, length=10),
+        )  # pyright: ignore[reportAssignmentType] # stub shenanigans
 
         if not records:
             LOGGER.warning("[EventSub] -> [JumboCactpot] :: No subscriptions. Exiting.")
@@ -529,13 +552,13 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(256, length=10))  # type: ignore # stub shenanigans
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(256, length=10))  # pyright: ignore[reportAssignmentType] # stub shenanigans
 
         if not records:
             LOGGER.warning("[EventSub] -> [GATEs] :: No subscriptions. Exiting.")
             return
 
-        gates_cog: GATEs | None = self.bot.get_cog("GATEs")  # type: ignore # cog downcasting
+        gates_cog: GATEs | None = self.bot.get_cog("GATEs")  # pyright: ignore[reportAssignmentType] # cog downcasting
         if not gates_cog:
             LOGGER.error("[EventSub] -> [GATEs] :: Could not load the GATEs cog.")
             return
@@ -559,7 +582,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     async def before_gate_loop(self) -> None:
         await self.bot.wait_until_ready()
 
-        gate_cog: GATEs | None = self.bot.get_cog("GATEs")  # type: ignore # cog downcasting
+        gate_cog: GATEs | None = self.bot.get_cog("GATEs")  # pyright: ignore[reportAssignmentType] # cog downcasting
         if not gate_cog:
             LOGGER.error("[EventSub] -> [Pre-GATEs] :: Can't load the cog. Cancelling loop.")
             self.gate_loop.cancel()

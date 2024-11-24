@@ -66,10 +66,9 @@ class GATEs(BaseCog["Graha"]):
     def _resolve_leap_of_faith(self, minute: GateSpawnMinute) -> LeapOfFaith:
         if minute == 0:
             return LeapOfFaith.nym
-        elif minute == 20:
+        if minute == 20:
             return LeapOfFaith.belah_dia
-        else:
-            return LeapOfFaith.sylphstep
+        return LeapOfFaith.sylphstep
 
     def generate_gate_embed(self, when: datetime.datetime | None = None) -> discord.Embed:
         when, gates = self._resolve_next_gate(when)
@@ -79,7 +78,7 @@ class GATEs(BaseCog["Graha"]):
         fmt = f"A random GATE from the below 3 opens up {ts(when):R}!\n\n"
         for gate in gates:
             if gate is GATE.leap_of_faith:
-                leap_of_faith = self._resolve_leap_of_faith(when.minute)  # type: ignore # resolved in earlier call
+                leap_of_faith = self._resolve_leap_of_faith(when.minute)  # pyright: ignore[reportArgumentType] # resolved in earlier call
                 fmt += f"[{leap_of_faith.clean()}]({leap_of_faith.url})" + "\n"
                 continue
             fmt += f"[{gate.clean()}]({gate.value})" + "\n"
@@ -92,7 +91,7 @@ class GATEs(BaseCog["Graha"]):
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.describe(ephemeral="Whether to show the data privately to you, or not.")
-    async def gate(self, interaction: Interaction, ephemeral: bool = True) -> None:
+    async def gate(self, interaction: Interaction, ephemeral: bool = True) -> None:  # noqa: FBT001, FBT002 # required by dpy
         """Shows data on the next possible selection for the GATE in the Golden Saucer."""
         now = datetime.datetime.now(datetime.UTC)
 

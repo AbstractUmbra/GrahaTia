@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, TypedDict
 if TYPE_CHECKING:
     from typing import NotRequired
 
-    from ..shared.reddit import RedditConfig
+    from utilities.shared.reddit import RedditConfig
 
 
 __all__ = ("Config",)

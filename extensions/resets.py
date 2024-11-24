@@ -52,7 +52,8 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
         wd = dt.weekday()
         if wd not in (5, 6):
             LOGGER.warning(
-                "[Resets] -> {Waiting for Cactpot} :: Called on a non-weekend (at %r). Altering and waiting.", str(dt)
+                "[Resets] -> {Waiting for Cactpot} :: Called on a non-weekend (at %r). Altering and waiting.",
+                str(dt),
             )
             dt = resolve_next_weekday(
                 target=Weekday.saturday,
@@ -86,7 +87,7 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
 
             await discord.utils.sleep_until(when)
             return Region.OCE, 128
-        elif dt.hour > 9 and dt.hour < 12:
+        if dt.hour > 9 and dt.hour < 12:
             when = resolve_next_weekday(
                 target=Weekday.saturday,
                 source=dt,
@@ -97,17 +98,16 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
 
             await discord.utils.sleep_until(when)
             return Region.JP, 64
-        else:
-            when = resolve_next_weekday(
-                target=Weekday.saturday,
-                source=dt,
-                current_week_included=True,
-                before_time=datetime.time(hour=18, minute=45, second=0, microsecond=0, tzinfo=datetime.UTC),
-            ).replace(hour=18, minute=45, second=0, microsecond=0)
-            LOGGER.info("[Resets] -> {Waiting for Cactpot} :: Next cactpot schedule is EU (at %r).", str(when))
+        when = resolve_next_weekday(
+            target=Weekday.saturday,
+            source=dt,
+            current_week_included=True,
+            before_time=datetime.time(hour=18, minute=45, second=0, microsecond=0, tzinfo=datetime.UTC),
+        ).replace(hour=18, minute=45, second=0, microsecond=0)
+        LOGGER.info("[Resets] -> {Waiting for Cactpot} :: Next cactpot schedule is EU (at %r).", str(when))
 
-            await discord.utils.sleep_until(when)
-            return Region.EU, 32
+        await discord.utils.sleep_until(when)
+        return Region.EU, 32
 
     def _get_cactpot_reset_data(self, region_or_dc: Datacenter | Region, /) -> tuple[datetime.datetime, Region]:
         value = region_or_dc.value if isinstance(region_or_dc, Datacenter) else region_or_dc
@@ -128,7 +128,10 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
             wd = Weekday.sunday
 
         date = resolve_next_weekday(
-            source=datetime.datetime.now(datetime.UTC), target=wd, current_week_included=True, before_time=time
+            source=datetime.datetime.now(datetime.UTC),
+            target=wd,
+            current_week_included=True,
+            before_time=time,
         )
         return datetime.datetime.combine(date.date(), time, tzinfo=datetime.UTC), value
 
@@ -207,13 +210,18 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
         ephemeral="Whether to show the data privately to you, or not.",
     )
     async def resets_summary(
-        self, interaction: Interaction, daily: bool = True, weekly: bool = True, ephemeral: bool = True
+        self,
+        interaction: Interaction,
+        daily: bool = True,  # noqa: FBT001, FBT002 # required by dpy
+        weekly: bool = True,  # noqa: FBT001, FBT002 # required by dpy
+        ephemeral: bool = True,  # noqa: FBT001, FBT002 # required by dpy
     ) -> None:
         """Sends a summary of the daily and weekly reset information."""
 
         if not any([daily, weekly]):
             return await interaction.response.send_message(
-                "Well... you need to request at least one of the daily or weekly items.", ephemeral=True
+                "Well... you need to request at least one of the daily or weekly items.",
+                ephemeral=True,
             )
 
         embeds = []
@@ -222,7 +230,7 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
         if weekly:
             embeds.append(self._get_weekly_reset_embed())
 
-        await interaction.response.send_message(embeds=embeds, ephemeral=ephemeral)
+        return await interaction.response.send_message(embeds=embeds, ephemeral=ephemeral)
 
     @app_commands.command()
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -231,7 +239,7 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
         region="Choose a region to show the information for. Will show all regions if no choice is made.",
         ephemeral="Whether to show the data privately to you, or not.",
     )
-    async def cactpot(self, interaction: Interaction, region: Region | None = None, ephemeral: bool = True) -> None:
+    async def cactpot(self, interaction: Interaction, region: Region | None = None, ephemeral: bool = True) -> None:  # noqa: FBT001, FBT002 # required by dpy
         """Shows data on when the next Jumbo Cactpot calling is!"""
         regions = [region] if region else Region
         embeds = [self._get_cactpot_embed(reg) for reg in regions]

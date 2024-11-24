@@ -6,6 +6,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from __future__ import annotations
 
+import operator
 from functools import reduce
 from typing import TYPE_CHECKING, Self
 
@@ -28,12 +29,13 @@ class SubscribedEventsFlags(DpyFlags):
         self.value: int = value
         for key, value in kwargs.items():
             if key not in self.VALID_FLAGS:
-                raise TypeError(f"{key!r} is not a valid flag name.")
+                msg = f"{key!r} is not a valid flag name."
+                raise TypeError(msg)
             setattr(self, key, value)
 
     @classmethod
     def all(cls) -> Self:
-        value = reduce(lambda a, b: a | b, cls.VALID_FLAGS.values())
+        value = reduce(operator.or_, cls.VALID_FLAGS.values())
         self = cls.__new__(cls)
         self.value = value
         return self

@@ -12,16 +12,15 @@ import discord
 from discord import Guild, Role
 from discord.utils import MISSING
 
-from ..flags import SubscribedEventsFlags
-from ..shared.cache import cache
+from utilities.flags import SubscribedEventsFlags
+from utilities.shared.cache import cache
 
 if TYPE_CHECKING:
     from typing import Self
 
     from bot import Graha
-
-    from ..shared._types.xiv.record_aliases.subscription import EventRecord
-    from ..shared._types.xiv.record_aliases.webhooks import WebhooksRecord
+    from utilities.shared._types.xiv.record_aliases.subscription import EventRecord
+    from utilities.shared._types.xiv.record_aliases.webhooks import WebhooksRecord
 
 __all__ = ("EventSubConfig",)
 
@@ -109,6 +108,8 @@ class EventSubConfig:
         if self.guild_id:
             return self._bot.get_guild(self.guild_id)
 
+        return None
+
     def is_thread(self) -> bool:
         return bool(self.thread_id)
 
@@ -118,9 +119,8 @@ class EventSubConfig:
             return None
 
         if self.guild:
-            return self.guild.get_channel(self.channel_id)  # type: ignore
-        else:
-            return self._bot.get_channel(self.channel_id)  # type: ignore # ? TODO: This is slow.
+            return self.guild.get_channel(self.channel_id)  # pyright: ignore[reportReturnType] # guarded by outer machinery, only TextChannel input accepted
+        return self._bot.get_channel(self.channel_id)  # pyright: ignore[reportReturnType] # see above
 
     @property
     def thread(self) -> discord.Thread:
@@ -136,30 +136,42 @@ class EventSubConfig:
         if self.guild and self.daily_role_id:
             return self.guild.get_role(self.daily_role_id)
 
+        return None
+
     @property
     def weekly_role(self) -> Role | None:
         if self.guild and self.weekly_role_id:
             return self.guild.get_role(self.weekly_role_id)
+
+        return None
 
     @property
     def fashion_report_role(self) -> Role | None:
         if self.guild and self.fashion_report_role_id:
             return self.guild.get_role(self.fashion_report_role_id)
 
+        return None
+
     @property
     def ocean_fishing_role(self) -> Role | None:
         if self.guild and self.ocean_fishing_role_id:
             return self.guild.get_role(self.ocean_fishing_role_id)
+
+        return None
 
     @property
     def jumbo_cactpot_role(self) -> Role | None:
         if self.guild and self.jumbo_cactpot_role_id:
             return self.guild.get_role(self.jumbo_cactpot_role_id)
 
+        return None
+
     @property
     def gate_role(self) -> Role | None:
         if self.guild and self.gate_role_id:
             return self.guild.get_role(self.gate_role_id)
+
+        return None
 
     async def _create_or_replace_webhook(self) -> discord.Webhook:
         if not self.channel:
@@ -180,9 +192,9 @@ class EventSubConfig:
         else:
             try:
                 await existing_webhook.delete(reason="Deleted by G'raha Tia due to misconfiguration.")
-            except discord.Forbidden:
+            except discord.Forbidden as err:
                 # we can't do anything here.
-                raise MisconfiguredSubscription(self, "Unable to delete webhooks within guild.")
+                raise MisconfiguredSubscription(self, "Unable to delete webhooks within guild.") from err
 
         webhook = await self.channel.create_webhook(name="XIV Timers", reason="Created via G'raha Tia subscriptions!")
         query = """
@@ -205,7 +217,7 @@ class EventSubConfig:
     async def get_webhook(self) -> discord.Webhook:
         if self.guild_id or self.webhook_id:
             query = "SELECT * FROM webhooks WHERE guild_id = $1 OR webhook_id = $2;"
-            record: WebhooksRecord | None = await self._bot.pool.fetchrow(query, self.guild_id, self.webhook_id)  # type: ignore # stubs
+            record: WebhooksRecord | None = await self._bot.pool.fetchrow(query, self.guild_id, self.webhook_id)  # pyright: ignore[reportAssignmentType] # stubs
             if not record:
                 return await self._create_or_replace_webhook()
 

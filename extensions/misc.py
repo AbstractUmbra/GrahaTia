@@ -34,9 +34,7 @@ TZ_NAME_MAPPING = {
 class Misc(BaseCog["Graha"]):
     def _clean_dt(self, dt: datetime.datetime) -> str:
         ord_ = ordinal(dt.day)
-        fmt = dt.strftime(f"%H:%M on %A, {ord_} of %B %Y")
-
-        return fmt
+        return dt.strftime(f"%H:%M on %A, {ord_} of %B %Y")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message, /) -> None:
@@ -78,7 +76,8 @@ class Misc(BaseCog["Graha"]):
             f"Hello, thank you for wanting to invite me.\nI like being upfront about things so [this link]({perms_link})"
             f" will invite me with the mandatory permissions I need for full features.\n[This link]({clean_link}) will"
             " invite me with no permissions and you can update and assign permissions/roles as necessary.\n\n"
-            f"[This link]({installation_link}) should also allow you to invite me as an installed application, so you can use most of my commands anywhere!"
+            f"[This link]({installation_link}) should also allow you to invite me as an installed application, "
+            "so you can use most of my commands anywhere!"
         )
 
         now = datetime.datetime.now(datetime.UTC)
@@ -90,7 +89,7 @@ class Misc(BaseCog["Graha"]):
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.describe(ephemeral="Whether to show the data privately to you, or not.")
-    async def server_times(self, interaction: Interaction, ephemeral: bool = True) -> None:
+    async def server_times(self, interaction: Interaction, ephemeral: bool = True) -> None:  # noqa: FBT001, FBT002 # required by dpy
         """Shows your local time against the datacenter server times."""
         await interaction.response.defer(ephemeral=ephemeral)
 

@@ -12,6 +12,7 @@ import gc
 import io
 import itertools
 import logging
+import operator
 import pathlib
 import re
 import secrets
@@ -59,7 +60,7 @@ class LoggingHandler(logging.Handler):
         super().__init__(logging.INFO)
 
     def filter(self, record: logging.LogRecord) -> bool:
-        return record.name in ("discord.gateway",)
+        return record.name == "discord.gateway"
 
     def emit(self, record: logging.LogRecord) -> None:
         self.cog.add_record(record)
@@ -170,11 +171,11 @@ class Stats(BaseCog["Graha"]):
                     "channel": ctx.channel.id,
                     "author": ctx.author.id,
                     "used": message.created_at.isoformat(),
-                    "prefix": ctx.prefix,  # type: ignore
+                    "prefix": ctx.prefix,  # pyright: ignore[reportArgumentType] # it's never None here
                     "command": command,
                     "failed": ctx.command_failed,
                     "app_command": is_app_command,
-                }
+                },
             )
 
     @commands.Cog.listener()
@@ -313,7 +314,7 @@ class Stats(BaseCog["Graha"]):
         embed.add_field(name="Uptime", value=self.get_bot_uptime(brief=True))
         embed.set_footer(text=f"Made with discord.py v{version}", icon_url="http://i.imgur.com/5BFecvA.png")
         embed.timestamp = discord.utils.utcnow()
-        await ctx.send(embed=embed)
+        await ctx.send(embeds=[embed])
 
     def censor_object(self, obj: str | discord.abc.Snowflake) -> str:
         if not isinstance(obj, str) and obj.id in self.bot._blacklist_data:
@@ -335,7 +336,7 @@ class Stats(BaseCog["Graha"]):
 
         # total command uses
         query = "SELECT COUNT(*), MIN(used) FROM commands WHERE guild_id=$1;"
-        count: tuple[int, datetime.datetime] = await ctx.db.fetchrow(query, ctx.guild.id)  # type: ignore
+        count: tuple[int, datetime.datetime] = await ctx.db.fetchrow(query, ctx.guild.id)  # pyright: ignore[reportAssignmentType] # stub shenanigans
 
         embed.description = f"{count[0]} commands used."
         timestamp = count[1].replace(tzinfo=datetime.UTC) if count[1] else discord.utils.utcnow()
@@ -419,7 +420,7 @@ class Stats(BaseCog["Graha"]):
         )
 
         embed.add_field(name="Top Command Users Today", value=value, inline=True)
-        await ctx.send(embed=embed)
+        await ctx.send(embeds=[embed])
 
     async def show_member_stats(self, ctx: Context, member: discord.Member) -> None:
         assert ctx.guild
@@ -437,7 +438,7 @@ class Stats(BaseCog["Graha"]):
 
         # total command uses
         query = "SELECT COUNT(*), MIN(used) FROM commands WHERE guild_id=$1 AND author_id=$2;"
-        count: tuple[int, datetime.datetime] = await ctx.db.fetchrow(query, ctx.guild.id, member.id)  # type: ignore
+        count: tuple[int, datetime.datetime] = await ctx.db.fetchrow(query, ctx.guild.id, member.id)  # pyright: ignore[reportAssignmentType] # stub shenanigans
 
         embed.description = f"{count[0]} commands used."
         timestamp = count[1].replace(tzinfo=datetime.UTC) if count[1] else discord.utils.utcnow()
@@ -481,7 +482,7 @@ class Stats(BaseCog["Graha"]):
         )
 
         embed.add_field(name="Most Used Commands Today", value=value, inline=False)
-        await ctx.send(embed=embed)
+        await ctx.send(embeds=[embed])
 
     @commands.group(invoke_without_command=True)
     @commands.guild_only()
@@ -500,7 +501,7 @@ class Stats(BaseCog["Graha"]):
         """Global all time command statistics."""
 
         query = "SELECT COUNT(*) FROM commands;"
-        total: tuple[int] = await ctx.db.fetchrow(query)  # type: ignore
+        total: tuple[int] = await ctx.db.fetchrow(query)  # pyright: ignore[reportAssignmentType] # stub shenanigans
 
         e = discord.Embed(title="Command Stats", colour=discord.Colour.blurple())
         e.description = f"{total[0]} commands used."
@@ -559,7 +560,7 @@ class Stats(BaseCog["Graha"]):
             value.append(f"{emoji}: {user} ({uses} uses)")
 
         e.add_field(name="Top Users", value="\n".join(value), inline=False)
-        await ctx.send(embed=e)
+        await ctx.send(embeds=[e])
 
     @stats.command(name="today")
     @commands.is_owner()
@@ -640,7 +641,7 @@ class Stats(BaseCog["Graha"]):
             value.append(f"{emoji}: {user} ({uses} uses)")
 
         e.add_field(name="Top Users", value="\n".join(value), inline=False)
-        await ctx.send(embed=e)
+        await ctx.send(embeds=[e])
 
     async def send_guild_stats(self, e: discord.Embed, guild: discord.Guild) -> None:
         e.add_field(name="Name", value=guild.name)
@@ -705,15 +706,13 @@ class Stats(BaseCog["Graha"]):
         await self.webhook.send(embed=embed, wait=False)
 
     def add_record(self, record: logging.LogRecord) -> None:
-        # if self.bot.config.debug:
-        #     return
         self._logging_queue.put_nowait(record)
 
     async def send_log_record(self, record: logging.LogRecord) -> None:
         attributes = {"INFO": "\N{INFORMATION SOURCE}\U0000fe0f", "WARNING": "\N{WARNING SIGN}"}
 
         emoji = attributes.get(record.levelname, "\N{CROSS MARK}")
-        dt = datetime.datetime.utcfromtimestamp(record.created)
+        dt = datetime.datetime.fromtimestamp(record.created, datetime.UTC)
 
         if "heartbeat blocked" in record.message:
             message = formats.to_codeblock(record.message, language="py", escape_md=False)
@@ -772,8 +771,10 @@ class Stats(BaseCog["Graha"]):
         spam_control = self.bot._spam_cooldown_mapping
         being_spammed = [str(key) for key, value in spam_control._cache.items() if value._tokens == 0]
 
-        description.append(f"Current Spammers: {', '.join(being_spammed) if being_spammed else 'None'}")
-        description.append(f"Questionable Connections: {questionable_connections}")
+        description.extend((
+            f"Current Spammers: {', '.join(being_spammed) if being_spammed else 'None'}",
+            f"Questionable Connections: {questionable_connections}",
+        ))
 
         total_warnings += questionable_connections
         if being_spammed:
@@ -815,7 +816,7 @@ class Stats(BaseCog["Graha"]):
 
         embed.set_footer(text=f"{total_warnings} warning(s)")
         embed.description = "\n".join(description)
-        await ctx.send(embed=embed)
+        await ctx.send(embeds=[embed])
 
     @commands.command(hidden=True, aliases=["cancel_task"])
     @commands.is_owner()
@@ -859,7 +860,7 @@ class Stats(BaseCog["Graha"]):
         fmt = f"```\n{render}\n```"
         if len(fmt) > 2000:
             fp = io.BytesIO(fmt.encode("utf-8"))
-            await ctx.send("Too many results...", file=discord.File(fp, "results.txt"))
+            await ctx.send("Too many results...", files=[discord.File(fp, "results.txt")])
         else:
             await ctx.send(fmt)
 
@@ -960,7 +961,7 @@ class Stats(BaseCog["Graha"]):
             if name in all_commands:
                 all_commands[name] = uses
 
-        as_data = sorted(all_commands.items(), key=lambda t: t[1], reverse=True)
+        as_data = sorted(all_commands.items(), key=operator.itemgetter(1), reverse=True)
         table = formats.TabularData()
         table.set_columns(["Command", "Uses"])
         table.add_rows(tup for tup in as_data)
@@ -980,7 +981,7 @@ class Stats(BaseCog["Graha"]):
 
         embed.add_field(name="Unused", value=unused, inline=False)
 
-        await ctx.send(embed=embed, file=discord.File(io.BytesIO(render.encode()), filename="full_results.txt"))
+        await ctx.send(embeds=[embed], files=[discord.File(io.BytesIO(render.encode()), filename="full_results.txt")])
 
     @command_history.command(name="cog")
     @commands.is_owner()
@@ -992,7 +993,7 @@ class Stats(BaseCog["Graha"]):
             cog = self.bot.get_cog(cog_name)
             if cog is None:
                 await ctx.send(f"Unknown cog: {cog_name}")
-                return
+                return None
 
             query = """SELECT *, t.success + t.failed AS "total"
                        FROM (
@@ -1045,11 +1046,16 @@ class Stats(BaseCog["Graha"]):
 
         table = formats.TabularData()
         table.set_columns(["Cog", "Success", "Failed", "Total"])
-        data = sorted([(cog, e.success, e.failed, e.total) for cog, e in data.items()], key=lambda t: t[-1], reverse=True)
+        data = sorted(
+            [(cog, e.success, e.failed, e.total) for cog, e in data.items()],
+            key=operator.itemgetter(-1),
+            reverse=True,
+        )
 
         table.add_rows(data)
         render = table.render()
         await ctx.send(f"```\n{render}\n```")
+        return None
 
 
 old_on_error = commands.Bot.on_error
@@ -1089,10 +1095,10 @@ async def setup(bot: Graha) -> None:
     await bot.add_cog(cog)
     bot._stats_cog_gateway_handler = handler = LoggingHandler(cog)
     logging.getLogger().addHandler(handler)
-    commands.Bot.on_error = on_error  # type: ignore # monkeypatching
+    commands.Bot.on_error = on_error  # pyright: ignore[reportAttributeAccessIssue] # monkeypatching
 
 
-async def teardown(bot: Graha) -> None:
+async def teardown(bot: Graha) -> None:  # expected by the extension handler
     commands.Bot.on_error = old_on_error
     logging.getLogger().removeHandler(bot._stats_cog_gateway_handler)
     del bot._stats_cog_gateway_handler

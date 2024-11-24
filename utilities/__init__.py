@@ -4,9 +4,8 @@ License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at http://mozilla.org/MPL/2.0/.
 """
 
-from . import context as context, flags as flags
+from . import _types as _types, containers as containers, context as context, flags as flags
 from .shared import (
-    _types as _types,
     async_config as async_config,
     cache as cache,
     checks as checks,

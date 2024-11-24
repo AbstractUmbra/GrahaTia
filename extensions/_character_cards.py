@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import discord
 import yarl
 from discord import app_commands
-from discord.app_commands.commands import _populate_choices
+from discord.app_commands.commands import _populate_choices  # noqa: PLC2701 # we do a little cheating
 
 from utilities import fuzzy
 from utilities.shared.cog import BaseCog
@@ -51,7 +51,7 @@ class CharacterCards(BaseCog["Graha"]):
         all_worlds: list[app_commands.Choice[str]] = []
         worlds: dict[str, list[str]] = defaultdict(list)
         for key, value in WORLDS_DATA.items():
-            for dc_data in value["datacenters"]:  # type: ignore # typing grievance with TypedDict.items()
+            for dc_data in value["datacenters"]:  # pyright: ignore[reportIndexIssue] # typing grievance with TypedDict.items()
                 for dc, worlds_ in dc_data.items():
                     datacenters.append(app_commands.Choice(name=f"[{key}] {dc}", value=dc))
                     for world in worlds_:
@@ -67,11 +67,15 @@ class CharacterCards(BaseCog["Graha"]):
             if world in value:
                 return key
 
+        return None
+
     def _resolve_dc_to_region(self, datacenter: str, /) -> str | None:
         for key, value in WORLDS_DATA.items():
-            for dc in value["datacenters"]:  # type: ignore # typing grievance with TypedDict.items()
+            for dc in value["datacenters"]:  # pyright: ignore[reportIndexIssue] # typing grievance with TypedDict.items()
                 if datacenter in dc:
                     return key
+
+        return None
 
     async def get_card(self, *, world: str, name: str) -> str:
         """Fetches a character card from the api, returning the url to the final image.
@@ -105,19 +109,23 @@ class CharacterCards(BaseCog["Graha"]):
             img: str = await self.get_card(world=world, name=character)
         except APIError:
             return await interaction.followup.send(
-                embed=discord.Embed(description="An error occurred with the api, this is likely due to an invalid name.")
+                embed=discord.Embed(description="An error occurred with the api, this is likely due to an invalid name."),
             )
 
         async with self.bot.session.get(img) as resp:
             data = await resp.read()
             buffer: BytesIO = BytesIO(data)
-        await interaction.followup.send(
-            f"Here is the card for {character}!", file=discord.File(fp=buffer, filename=f"{character}-card.png")
+
+        return await interaction.followup.send(
+            f"Here is the card for {character}!",
+            file=discord.File(fp=buffer, filename=f"{character}-card.png"),
         )
 
     # @character_card.autocomplete("datacenter")
     async def datacenter_autocomplete(
-        self, interaction: discord.Interaction, current: str
+        self,
+        interaction: discord.Interaction,
+        current: str,
     ) -> list[app_commands.Choice[str]]:
         if not current:
             return self.datacenters[:25]

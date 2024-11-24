@@ -11,10 +11,11 @@ from __future__ import annotations
 import datetime
 import secrets
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
 import discord
 from discord.ext import commands
+from discord.utils import MISSING
 
 from .shared.paste import create_paste
 from .shared.ui import BaseView, ConfirmationView
@@ -29,9 +30,9 @@ if TYPE_CHECKING:
 
     from bot import Graha
 
-    CogT = TypeVar("CogT", bound=commands.Cog, covariant=True, default=commands.Cog)
+    CogT_co = TypeVar("CogT_co", bound=commands.Cog, covariant=True, default=commands.Cog)
 else:
-    CogT = TypeVar("CogT", bound=commands.Cog, covariant=True)
+    CogT_co = TypeVar("CogT_co", bound=commands.Cog, covariant=True)
 
 
 __all__ = (
@@ -117,15 +118,11 @@ class DisambiguatorView(BaseView, Generic[T]):
         self.stop()
 
 
-class SupportsStr(Protocol):
-    def __str__(self) -> str: ...
-
-
-class Context(commands.Context["Graha"], Generic[CogT]):
+class Context(commands.Context["Graha"], Generic[CogT_co]):
     channel: discord.TextChannel | discord.VoiceChannel | discord.Thread | discord.DMChannel
     bot: Graha
     command: commands.Command[Any, ..., Any]
-    cog: CogT
+    cog: CogT_co
 
     __slots__ = ("pool",)
 
@@ -143,7 +140,7 @@ class Context(commands.Context["Graha"], Generic[CogT]):
 
     @property
     def db(self) -> DatabaseProtocol:
-        return self.pool  # type: ignore # override for protocol
+        return self.pool  # pyright: ignore[reportReturnType] # override for protocol
 
     @cached_property
     def ray_id(self) -> str:
@@ -155,11 +152,15 @@ class Context(commands.Context["Graha"], Generic[CogT]):
         if ref and isinstance(ref.resolved, discord.Message):
             return ref.resolved.to_reference()
 
+        return None
+
     @discord.utils.cached_property
     def replied_message(self) -> discord.Message | None:
         ref = self.message.reference
         if ref and isinstance(ref.resolved, discord.Message):
             return ref.resolved
+
+        return None
 
     async def disambiguate(self, matches: list[T], entry: Callable[[T], Any], *, ephemeral: bool = False) -> T:
         if len(matches) == 0:
@@ -172,18 +173,21 @@ class Context(commands.Context["Graha"], Generic[CogT]):
             raise ValueError("Too many results... sorry.")
 
         view = DisambiguatorView[T](self, matches, entry)
-        view.message = await self.send(
+        message = await self.send(
             "There are too many matches... Which one did you mean?",
             view=view,
             ephemeral=ephemeral,
             wait=True,
         )
+        assert message
+        view.message = message
+
         await view.wait()
         return view.selected
 
     async def prompt(
         self,
-        message: SupportsStr,
+        message: str,
         *,
         timeout: float = 60.0,
         delete_after: bool = True,
@@ -219,7 +223,7 @@ class Context(commands.Context["Graha"], Generic[CogT]):
         await view.wait()
         return view.value
 
-    def tick(self, opt: bool | None, label: str | None = None) -> str:
+    def tick(self, opt: bool | None, label: str | None = None) -> str:  # quick hack shortcut
         lookup = {
             True: "<:TickYes:735498312861351937>",
             False: "<:CrossNo:735498453181923377>",
@@ -230,86 +234,12 @@ class Context(commands.Context["Graha"], Generic[CogT]):
             return f"{emoji}: {label}"
         return emoji
 
-    @overload
     async def send(
         self,
-        content: SupportsStr | None = None,
-        *,
-        tts: bool = ...,
-        embed: discord.Embed | None = ...,
-        embeds: Sequence[discord.Embed] | None = ...,
-        file: discord.File | None = ...,
-        files: Sequence[discord.File] | None = ...,
-        stickers: Sequence[discord.GuildSticker | discord.StickerItem] | None = ...,
-        delete_after: float | None = ...,
-        nonce: str | int | None = ...,
-        allowed_mentions: discord.AllowedMentions | None = ...,
-        reference: discord.Message | discord.MessageReference | discord.PartialMessage | None = ...,
-        mention_author: bool | None = ...,
-        view: discord.ui.View | None = ...,
-        suppress_embeds: bool = ...,
-        ephemeral: bool = ...,
-        silent: bool = ...,
-        paste: bool = ...,
-        wait: Literal[True],
-    ) -> discord.Message: ...
-
-    @overload
-    async def send(
-        self,
-        content: SupportsStr | None = None,
-        *,
-        tts: bool = ...,
-        embed: discord.Embed | None = ...,
-        embeds: Sequence[discord.Embed] | None = ...,
-        file: discord.File | None = ...,
-        files: Sequence[discord.File] | None = ...,
-        stickers: Sequence[discord.GuildSticker | discord.StickerItem] | None = ...,
-        delete_after: float | None = ...,
-        nonce: str | int | None = ...,
-        allowed_mentions: discord.AllowedMentions | None = ...,
-        reference: discord.Message | discord.MessageReference | discord.PartialMessage | None = ...,
-        mention_author: bool | None = ...,
-        view: discord.ui.View | None = ...,
-        suppress_embeds: bool = ...,
-        ephemeral: bool = ...,
-        silent: bool = ...,
-        paste: bool = ...,
-        wait: Literal[False],
-    ) -> None: ...
-
-    @overload
-    async def send(
-        self,
-        content: SupportsStr | None = None,
-        *,
-        tts: bool = ...,
-        embed: discord.Embed | None = ...,
-        embeds: Sequence[discord.Embed] | None = ...,
-        file: discord.File | None = ...,
-        files: Sequence[discord.File] | None = ...,
-        stickers: Sequence[discord.GuildSticker | discord.StickerItem] | None = ...,
-        delete_after: float | None = ...,
-        nonce: str | int | None = ...,
-        allowed_mentions: discord.AllowedMentions | None = ...,
-        reference: discord.Message | discord.MessageReference | discord.PartialMessage | None = ...,
-        mention_author: bool | None = ...,
-        view: discord.ui.View | None = ...,
-        suppress_embeds: bool = ...,
-        ephemeral: bool = ...,
-        silent: bool = ...,
-        paste: bool = ...,
-        wait: bool = ...,
-    ) -> None: ...
-
-    async def send(
-        self,
-        content: SupportsStr | None = None,
+        content: str | None = None,
         *,
         tts: bool = False,
-        embed: discord.Embed | None = None,
         embeds: Sequence[discord.Embed] | None = None,
-        file: discord.File | None = None,
         files: Sequence[discord.File] | None = None,
         stickers: Sequence[discord.GuildSticker | discord.StickerItem] | None = None,
         delete_after: float | None = None,
@@ -321,6 +251,7 @@ class Context(commands.Context["Graha"], Generic[CogT]):
         suppress_embeds: bool = False,
         ephemeral: bool = False,
         silent: bool = False,
+        poll: discord.Poll | None = MISSING,
         paste: bool = False,
         wait: bool = False,
     ) -> discord.Message | None:
@@ -338,27 +269,30 @@ class Context(commands.Context["Graha"], Generic[CogT]):
                 f" {paste_url}.\nThe password is: `{password}`."
             )
 
-        sent = await super().send(  # type: ignore
+        # this is a cluster fuck
+        # one day we'll be able to match *args and **kwargs of a super method
+        sent = await super().send(
             content=content,
             tts=tts,
-            embed=embed,
-            embeds=embeds,
-            file=file,
-            files=files,
-            stickers=stickers,
-            delete_after=delete_after,
-            nonce=nonce,
-            allowed_mentions=allowed_mentions,
-            reference=reference,
-            mention_author=mention_author,
-            view=view,
+            embeds=embeds,  # pyright: ignore[reportArgumentType] # see above
+            files=files,  # pyright: ignore[reportArgumentType] # see above
+            stickers=stickers,  # pyright: ignore[reportArgumentType] # see above
+            delete_after=delete_after,  # pyright: ignore[reportArgumentType] # see above
+            nonce=nonce,  # pyright: ignore[reportArgumentType] # see above
+            allowed_mentions=allowed_mentions,  # pyright: ignore[reportArgumentType] # see above
+            reference=reference,  # pyright: ignore[reportArgumentType] # see above
+            mention_author=mention_author,  # pyright: ignore[reportArgumentType] # see above
+            view=view,  # pyright: ignore[reportArgumentType] # see above
             suppress_embeds=suppress_embeds,
             ephemeral=ephemeral,
             silent=silent,
+            poll=poll,  # pyright: ignore[reportArgumentType] # see above
         )
 
         if wait is True:
             return sent
+
+        return None
 
 
 class GuildContext(Context):

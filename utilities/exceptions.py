@@ -20,8 +20,8 @@ def sentry_before_send(event: "Event", hint: "Hint") -> "Event | None":
 
         return event
 
+    return None
+
 
 class NoSubmissionFound(ValueError):
     """A generic error for when no submissions are found for the fashion report on reddit."""
-
-    pass

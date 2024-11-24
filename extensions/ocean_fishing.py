@@ -155,7 +155,7 @@ class Voyage(NamedTuple):
     def stops(self) -> str:
         routes: list[tuple[str, str]] = []
 
-        for stop, time in zip(STOP_MAPPING[self.d], STOP_TIME_MAPPING[self.t]):
+        for stop, time in zip(STOP_MAPPING[self.d], STOP_TIME_MAPPING[self.t], strict=False):
             routes.append((stop.value, time))
 
         return "\n".join([f"{item[1]}: {item[0]}" for item in routes])
@@ -200,7 +200,7 @@ class OceanFishing(BaseCog["Graha"]):
 
         voyage_number = hour >> 1
         destination_index = ((day + voyage_number) % len(DESTINATION_CYCLE) + len(DESTINATION_CYCLE)) % len(
-            DESTINATION_CYCLE
+            DESTINATION_CYCLE,
         )
         time_index = ((day + voyage_number) % len(TIME_CYCLE) + len(TIME_CYCLE)) % len(TIME_CYCLE)
 
@@ -230,7 +230,7 @@ class OceanFishing(BaseCog["Graha"]):
         for idx in range(count):
             dest, time = self.voyage_cache[route][(start_index + idx) % 144]
             upcoming_voyages.append(
-                Voyage(datetime.datetime.fromtimestamp((start_index + idx + 1) * 7200, tz=datetime.UTC), dest, time)
+                Voyage(datetime.datetime.fromtimestamp((start_index + idx + 1) * 7200, tz=datetime.UTC), dest, time),
             )
 
         return upcoming_voyages
@@ -257,7 +257,7 @@ class OceanFishing(BaseCog["Graha"]):
             )
         else:
             current_fmt += (
-                "The registration window for this voyage will open at" f" {current_start_time} ({current_start_time_rel})."
+                f"The registration window for this voyage will open at {current_start_time} ({current_start_time_rel})."
             )
         embed.add_field(name="Current Route", value=current_fmt, inline=False)
 
@@ -279,7 +279,7 @@ class OceanFishing(BaseCog["Graha"]):
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.describe(ephemeral="Whether to show the data privately to you, or not.")
-    async def ocean_fishing_times(self, interaction: Interaction, ephemeral: bool = True) -> None:
+    async def ocean_fishing_times(self, interaction: Interaction, ephemeral: bool = True) -> None:  # noqa: FBT001, FBT002 # required by dpy
         """Shows your local time against the current ocean fishing schedule windows and their routes!"""
         now = datetime.datetime.now(datetime.UTC)
 

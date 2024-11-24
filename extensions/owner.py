@@ -10,7 +10,7 @@ import asyncio
 import io
 import pathlib
 import re
-import subprocess
+import subprocess  # accepted
 import time
 import traceback
 from typing import TYPE_CHECKING, Literal
@@ -79,7 +79,7 @@ class Admin(BaseCog["Graha"]):
         except commands.ExtensionError as err:
             await ctx.send(f"{err.__class__.__name__}: {err}")
         else:
-            await ctx.message.add_reaction(ctx.tick(True))
+            await ctx.message.add_reaction(ctx.tick(True))  # noqa: FBT003 # quick shortcut
 
     @commands.command()
     async def unload(self, ctx: Context, *, module: str = commands.param(converter=ModuleConverter)) -> None:
@@ -89,7 +89,7 @@ class Admin(BaseCog["Graha"]):
         except commands.ExtensionError as err:
             await ctx.send(f"{err.__class__.__name__}: {err}")
         else:
-            await ctx.message.add_reaction(ctx.tick(True))
+            await ctx.message.add_reaction(ctx.tick(True))  # noqa: FBT003 # quick shortcut
 
     @commands.group(name="reload", invoke_without_command=True)
     async def _reload(self, ctx: Context, *, module: str = commands.param(converter=ModuleConverter)) -> None:
@@ -100,10 +100,12 @@ class Admin(BaseCog["Graha"]):
             return await self.bot.load_extension(module)
         except commands.ExtensionError as err:
             await ctx.send(f"{err.__class__.__name__}: {err}")
-            await ctx.message.add_reaction(ctx.tick(False))
-            return
+            await ctx.message.add_reaction(ctx.tick(False))  # noqa: FBT003 # quick shortcut
+            return None
 
-        await ctx.message.add_reaction(ctx.tick(True))
+        await ctx.message.add_reaction(ctx.tick(True))  # noqa: FBT003 # quick shortcut
+
+        return None
 
     async def _git_pull(self) -> list[str]:
         process = await asyncio.create_subprocess_shell("git pull", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -112,12 +114,8 @@ class Admin(BaseCog["Graha"]):
         return [output.decode() for output in result]
 
     @_reload.command(name="all")
-    async def _reload_all(self, ctx: Context, update: bool = False) -> None:
+    async def _reload_all(self, ctx: Context) -> None:
         """Reloads all loaded extensions whilst optionally pulling from git."""
-
-        if update:
-            async with ctx.typing():
-                _, _ = await self._git_pull()
 
         sorted_exts = sorted(self.bot.extensions)
 
@@ -133,11 +131,11 @@ class Admin(BaseCog["Graha"]):
 
         failed_exts = [ext for failed, ext in results if failed is False]
         if failed_exts:
-            await ctx.message.add_reaction(ctx.tick(False))
+            await ctx.message.add_reaction(ctx.tick(False))  # noqa: FBT003 # quick shortcut
             ret = "\n".join(failed_exts)
             await ctx.send(f"These extensions failed to be reloaded:\n\n{ret}")
         else:
-            await ctx.message.add_reaction(ctx.tick(True))
+            await ctx.message.add_reaction(ctx.tick(True))  # noqa: FBT003 # quick shortcut
 
     @commands.group(invoke_without_command=True)
     async def sql(self, ctx: Context, *, query: str) -> None:
@@ -150,7 +148,7 @@ class Admin(BaseCog["Graha"]):
             start = time.perf_counter()
             results = await strategy(query)
             dati = (time.perf_counter() - start) * 1000.0
-        except Exception:
+        except (ValueError, TypeError):
             await ctx.send(f"```py\n{traceback.format_exc()}\n```")
             return
 
@@ -168,7 +166,7 @@ class Admin(BaseCog["Graha"]):
         fmt = f"```\n{render}\n```\n*Returned {formats.plural(rows):row} in {dati:.2f}ms*"
         if len(fmt) > 2000:
             filep = io.BytesIO(fmt.encode("utf-8"))
-            await ctx.send("Too many results...", file=discord.File(filep, "results.txt"))
+            await ctx.send("Too many results...", files=[discord.File(filep, "results.txt")])
         else:
             await ctx.send(fmt)
 
@@ -191,14 +189,17 @@ class Admin(BaseCog["Graha"]):
         fmt = f"```\n{render}\n```"
         if len(fmt) > 2000:
             filep = io.BytesIO(fmt.encode("utf-8"))
-            await ctx.send("Too many results...", file=discord.File(filep, "results.txt"))
+            await ctx.send("Too many results...", files=[discord.File(filep, "results.txt")])
         else:
             await ctx.send(fmt)
 
     @commands.command()
     @commands.guild_only()
     async def sync(
-        self, ctx: GuildContext, guilds: Greedy[discord.Object], spec: Literal["~", "*", "^"] | None = None
+        self,
+        ctx: GuildContext,
+        guilds: Greedy[discord.Object],
+        spec: Literal["~", "*", "^"] | None = None,
     ) -> None:
         """
         Pass guild ids or pass a sync specification:-
@@ -221,7 +222,7 @@ class Admin(BaseCog["Graha"]):
                 fmt = await ctx.bot.tree.sync()
 
             await ctx.send(
-                f"Synced {formats.plural(len(fmt)):command} {'globally' if spec is None else 'to the current guild.'}"
+                f"Synced {formats.plural(len(fmt)):command} {'globally' if spec is None else 'to the current guild.'}",
             )
             return
 
