@@ -41,18 +41,18 @@ from utilities.shared.async_config import Config
 from utilities.shared.db import db_init
 from utilities.shared.reddit import RedditHandler
 
+if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
+    from typing import Self
+
+    from utilities._types.bot_config import Config as BotConfig
+
 try:
     import uvloop
 except ModuleNotFoundError:
     HAS_UVLOOP = False
 else:
     HAS_UVLOOP = True
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
-    from typing import Self
-
-    from utilities._types.bot_config import Config as BotConfig
 
 LOGGER = logging.getLogger("root.graha")
 jishaku.Flags.HIDE = True
