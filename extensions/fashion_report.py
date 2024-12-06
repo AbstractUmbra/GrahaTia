@@ -178,7 +178,7 @@ class FashionReport(BaseCog["Graha"]):
                 continue
 
             if self.weeks_since_start(dt) != int(match["week_num"]):
-                LOGGER.warning(
+                LOGGER.debug(
                     (
                         "[FashionReport] -> {Submission Filtering} :: Found a submission, "
                         "but doesn't match the expected week (wanted %s but got %s)"
