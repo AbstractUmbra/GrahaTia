@@ -419,7 +419,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
         await self.handle_dispatch(to_send)
 
-    @tasks.loop(time=datetime.time(hour=7, minute=45, tzinfo=datetime.UTC))
+    @tasks.loop(time=datetime.time(hour=8, minute=30, tzinfo=datetime.UTC))
     async def fashion_report_loop(self) -> None:
         now = datetime.datetime.now(datetime.UTC)
         if now.weekday() != 4:  # friday
