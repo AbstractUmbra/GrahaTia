@@ -223,7 +223,7 @@ class Context(commands.Context["Graha"], Generic[CogT_co]):
         await view.wait()
         return view.value
 
-    def tick(self, opt: bool | None, label: str | None = None) -> str:  # quick hack shortcut
+    def tick(self, opt: bool | None, label: str | None = None) -> str:  # noqa: FBT001 # quick hack shortcut
         lookup = {
             True: "<:TickYes:735498312861351937>",
             False: "<:CrossNo:735498453181923377>",

@@ -1098,7 +1098,7 @@ async def setup(bot: Graha) -> None:
     commands.Bot.on_error = on_error  # pyright: ignore[reportAttributeAccessIssue] # monkeypatching
 
 
-async def teardown(bot: Graha) -> None:  # expected by the extension handler
+async def teardown(bot: Graha) -> None:  # noqa: RUF029 # expected by the extension handler
     commands.Bot.on_error = old_on_error
     logging.getLogger().removeHandler(bot._stats_cog_gateway_handler)
     del bot._stats_cog_gateway_handler

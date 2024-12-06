@@ -6,11 +6,9 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from __future__ import annotations
 
-import asyncio
 import io
 import pathlib
 import re
-import subprocess  # accepted
 import time
 import traceback
 from typing import TYPE_CHECKING, Literal
@@ -106,12 +104,6 @@ class Admin(BaseCog["Graha"]):
         await ctx.message.add_reaction(ctx.tick(True))  # noqa: FBT003 # quick shortcut
 
         return None
-
-    async def _git_pull(self) -> list[str]:
-        process = await asyncio.create_subprocess_shell("git pull", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        result = await process.communicate()
-
-        return [output.decode() for output in result]
 
     @_reload.command(name="all")
     async def _reload_all(self, ctx: Context) -> None:

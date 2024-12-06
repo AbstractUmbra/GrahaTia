@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Literal
 
 import discord
 from discord import Enum, app_commands
-from discord.app_commands.commands import _populate_choices  # we do some cheating
+from discord.app_commands.commands import _populate_choices  # noqa: PLC2701 # we do some cheating
 from discord.enums import try_enum
 from discord.ext import commands
 
