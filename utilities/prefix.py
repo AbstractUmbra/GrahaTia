@@ -17,11 +17,17 @@ if TYPE_CHECKING:
 
 
 def callable_prefix(bot: Graha, message: Message, /) -> list[str]:
+    first_char = message.author.display_name[0]
+    lower, upper = first_char.lower(), first_char.upper()
+
+    ret = [lower, upper, "gt "]
     if message.guild is None:
-        return commands.when_mentioned_or("gt ")(bot, message)
+        return commands.when_mentioned_or(*ret)(bot, message)
 
     guild_prefixes: list[str] | None = bot._prefix_data.get(str(message.guild.id))
     if guild_prefixes is None:
-        guild_prefixes = ["gt "]
+        guild_prefixes = ret
+    else:
+        guild_prefixes.extend(ret)
 
     return commands.when_mentioned_or(*guild_prefixes)(bot, message)
