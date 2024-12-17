@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from extensions.gates import GATEs
     from extensions.ocean_fishing import OceanFishing as OceanFishingCog
     from extensions.resets import Resets as ResetsCog
+    from extensions.triple_triad import TripleTriad
     from utilities.context import Interaction
     from utilities.shared._types.xiv.record_aliases.subscription import (
         EventRecord as SubscriptionEventRecord,
@@ -154,6 +155,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         self.ocean_fishing_loop.start()
         self.jumbo_cactpot_loop.start()
         self.gate_loop.start()
+        self.open_tournament_loop.start()
 
     async def cog_unload(self) -> None:
         self.daily_reset_loop.cancel()
@@ -162,6 +164,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         self.ocean_fishing_loop.cancel()
         self.jumbo_cactpot_loop.cancel()
         self.gate_loop.cancel()
+        self.open_tournament_loop.cancel()
 
     async def _set_subscriptions(
         self,
@@ -183,7 +186,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                     thread_id = EXCLUDED.thread_id;
                 """
 
-        subscription_bits = BitString.from_int(subscription_value, length=10)
+        subscription_bits = BitString.from_int(subscription_value, length=64)
         await self.bot.pool.execute(
             query,
             guild_id,
@@ -350,7 +353,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(1, length=10))  # pyright: ignore[reportAssignmentType] # stub shenanigans
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(1, length=64))  # pyright: ignore[reportAssignmentType] # stub shenanigans
 
         if not records:
             LOGGER.warning("[EventSub] -> [DailyReset] :: No subscriptions. Exiting.")
@@ -393,7 +396,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(2, length=10))  # pyright: ignore[reportAssignmentType] # stub shenanigans
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(2, length=64))  # pyright: ignore[reportAssignmentType] # stub shenanigans
 
         if not records:
             LOGGER.warning("[EventSub] -> [WeeklyReset] :: No subscriptions. Exiting.")
@@ -431,7 +434,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(4, length=10))  # pyright: ignore[reportAssignmentType] # stub shenanigans
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(4, length=64))  # pyright: ignore[reportAssignmentType] # stub shenanigans
         if not records:
             LOGGER.warning("[EventSub] -> [FashionReport] :: No subscriptions. Exiting.")
             return
@@ -469,7 +472,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(8, length=10))  # pyright: ignore[reportAssignmentType] # stubs
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(8, length=64))  # pyright: ignore[reportAssignmentType] # stubs
         if not records:
             LOGGER.warning("[EventSub] -> [OceanFishing] :: No subscriptions. Exiting.")
             return
@@ -522,7 +525,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
         records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(
             query,
-            BitString.from_int(bitstring_value, length=10),
+            BitString.from_int(bitstring_value, length=64),
         )  # pyright: ignore[reportAssignmentType] # stub shenanigans
 
         if not records:
@@ -552,7 +555,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                 WHERE subscriptions & $1 = $1;
                 """
 
-        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(256, length=10))  # pyright: ignore[reportAssignmentType] # stub shenanigans
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(256, length=64))  # pyright: ignore[reportAssignmentType] # stub shenanigans
 
         if not records:
             LOGGER.warning("[EventSub] -> [GATEs] :: No subscriptions. Exiting.")
@@ -572,6 +575,43 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             webhook = await self._resolve_webhook_from_cache(conf, log_key="([GATEs])")
 
             if not webhook:
+                continue
+
+            to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], config=conf))
+
+        await self.handle_dispatch(to_send)
+
+    @tasks.loop(hours=2)
+    async def open_tournament_loop(self) -> None:
+        now = datetime.datetime.now(datetime.UTC)
+
+        query = """
+                SELECT *
+                FROM event_remind_subscriptions
+                WHERE subscripts & $1 = $1;
+                """
+
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(512, length=64))  # pyright: ignore[reportAssignmentType] # stub shenanigans
+
+        if not records:
+            LOGGER.warning("[EventSub] -> [TT OpenTournament] :: No subscriptions. Exiting.")
+            return
+
+        tt_cog: TripleTriad | None = self.bot.get_cog("TripleTriad")  # pyright: ignore[reportAssignmentType] # cog downcasting
+        if not tt_cog:
+            LOGGER.error("[EventSub] -> [TT OpenTournament] :: Could not load the Triple Triad cog.")
+            return
+
+        embed = tt_cog.generate_open_tournament_embed(now)
+
+        to_send: list[Coroutine[Any, Any, None]] = []
+
+        for record in records:
+            conf = await self.get_sub_config(record["guild_id"])
+            webhook = await self._resolve_webhook_from_cache(conf, log_key="([TT OpenTournament])")
+
+            if not webhook:
+                await conf.delete()
                 continue
 
             to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], config=conf))

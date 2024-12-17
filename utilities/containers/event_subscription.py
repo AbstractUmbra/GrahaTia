@@ -43,6 +43,7 @@ class EventSubConfig:
         "guild_id",
         "jumbo_cactpot_role_id",
         "ocean_fishing_role_id",
+        "open_tournament_role_id",
         "subscriptions",
         "thread_id",
         "webhook_id",
@@ -64,6 +65,7 @@ class EventSubConfig:
         jumbo_cactpot_role_id: int | None = None,
         ocean_fishing_role_id: int | None = None,
         gate_role_id: int | None = None,
+        open_tournament_role_id: int | None = None,
         webhook_id: int | None = None,
     ) -> None:
         self._bot: Graha = bot
@@ -77,6 +79,7 @@ class EventSubConfig:
         self.jumbo_cactpot_role_id: int | None = jumbo_cactpot_role_id
         self.ocean_fishing_role_id: int | None = ocean_fishing_role_id
         self.gate_role_id: int | None = gate_role_id
+        self.open_tournament_role_id: int | None = open_tournament_role_id
         self.webhook_id: int | None = webhook_id
 
     def __repr__(self) -> str:
@@ -96,6 +99,7 @@ class EventSubConfig:
             jumbo_cactpot_role_id=record["jumbo_cactpot_role_id"],
             ocean_fishing_role_id=record["ocean_fishing_role_id"],
             gate_role_id=record["gate_role_id"],
+            open_tournament_role_id=record["open_tournament_role_id"],
             webhook_id=record["webhook_id"],
         )
 
@@ -170,6 +174,13 @@ class EventSubConfig:
     def gate_role(self) -> Role | None:
         if self.guild and self.gate_role_id:
             return self.guild.get_role(self.gate_role_id)
+
+        return None
+
+    @property
+    def open_tournament_role(self) -> Role | None:
+        if self.guild and self.open_tournament_role_id:
+            return self.guild.get_role(self.open_tournament_role_id)
 
         return None
 

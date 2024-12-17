@@ -81,3 +81,7 @@ class SubscribedEventsFlags(DpyFlags):
     @flag_value
     def gate(self) -> int:
         return 1 << 8
+
+    @flag_value
+    def open_tournament(self) -> int:
+        return 1 << 9
