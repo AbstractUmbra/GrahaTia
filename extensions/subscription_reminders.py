@@ -53,7 +53,7 @@ class EventSubView(BaseView):
     async def on_timeout(self) -> None:
         return
 
-    @discord.ui.select(min_values=1, max_values=9)
+    @discord.ui.select(min_values=1, max_values=10)
     async def sub_selection(self, interaction: Interaction, item: discord.ui.Select[Self]) -> None:
         assert interaction.guild  # guarded in earlier check
         await interaction.response.defer()
@@ -141,6 +141,12 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             value="256",
             description="Opt into reminders about GATE events opening.",
             emoji="\U0001f3b2",
+        ),
+        discord.SelectOption(
+            label="Triple Triad Open Tournamens",
+            value="512",
+            description="Opt into reminders about TT Open Tournament signups.",
+            emoji="\U0001f3c6",
         ),
     ]
     __cog_is_app_commands_group__ = True
