@@ -1,36 +1,36 @@
-[tool.poetry]
+[project]
 name = "Graha Tia"
 version = "0.0.1"
 description = "A helper bot for organizing your FFXIV needs."
-authors = ["Alex Nørgaard <umbra@abstractumbra.dev>"]
+authors = [{ name = "Alex Nørgaard", email = "umbra@abstractumbra.dev" }]
+dependencies = [
+    "discord-py[speed] @ git+https://github.com/Rapptz/discord.py.git@master",
+    "discord-ext-menus @ git+https://github.com/Rapptz/discord-ext-menus@master",
+    "jishaku",
+    "mystbin-py",
+    "asyncpg",
+    "sentry-sdk[aiohttp,asyncpg]",
+    "lru-dict",
+    "parsedatetime",
+    "python-dateutil",
+    "psutil",
+    "pygit2",
+    "beautifulsoup4",
+    "lxml",
+]
+requires-python = "<4.0,>=3.12"
+readme = "README.md"
+license = { text = "MPL2.0" }
 
-[tool.poetry.dependencies]
-python = "^3.12"
-"discord.py" = { git = "https://github.com/Rapptz/discord.py.git", extras = [
-    "speed",
-], rev = "master" }
-discord-ext-menus = { git = "https://github.com/Rapptz/discord-ext-menus", rev = "master" }
-jishaku = "*"
-"mystbin.py" = "*"
-asyncpg = "*"
-sentry-sdk = { version = "*", extras = ["asyncpg", "aiohttp"] }
-lru-dict = "*"
-parsedatetime = "*"
-python-dateutil = "*"
-psutil = "*"
-pygit2 = "*"
-beautifulsoup4 = "*"
-lxml = "*"
+[tool.pdm]
+distribution = false
 
-[tool.poetry.group.dev.dependencies]
-ruff = "*"
-typing-extensions = "*"
-asyncpg-stubs = "*"
-"pre-commit" = "*"
+[tool.pdm.dev-dependencies]
+dev = ["ruff", "typing-extensions", "asyncpg-stubs", "pre-commit"]
+speed = ["orjson", "uvloop"]
 
-[tool.poetry.group.speed.dependencies]
-orjson = "*"
-uvloop = "*"
+[tool.pdm.build]
+includes = []
 
 [tool.ruff]
 line-length = 125
@@ -149,8 +149,6 @@ inline-quotes = "single"
 
 [tool.pyright]
 include = ["bot.py", "utilities/**/*.py", "extensions/**/*.py"]
-venv = ".venv"
-venvPath = "."
 useLibraryCodeForTypes = true
 typeCheckingMode = "basic"
 pythonVersion = "3.12"
@@ -168,7 +166,3 @@ reportGeneralTypeIssues = "error"
 reportDuplicateImport = "error"
 reportUntypedFunctionDecorator = "error"
 reportUnnecessaryTypeIgnoreComment = "warning"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
