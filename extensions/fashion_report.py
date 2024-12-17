@@ -10,7 +10,7 @@ import asyncio
 import datetime
 import logging
 import re
-from typing import TYPE_CHECKING, ClassVar, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import discord
 from discord import app_commands
@@ -74,7 +74,7 @@ class KaiyokoSubmission(NamedTuple):
 
 class FashionReport(BaseCog["Graha"]):
     AuthHandler: RedditHandler
-    FASHION_REPORT_START: ClassVar[datetime.datetime] = datetime.datetime(
+    FASHION_REPORT_START: datetime.datetime = datetime.datetime(
         year=2018,
         month=1,
         day=26,

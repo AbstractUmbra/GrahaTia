@@ -102,8 +102,8 @@ class Misc(BaseCog["Graha"]):
         embed.description = fmt
 
         for tz, name in TZ_NAME_MAPPING.items():
-            _local = utc.astimezone(zoneinfo.ZoneInfo(tz))
-            embed.add_field(name=name, value=self._clean_dt(_local), inline=False)
+            local = utc.astimezone(zoneinfo.ZoneInfo(tz))
+            embed.add_field(name=name, value=self._clean_dt(local), inline=False)
 
         await interaction.followup.send(embed=embed, ephemeral=ephemeral)
 

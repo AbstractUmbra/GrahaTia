@@ -185,8 +185,8 @@ class OceanFishing(BaseCog["Graha"]):
         self.voyage_cache[route] = [(item.d, item.t) for item in cache]
 
     def _calculate_voyages(self, *, route: Route, dt: datetime.datetime, count: int) -> list[Voyage]:
-        _destination_cycle = DESTINATION_CYCLE[route]
-        _time_cycle = TIME_CYCLE[route]
+        destination_cycle = DESTINATION_CYCLE[route]
+        time_cycle = TIME_CYCLE[route]
         adjusted_date = (dt + datetime.timedelta(hours=9)) - datetime.timedelta(minutes=45)
         day = math.floor((adjusted_date.timestamp() - 1593302400) / 86400)
         hour = adjusted_date.hour
@@ -207,9 +207,9 @@ class OceanFishing(BaseCog["Graha"]):
         upcoming_voyages: list[Voyage] = []
 
         while len(upcoming_voyages) < count:
-            _current_destination = _destination_cycle[destination_index]
-            _current_time = _time_cycle[time_index]
-            upcoming_voyages.append(Voyage(self._from_epoch(day, hour), _current_destination, _current_time))
+            current_destination = destination_cycle[destination_index]
+            current_time = time_cycle[time_index]
+            upcoming_voyages.append(Voyage(self._from_epoch(day, hour), current_destination, current_time))
 
             if hour == 23:
                 day += 1
