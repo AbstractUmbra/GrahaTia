@@ -658,6 +658,22 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         await discord.utils.sleep_until(then)
         LOGGER.info("[EventSub] -> [OceanFishing] :: Woken up at %s", then)
 
+    @open_tournament_loop.before_loop
+    async def open_tournament_before_loop(self) -> None:
+        await self.bot.wait_until_ready()
+
+        now = datetime.datetime.now(datetime.UTC)
+        then = now + datetime.timedelta(hours=1) if now.hour % 2 == 0 else now
+
+        if then.minute >= 45:
+            # exceeded warning time, alert on next
+            then += datetime.timedelta(hours=2)
+        then = then.replace(minute=45, second=0, microsecond=0)
+
+        LOGGER.info("[EventSub] -> [TT OpenTournament] :: Sleeping until %s", then)
+        await discord.utils.sleep_until(then)
+        LOGGER.info("[EventSub] -> [TT OpenTournament] :: Woken up at %s", then)
+
     @jumbo_cactpot_loop.before_loop
     @weekly_reset_loop.before_loop
     @daily_reset_loop.before_loop
