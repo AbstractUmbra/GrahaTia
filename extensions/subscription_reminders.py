@@ -594,7 +594,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         query = """
                 SELECT *
                 FROM event_remind_subscriptions
-                WHERE subscripts & $1 = $1;
+                WHERE subscriptions & $1 = $1;
                 """
 
         records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(512, length=64))  # pyright: ignore[reportAssignmentType] # stub shenanigans
