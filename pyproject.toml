@@ -1,5 +1,5 @@
 [project]
-name = "Graha Tia"
+name = "Graha-Tia"
 version = "0.0.1"
 description = "A helper bot for organizing your FFXIV needs."
 authors = [{ name = "Alex Nørgaard", email = "umbra@abstractumbra.dev" }]
@@ -22,12 +22,13 @@ requires-python = "<4.0,>=3.12"
 readme = "README.md"
 license = { text = "MPL2.0" }
 
+[dependency-groups]
+dev = ["ruff", "typing-extensions", "asyncpg-stubs"]
+super-dev = ["ipython", "ipykernel"]
+speed = ["orjson", "uvloop"]
+
 [tool.pdm]
 distribution = false
-
-[tool.pdm.dev-dependencies]
-dev = ["ruff", "typing-extensions", "asyncpg-stubs", "pre-commit"]
-speed = ["orjson", "uvloop"]
 
 [tool.pdm.build]
 includes = []
