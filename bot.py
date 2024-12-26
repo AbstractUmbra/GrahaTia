@@ -110,9 +110,9 @@ class RemoveNoise(logging.Filter):
 
 
 class LogHandler:
-    def __init__(self, *, stream: bool = True) -> None:
+    def __init__(self, *, max_bytes: int | None = None, stream: bool = True) -> None:
         self.log: logging.Logger = logging.getLogger()
-        self.max_bytes: int = 32 * 1024 * 1024
+        self.max_bytes: int = max_bytes or 10 * 1024 * 1024
         self.logging_path = pathlib.Path("./logs/")
         self.logging_path.mkdir(exist_ok=True)
         self.stream: bool = stream
