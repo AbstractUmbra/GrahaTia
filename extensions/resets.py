@@ -19,6 +19,7 @@ from utilities.shared.time import Weekday, resolve_next_weekday
 
 if TYPE_CHECKING:
     from bot import Graha
+    from extensions.triple_triad import TripleTriad
     from utilities.context import Interaction
 
 
@@ -189,7 +190,13 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
 
         weekly_dt_full = discord.utils.format_dt(next_weekly, "F")
         weekly_dt_relative = discord.utils.format_dt(next_weekly, "R")
-        weekly_fmt = f"Resets at {weekly_dt_full} ({weekly_dt_relative})\n\n" + "\n".join(self.WEEKLIES)
+        weeklies_fmt = self.WEEKLIES
+        tt: TripleTriad | None = self.bot.get_cog("TripleTriad")  # pyright: ignore[reportAssignmentType] # cog downcasting
+        if tt:
+            tournament_prose = "TT Tourament entry" if tt._in_tournament_week(next_weekly) else "TT Tournament rewards"
+            weeklies_fmt.insert(3, tournament_prose)
+
+        weekly_fmt = f"Resets at {weekly_dt_full} ({weekly_dt_relative})\n\n" + "\n".join(weeklies_fmt)
 
         embed = discord.Embed(colour=discord.Colour.random())
         embed.set_thumbnail(

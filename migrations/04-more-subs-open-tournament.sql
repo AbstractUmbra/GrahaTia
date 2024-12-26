@@ -4,4 +4,4 @@ ALTER TABLE event_remind_subscriptions
     ALTER COLUMN subscriptions SET DEFAULT '0000000000000000000000000000000000000000000000000000000000000000'::bit(64);
 
 ALTER TABLE event_remind_subscriptions
-    ADD COLUMN open_tournament_role_id BIGINT;
+    ADD COLUMN tt_open_tournament_role_id BIGINT;

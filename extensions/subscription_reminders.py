@@ -143,9 +143,15 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             emoji="\U0001f3b2",
         ),
         discord.SelectOption(
-            label="Triple Triad Open Tournamens",
+            label="Triple Triad Open Tournaments",
             value="512",
             description="Opt into reminders about TT Open Tournament signups.",
+            emoji="\U00002663\U0000fe0f",
+        ),
+        discord.SelectOption(
+            label="Triple Triad Tournaments",
+            value="1024",
+            description="Opt into reminders about TT Tournament signups.",
             emoji="\U0001f3c6",
         ),
     ]
@@ -162,6 +168,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         self.jumbo_cactpot_loop.start()
         self.gate_loop.start()
         self.open_tournament_loop.start()
+        self.tt_tournament_loop.start()
 
     async def cog_unload(self) -> None:
         self.daily_reset_loop.cancel()
@@ -171,6 +178,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         self.jumbo_cactpot_loop.cancel()
         self.gate_loop.cancel()
         self.open_tournament_loop.cancel()
+        self.tt_tournament_loop.cancel()
 
     async def _set_subscriptions(
         self,
@@ -624,6 +632,45 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
         await self.handle_dispatch(to_send)
 
+    @tasks.loop(time=WEEKLY_RESET_REMINDER_TIME)
+    async def tt_tournament_loop(self) -> None:
+        now = datetime.datetime.now(datetime.UTC)
+        if now.weekday() != 1:  # tuesday
+            return
+
+        query = """
+                SELECT *
+                FROM event_remind_subscriptions
+                WHERE subscriptions & $1 = $1;
+                """
+
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(1024, length=64))  # pyright: ignore[reportAssignmentType] # stub shenanigans
+
+        if not records:
+            LOGGER.warning("[EventSub] -> [TT Tournament] :: No subscriptions. Exiting.")
+            return
+
+        tt_cog: TripleTriad | None = self.bot.get_cog("TripleTriad")  # pyright: ignore[reportAssignmentType] # cog downcasting
+        if not tt_cog:
+            LOGGER.error("[EventSub] -> [TT Tournament] :: Could not load the Triple Triad cog.")
+            return
+
+        embed = tt_cog.generate_tournament_embed(now)
+
+        to_send: list[Coroutine[Any, Any, None]] = []
+
+        for record in records:
+            conf = await self.get_sub_config(record["guild_id"])
+            webhook = await self._resolve_webhook_from_cache(conf, log_key="([TT Tournament])")
+
+            if not webhook:
+                await conf.delete()
+                continue
+
+            to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], config=conf))
+
+        await self.handle_dispatch(to_send)
+
     @gate_loop.before_loop
     async def before_gate_loop(self) -> None:
         await self.bot.wait_until_ready()
@@ -678,6 +725,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     @weekly_reset_loop.before_loop
     @daily_reset_loop.before_loop
     @fashion_report_loop.before_loop
+    @tt_tournament_loop.before_loop
     async def before_loop(self) -> None:
         await self.bot.wait_until_ready()
 
