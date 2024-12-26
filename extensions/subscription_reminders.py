@@ -26,6 +26,8 @@ if TYPE_CHECKING:
     from collections.abc import Coroutine, Sequence
     from typing import Self
 
+    from discord.ui.item import Item
+
     from bot import Graha
     from extensions.fashion_report import FashionReport as FashionReportCog
     from extensions.gates import GATEs
@@ -45,13 +47,35 @@ class NoKaiyokoPost(Exception):
 
 
 class EventSubView(BaseView):
-    def __init__(self, *, timeout: float | None = 180.0, options: list[SelectOption], cog: EventSubscriptions) -> None:
+    def __init__(
+        self,
+        *,
+        timeout: float | None = 180.0,
+        author: discord.abc.Snowflake,
+        options: list[SelectOption],
+        cog: EventSubscriptions,
+    ) -> None:
         super().__init__(timeout=timeout)
+        self.author = author
         self.sub_selection.options = options
         self.cog: EventSubscriptions = cog
 
     async def on_timeout(self) -> None:
         return
+
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        return interaction.user.id == self.author.id
+
+    async def on_error(self, interaction: Interaction, error: Exception, item: Item[Self]) -> None:
+        if isinstance(error, app_commands.CheckFailure):
+            if interaction.response.is_done() and not interaction.is_expired():
+                meth = interaction.followup.send
+            else:
+                meth = interaction.response.send_message
+
+            await meth("Sorry, this functionality is not intended for you!")
+
+        await super().on_error(interaction, error, item)
 
     @discord.ui.select(min_values=1, max_values=10)
     async def sub_selection(self, interaction: Interaction, item: discord.ui.Select[Self]) -> None:
@@ -308,7 +332,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         for (_, value), option in zip(config.subscriptions, options, strict=False):
             option.default = value
 
-        view = EventSubView(options=options, cog=self)
+        view = EventSubView(author=interaction.user, options=options, cog=self)
         return await interaction.followup.send(
             content="Please select which reminders you wish to recieve in the following dropdown!",
             view=view,
@@ -397,11 +421,6 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     async def weekly_reset_loop(self) -> None:
         now = datetime.datetime.now(datetime.UTC)
         if now.weekday() != 1:  # tuesday
-            LOGGER.warning(
-                "[EventSub] -> [Weekly reset] :: Attempted to run on a non-Tuesday: '%s (day # '%s')'",
-                now.strftime("%A"),
-                now.weekday(),
-            )
             return
 
         query = """
