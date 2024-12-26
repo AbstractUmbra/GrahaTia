@@ -1,6 +1,3 @@
 [submodule "utilities"]
 	path = utilities/shared
 	url = git@github.com:AbstractUmbra/_utilities.git
-[submodule "graha-worker"]
-	path = worker
-	url = git@github.com:AbstractUmbra/graha-worker.git
