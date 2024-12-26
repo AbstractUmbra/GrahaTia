@@ -59,8 +59,8 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
             dt = resolve_next_weekday(
                 target=Weekday.saturday,
                 current_week_included=True,
-                before_time=datetime.time(hour=0, minute=0, second=0, microsecond=0, tzinfo=datetime.UTC),
-            )
+                before_time=datetime.time(tzinfo=datetime.UTC),
+            ).replace(hour=0, minute=0, second=0, microsecond=0)
             wd = dt.weekday()
 
         # special case sunday for NA
@@ -99,6 +99,7 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
 
             await discord.utils.sleep_until(when)
             return Region.JP, 64
+
         when = resolve_next_weekday(
             target=Weekday.saturday,
             source=dt,
