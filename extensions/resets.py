@@ -191,7 +191,7 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
 
         weekly_dt_full = discord.utils.format_dt(next_weekly, "F")
         weekly_dt_relative = discord.utils.format_dt(next_weekly, "R")
-        weeklies_fmt = self.WEEKLIES
+        weeklies_fmt = self.WEEKLIES[:]
         tt: TripleTriad | None = self.bot.get_cog("TripleTriad")  # pyright: ignore[reportAssignmentType] # cog downcasting
         if tt:
             tournament_prose = "TT Tourament entry" if tt._in_tournament_week(next_weekly) else "TT Tournament rewards"
