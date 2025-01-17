@@ -16,7 +16,9 @@ from utilities.containers.event_subscription import (
     EventSubConfig,
     MisconfiguredSubscription,
 )
-from utilities.exceptions import NoSubmissionFound
+
+# from utilities.exceptions import NoSubmissionFound   # noqa: ERA001 # will return when Kaiyoko does
+from utilities.flags import SubscribedEventsFlags
 from utilities.shared.cache import cache
 from utilities.shared.cog import BaseCog
 from utilities.shared.converters import WebhookTransformer  # noqa: TC001
@@ -84,7 +86,7 @@ class EventSubView(BaseView):
 
         config = await self.cog.get_sub_config(interaction.guild.id)
 
-        resolved_flags = sum(map(int, self.sub_selection.values))
+        resolved_flags = SubscribedEventsFlags._from_value(sum(map(int, self.sub_selection.values)))
 
         if isinstance(interaction.channel, discord.Thread):
             current_channel = interaction.channel.parent
@@ -104,8 +106,16 @@ class EventSubView(BaseView):
         await self.cog._set_subscriptions(interaction.guild.id, resolved_flags, channel_id, thread_id)
         self.cog.get_sub_config.invalidate(self.cog, interaction.guild.id)
 
+        content = "Your subscription choices have been recorded, thank you!"
+        if resolved_flags.fashion_report:
+            content += (
+                "\nPlease note that the Fashion Report notifications are currently disabled due to "
+                "[Kaiyoko taking a step back](<https://x.com/KaiyokoStar/status/1879190538165145961>) and their replacement "
+                "not presenting the information in a parseable format. My apologies."
+            )
+
         await interaction.edit_original_response(
-            content="Your subscription choices have been recorded, thank you!",
+            content=content,
             view=None,
         )
 
@@ -186,8 +196,8 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         self.avatar_url: str = "https://static.abstractumbra.dev/images/graha.png"
         self.daily_reset_loop.start()
         self.weekly_reset_loop.start()
-        self.fashion_report_loop.add_exception_type(NoSubmissionFound)
-        self.fashion_report_loop.start()
+        # self.fashion_report_loop.add_exception_type(NoSubmissionFound)  # noqa: ERA001 # will return when Kaiyoko does
+        # self.fashion_report_loop.start()  # noqa: ERA001 # will return when Kaiyoko does
         self.ocean_fishing_loop.start()
         self.jumbo_cactpot_loop.start()
         self.gate_loop.start()
@@ -197,7 +207,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     async def cog_unload(self) -> None:
         self.daily_reset_loop.cancel()
         self.weekly_reset_loop.cancel()
-        self.fashion_report_loop.cancel()
+        # self.fashion_report_loop.cancel()  # noqa: ERA001 # will return when Kaiyoko does
         self.ocean_fishing_loop.cancel()
         self.jumbo_cactpot_loop.cancel()
         self.gate_loop.cancel()
@@ -207,7 +217,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     async def _set_subscriptions(
         self,
         guild_id: int,
-        subscription_value: int,
+        subscriptions: SubscribedEventsFlags,
         channel_id: int | None = None,
         thread_id: int | None = None,
     ) -> None:
@@ -224,7 +234,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                     thread_id = EXCLUDED.thread_id;
                 """
 
-        subscription_bits = BitString.from_int(subscription_value, length=64)
+        subscription_bits = subscriptions.to_bitstring()
         await self.bot.pool.execute(
             query,
             guild_id,

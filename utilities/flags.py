@@ -10,6 +10,7 @@ import operator
 from functools import reduce
 from typing import TYPE_CHECKING, Self
 
+from asyncpg import BitString
 from discord.flags import BaseFlags as DpyFlags, fill_with_flags, flag_value
 
 if TYPE_CHECKING:
@@ -45,6 +46,9 @@ class SubscribedEventsFlags(DpyFlags):
         self = cls.__new__(cls)
         self.value = self.DEFAULT_VALUE
         return self
+
+    def to_bitstring(self) -> BitString:
+        return BitString.from_int(self.value, length=64)
 
     @flag_value
     def daily_resets(self) -> int:

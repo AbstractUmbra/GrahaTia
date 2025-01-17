@@ -89,7 +89,8 @@ class FashionReport(BaseCog["Graha"]):
         super().__init__(bot)
         self.reset_cache.start()
         self.current_report: KaiyokoSubmission = MISSING
-        self._report_task: asyncio.Task[None] = asyncio.create_task(self._wait_for_report())
+        # self._report_task: asyncio.Task[None] = asyncio.create_task(self._wait_for_report())  # noqa: ERA001
+        # # will return when Kaiyoko does
         self._ready: asyncio.Event = asyncio.Event()
 
     async def cog_load(self) -> None:
@@ -99,7 +100,7 @@ class FashionReport(BaseCog["Graha"]):
         self._ready.set()
 
     def cog_unload(self) -> None:
-        self._report_task.cancel("Unloading FashionReport cog.")
+        # self._report_task.cancel("Unloading FashionReport cog.")  # noqa: ERA001 # will return when Kaiyoko does
         self.reset_cache.cancel()
         self._ready.clear()
 
@@ -232,6 +233,12 @@ class FashionReport(BaseCog["Graha"]):
     @app_commands.describe(ephemeral="Whether to show the data privately to you, or not.")
     async def fashion_report_app_cmd(self, interaction: Interaction, ephemeral: bool = True) -> None:  # noqa: FBT001, FBT002 # required by dpy
         """Get the latest available Fashion Report information from KaiyokoStar!"""
+
+        return await interaction.response.send_message(
+            "Sorry, this functionality is currently disabled due to "
+            "[Kaiyoko taking a step back](<https://x.com/KaiyokoStar/status/1879190538165145961>). "
+            "I apologise for the inconvenience.",
+        )
         if not self.current_report:
             return await interaction.response.send_message(
                 "Sorry, but I haven't found the post from Kaiyoko yet, try again later?",
@@ -244,6 +251,12 @@ class FashionReport(BaseCog["Graha"]):
     @commands.group(name="fashionreport", aliases=["fr", "fashion-report"], invoke_without_command=True)
     async def fashion_report(self, ctx: Context) -> None:
         """Fetch the latest fashion report data from /u/Kaiyoko."""
+        await ctx.send(
+            "Sorry, this functionality is currently disabled due to "
+            "[Kaiyoko taking a step back](<https://x.com/KaiyokoStar/status/1879190538165145961>). "
+            "I apologise for the inconvenience.",
+        )
+        return
 
         if self.current_report:
             embed = self.generate_fashion_embed()
