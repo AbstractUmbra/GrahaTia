@@ -264,7 +264,7 @@ class Stats(BaseCog["Graha"]):
 
     def get_last_commits(self, count: int = 3) -> str:
         repo = pygit2.Repository(".git")  # pyright: ignore[reportPrivateImportUsage] module not exported by upstream
-        commits = list(itertools.islice(repo.walk(repo.head.target, pygit2.enums.SortMode.TOPOLOGICAL), count))  # pyright: ignore[reportAttributeAccessIssue] item defintion issue in upstream types
+        commits = list(itertools.islice(repo.walk(repo.head.target, pygit2.enums.SortMode.TOPOLOGICAL), count))  # pyright: ignore[reportAttributeAccessIssue] item definition issue in upstream types
         return "\n".join(self.format_commit(c) for c in commits)
 
     @commands.command()
