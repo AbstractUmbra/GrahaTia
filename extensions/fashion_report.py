@@ -238,6 +238,7 @@ class FashionReport(BaseCog["Graha"]):
             "Sorry, this functionality is currently disabled due to "
             "[Kaiyoko taking a step back](<https://x.com/KaiyokoStar/status/1879190538165145961>). "
             "I apologise for the inconvenience.",
+            ephemeral=ephemeral,
         )
         if not self.current_report:
             return await interaction.response.send_message(
