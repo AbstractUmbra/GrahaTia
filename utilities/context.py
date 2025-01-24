@@ -11,7 +11,7 @@ from __future__ import annotations
 import datetime
 import secrets
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 import discord
 from discord.ext import commands
@@ -79,7 +79,7 @@ class DatabaseProtocol(Protocol):
     def release(self, connection: Connection) -> None: ...
 
 
-class DisambiguatorView(BaseView, Generic[T]):
+class DisambiguatorView[T](BaseView):
     message: discord.Message
     selected: T
 
@@ -118,7 +118,7 @@ class DisambiguatorView(BaseView, Generic[T]):
         self.stop()
 
 
-class Context(commands.Context["Graha"], Generic[CogT_co]):
+class Context[CogT_co: commands.Cog](commands.Context["Graha"]):
     channel: discord.TextChannel | discord.VoiceChannel | discord.Thread | discord.DMChannel
     bot: Graha
     command: commands.Command[Any, ..., Any]
