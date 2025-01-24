@@ -89,3 +89,7 @@ class SubscribedEventsFlags(DpyFlags):
     @flag_value
     def open_tournament(self) -> int:
         return 1 << 9
+
+    @flag_value
+    def triple_tournament_tournament(self) -> int:
+        return 1 << 10
