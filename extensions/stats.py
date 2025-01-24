@@ -771,10 +771,12 @@ class Stats(BaseCog["Graha"]):
         spam_control = self.bot._spam_cooldown_mapping
         being_spammed = [str(key) for key, value in spam_control._cache.items() if value._tokens == 0]
 
-        description.extend((
-            f"Current Spammers: {', '.join(being_spammed) if being_spammed else 'None'}",
-            f"Questionable Connections: {questionable_connections}",
-        ))
+        description.extend(
+            (
+                f"Current Spammers: {', '.join(being_spammed) if being_spammed else 'None'}",
+                f"Questionable Connections: {questionable_connections}",
+            )
+        )
 
         total_warnings += questionable_connections
         if being_spammed:
