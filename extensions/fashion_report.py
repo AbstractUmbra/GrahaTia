@@ -27,7 +27,7 @@ from utilities.shared.time import Weekday, resolve_next_weekday
 if TYPE_CHECKING:
     from bot import Graha
     from utilities.containers.event_subscription import EventSubConfig
-    from utilities.shared._types.xiv.reddit.kaiyoko import TopLevelListingResponse
+    from utilities.shared._types.xiv.reddit.fashion_report import TopLevelListingResponse
 
 FASHION_REPORT_PATTERN: re.Pattern[str] = re.compile(
     r"Fashion Report - Full Details - For Week of (?P<date>[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}) \(Week (?P<week_num>[0-9]{3})\)",
@@ -40,7 +40,7 @@ class Context(BaseContext):
     subscription_config: EventSubConfig
 
 
-class KaiyokoSubmission(NamedTuple):
+class FashionReportSubmission(NamedTuple):
     prose: str
     url: str
     created_at: datetime.datetime
@@ -88,19 +88,17 @@ class FashionReport(BaseCog["Graha"]):
     def __init__(self, bot: Graha) -> None:
         super().__init__(bot)
         self.reset_cache.start()
-        self.current_report: KaiyokoSubmission = MISSING
-        # self._report_task: asyncio.Task[None] = asyncio.create_task(self._wait_for_report())  # noqa: ERA001
-        # # will return when Kaiyoko does
+        self.current_report: FashionReportSubmission = MISSING
+        self._report_task: asyncio.Task[None] = asyncio.create_task(self._wait_for_report())
         self._ready: asyncio.Event = asyncio.Event()
 
     async def cog_load(self) -> None:
         # we don't add this on init since loading this Cog will fail if this method errors,
         # so if the api request doesn't work, we don't start this extension.
-        self._auth_handler = await RedditHandler(session=self.bot.session, config=self.bot.config["reddit"]).refresh()
         self._ready.set()
 
     def cog_unload(self) -> None:
-        # self._report_task.cancel("Unloading FashionReport cog.")  # noqa: ERA001 # will return when Kaiyoko does
+        self._report_task.cancel("Unloading FashionReport cog.")
         self.reset_cache.cancel()
         self._ready.clear()
 
@@ -161,10 +159,10 @@ class FashionReport(BaseCog["Graha"]):
         return weeks
 
     @cache(ignore_kwargs=True)
-    async def _filter_submissions(self, *, dt: datetime.datetime) -> KaiyokoSubmission:
+    async def _filter_submissions(self, *, dt: datetime.datetime) -> FashionReportSubmission:
         try:
             submissions: TopLevelListingResponse = await self.bot.reddit.get(
-                "https://oauth.reddit.com/user/kaiyoko/submitted",
+                "https://oauth.reddit.com/user/Gottesstrafe/submitted",
             )
         except RedditError as err:
             raise RedditError("[Fashion Report] -> {Submission Filtering} :: Reddit API request failed") from err
@@ -173,7 +171,7 @@ class FashionReport(BaseCog["Graha"]):
             match = FASHION_REPORT_PATTERN.search(submission["data"]["title"])
             if not match:
                 LOGGER.debug(
-                    "[FashionReport] :: Kaiyoko entry found but is not a fashion report: %r",
+                    "[FashionReport] :: FashionReport author entry found but is not a fashion report: %r",
                     submission["data"]["title"],
                 )
                 continue
@@ -199,7 +197,7 @@ class FashionReport(BaseCog["Graha"]):
         else:
             raise NoSubmissionFound("No submissions matches")
 
-        return KaiyokoSubmission(
+        return FashionReportSubmission(
             f"Fashion Report details for week of {match['date']} (Week {match['week_num']})",
             submission["data"]["url"],
             created,
@@ -232,17 +230,11 @@ class FashionReport(BaseCog["Graha"]):
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.describe(ephemeral="Whether to show the data privately to you, or not.")
     async def fashion_report_app_cmd(self, interaction: Interaction, ephemeral: bool = True) -> None:  # noqa: FBT001, FBT002 # required by dpy
-        """Get the latest available Fashion Report information from KaiyokoStar!"""
+        """Get the latest available Fashion Report information from /u/Gottesstrafe!"""
 
-        return await interaction.response.send_message(
-            "Sorry, this functionality is currently disabled due to "
-            "[Kaiyoko taking a step back](<https://x.com/KaiyokoStar/status/1879190538165145961>). "
-            "I apologise for the inconvenience.",
-            ephemeral=ephemeral,
-        )
         if not self.current_report:
             return await interaction.response.send_message(
-                "Sorry, but I haven't found the post from Kaiyoko yet, try again later?",
+                "Sorry, but I haven't found the post from Gottesstrafe yet, try again later?",
                 ephemeral=ephemeral,
             )
 
@@ -251,13 +243,7 @@ class FashionReport(BaseCog["Graha"]):
 
     @commands.group(name="fashionreport", aliases=["fr", "fashion-report"], invoke_without_command=True)
     async def fashion_report(self, ctx: Context) -> None:
-        """Fetch the latest fashion report data from /u/Kaiyoko."""
-        await ctx.send(
-            "Sorry, this functionality is currently disabled due to "
-            "[Kaiyoko taking a step back](<https://x.com/KaiyokoStar/status/1879190538165145961>). "
-            "I apologise for the inconvenience.",
-        )
-        return
+        """Fetch the latest fashion report data from /u/Gottesstrafe."""
 
         if self.current_report:
             embed = self.generate_fashion_embed()
