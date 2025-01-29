@@ -107,6 +107,22 @@ class EventSubView(BaseView):
 
         content = "Your subscription choices have been recorded, thank you!"
 
+        if resolved_flags.weekly_resets and resolved_flags.triple_tournament_tournament:
+            content += (
+                "\nAs a heads up, the Triple Triad Tournament and Weekly Reset reminders have "
+                "minorly duplicated information. You may wish to disable one, or the other."
+            )
+        if resolved_flags.open_tournament:
+            content += (
+                "\nThe TT Open Tournament reminders spawn every 2 hours and are rather spammy currently. "
+                "I'd recommend disabling it when no longer necessary."
+            )
+        if resolved_flags.ocean_fishing:
+            content += (
+                "\nThe Ocean Fishing reminders spawn every 2 hours and are rather spammy currently. "
+                "I'd recommend disabling it when no longer necessary."
+            )
+
         await interaction.edit_original_response(
             content=content,
             view=None,
@@ -679,7 +695,9 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             LOGGER.error("[EventSub] -> [TT Tournament] :: Could not load the Triple Triad cog.")
             return
 
-        if not tt_cog._in_tournament_week(now): # i know it checks this in the function itself, added it here for better signposting
+        if not tt_cog._in_tournament_week(
+            now
+        ):  # i know it checks this in the function itself, added it here for better signposting
             return
 
         embed = tt_cog.generate_tournament_embed(now)
