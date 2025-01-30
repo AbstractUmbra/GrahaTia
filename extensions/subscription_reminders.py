@@ -695,11 +695,6 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             LOGGER.error("[EventSub] -> [TT Tournament] :: Could not load the Triple Triad cog.")
             return
 
-        if not tt_cog._in_tournament_week(
-            now
-        ):  # i know it checks this in the function itself, added it here for better signposting
-            return
-
         embed = tt_cog.generate_tournament_embed(now)
 
         to_send: list[Coroutine[Any, Any, None]] = []

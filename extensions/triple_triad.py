@@ -67,12 +67,20 @@ class TripleTriad(BaseCog["Graha"]):
 
     def generate_tournament_embed(self, dt: datetime.datetime | None = None, /) -> discord.Embed:
         dt = dt or self._resolve_next_tournament_window()
-        then = dt + datetime.timedelta(days=7)
+        then = ts(dt + datetime.timedelta(days=7))
 
-        embed = discord.Embed(title="Triple Triad Tournament signup time!", colour=random_pastel_colour()).set_thumbnail(
-            url="https://media.discordapp.net/attachments/872373121292853248/991352363577250003/unknown.png?width=198&height=262",
-        )
-        embed.description = f"You can claim your winnings from this tournament at {ts(then):F} (in {ts(then):R})!"
+        if self._in_tournament_week(dt):
+            embed = discord.Embed(title="Triple Triad Tournament signup time!", colour=random_pastel_colour()).set_thumbnail(
+                url="https://media.discordapp.net/attachments/872373121292853248/991352363577250003/unknown.png?width=198&height=262",
+            )
+            embed.description = f"You can claim your winnings from this tournament at {then:F} (in {then:R})!"
+        else:
+            embed = discord.Embed(
+                title="Triple Triad Tournament results time!", colour=random_pastel_colour()
+            ).set_thumbnail(
+                url="https://media.discordapp.net/attachments/872373121292853248/991352363577250003/unknown.png?width=198&height=262"
+            )
+            embed.description = "Claim your winnings from last week's tournament!"
 
         return embed
 
