@@ -22,10 +22,18 @@ if TYPE_CHECKING:
     from utilities.shared._types.xiv.record_aliases.subscription import EventRecord
     from utilities.shared._types.xiv.record_aliases.webhooks import WebhooksRecord
 
-__all__ = ("EventSubConfig",)
+__all__ = ("EventSubConfig", "MisconfiguredSubscription", "NoWebhookFound")
 
 
 class MisconfiguredSubscription(Exception):
+    __slots__ = ("subscription_config",)
+
+    def __init__(self, subscription_config: EventSubConfig, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.subscription_config = subscription_config
+
+
+class NoWebhookFound(Exception):
     __slots__ = ("subscription_config",)
 
     def __init__(self, subscription_config: EventSubConfig, *args: Any, **kwargs: Any) -> None:
@@ -235,8 +243,8 @@ class EventSubConfig:
 
         return webhook
 
-    @cache()
-    async def get_webhook(self) -> discord.Webhook:
+    @cache(ignore_kwargs=True)
+    async def get_webhook(self, *, recreate: bool = True) -> discord.Webhook:
         if self.guild_id or self.webhook_id:
             query = "SELECT * FROM webhooks WHERE guild_id = $1 OR webhook_id = $2;"
             record: WebhooksRecord | None = await self._bot.pool.fetchrow(query, self.guild_id, self.webhook_id)  # pyright: ignore[reportAssignmentType] # stubs
@@ -248,6 +256,9 @@ class EventSubConfig:
             )
 
             return discord.Webhook.from_url(url, client=self._bot)
+
+        if not recreate:
+            raise NoWebhookFound(self)
         return await self._create_or_replace_webhook()
 
     async def delete(self) -> bool:

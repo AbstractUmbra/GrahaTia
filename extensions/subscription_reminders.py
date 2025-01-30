@@ -15,6 +15,7 @@ from utilities.constants import DAILY_RESET_REMINDER_TIME, WEEKLY_RESET_REMINDER
 from utilities.containers.event_subscription import (
     EventSubConfig,
     MisconfiguredSubscription,
+    NoWebhookFound,
 )
 from utilities.exceptions import NoSubmissionFound
 from utilities.flags import SubscribedEventsFlags
@@ -376,13 +377,12 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
         if delete_webhook:
             try:
-                wh = await config.get_webhook()
+                wh = await config.get_webhook(recreate=False)
                 await wh.delete()
+            except NoWebhookFound:
+                content += "But it seems the webhook has already been deleted."
             except discord.HTTPException:
-                content += (
-                    "But I was unable to find or delete the webhook created for this. "
-                    "You may want to check on this yourself!"
-                )
+                content += "But I was unable to delete the webhook created for this. You may want to check on this yourself!"
             else:
                 content += "I also deleted the webhook created for this, as requested."
         else:
