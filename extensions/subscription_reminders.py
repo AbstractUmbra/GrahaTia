@@ -362,7 +362,8 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     @app_commands.command(name="delete")
     @app_commands.guild_only()
     @app_commands.default_permissions(manage_channels=True, manage_webhooks=True)
-    async def delete_subscription(self, interaction: Interaction) -> None:
+    async def delete_subscription(self, interaction: Interaction, delete_webhook: bool = False) -> None:  # noqa: FBT001, FBT002  # needed for command callback
+        """Deletes any existing subscriptions for the command, and optionally the webhook too."""
         assert interaction.guild  # guarded by decorated check
 
         await interaction.response.defer(thinking=True)
@@ -371,11 +372,24 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
         await self._delete_subscription(config)
 
+        content = "Okay, I've removed your subscription data. "
+
+        if delete_webhook:
+            try:
+                wh = await config.get_webhook()
+                await wh.delete()
+            except discord.HTTPException:
+                content += (
+                    "But I was unable to find or delete the webhook created for this. "
+                    "You may want to check on this yourself!"
+                )
+            else:
+                content += "I also deleted the webhook created for this, as requested."
+        else:
+            content += "But I left the webhook alone, as requested."
+
         await interaction.followup.send(
-            (
-                "Okay, I've removed your subscription data. You may want to delete the "
-                "webhook I used for this, but that's up to you!"
-            ),
+            content,
             ephemeral=False,
         )
 
