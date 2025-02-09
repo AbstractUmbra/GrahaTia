@@ -255,7 +255,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             thread_id,
         )
         config = await self.get_sub_config(guild_id)
-        webhook = await config.get_webhook()
+        webhook = config._get_patch() or await config.get_webhook()
 
         webhook_query = """
                         WITH sub_update AS (
@@ -278,6 +278,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                         """
         await self.bot.pool.execute(webhook_query, webhook.id, guild_id, webhook.url, webhook.token)
 
+        config._del_patch()
         self.get_sub_config.invalidate(self, guild_id)
 
     async def _delete_subscription(self, config: EventSubConfig) -> None:
@@ -348,6 +349,8 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         await interaction.response.defer()
 
         config = await self.get_sub_config(interaction.guild.id, webhook=webhook)
+        if webhook:
+            config._patch_webhook = webhook
 
         options = self.POSSIBLE_SUBSCRIPTIONS[:]
 

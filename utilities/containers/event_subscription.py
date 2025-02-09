@@ -42,8 +42,10 @@ class NoWebhookFound(Exception):
 
 
 class EventSubConfig:
+    _patch_webhook: discord.Webhook
     __slots__ = (
         "_bot",
+        "_patch_webhook",
         "channel_id",
         "daily_role_id",
         "fashion_report_role_id",
@@ -118,6 +120,15 @@ class EventSubConfig:
     @classmethod
     def with_webhook(cls, bot: Graha, /, *, guild_id: int, webhook: discord.Webhook) -> Self:
         return cls(bot, guild_id=guild_id, webhook_id=webhook.id)
+
+    def _get_patch(self) -> discord.Webhook | None:
+        if hasattr(self, "_patch_webhook"):
+            return self._patch_webhook
+        return None
+
+    def _del_patch(self) -> None:
+        if self._patch_webhook:
+            del self._patch_webhook
 
     @property
     def guild(self) -> Guild | None:
