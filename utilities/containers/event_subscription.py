@@ -127,7 +127,7 @@ class EventSubConfig:
         return None
 
     def _del_patch(self) -> None:
-        if self._patch_webhook:
+        if hasattr(self, "_patch_webhook"):
             del self._patch_webhook
 
     @property
