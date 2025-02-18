@@ -233,13 +233,14 @@ class FashionReport(BaseCog["Graha"]):
         """Get the latest available Fashion Report information from /u/Gottesstrafe!"""
 
         if not self.current_report:
-            return await interaction.response.send_message(
+            await interaction.response.send_message(
                 "Sorry, but I haven't found the post from Gottesstrafe yet, try again later?",
                 ephemeral=ephemeral,
             )
+            return
 
         embed = self.generate_fashion_embed()
-        return await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
+        await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
 
     @commands.group(name="fashionreport", aliases=["fr", "fashion-report"], invoke_without_command=True)
     async def fashion_report(self, ctx: Context) -> None:

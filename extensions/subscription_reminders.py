@@ -339,12 +339,13 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         """Open a selection of subscriptions for this channel!"""
         assert interaction.guild  # guarded in check
         if not isinstance(interaction.channel, (discord.TextChannel, discord.VoiceChannel, discord.Thread)):
-            return await interaction.response.send_message(
+            await interaction.response.send_message(
                 (
                     "Sorry, but I can't process subscriptions in this channel. "
                     "Please use a normal text/voice channel or a thread."
                 ),
             )
+            return None
 
         await interaction.response.defer()
 

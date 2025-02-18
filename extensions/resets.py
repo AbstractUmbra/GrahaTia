@@ -227,10 +227,11 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
         """Sends a summary of the daily and weekly reset information."""
 
         if not any([daily, weekly]):
-            return await interaction.response.send_message(
+            await interaction.response.send_message(
                 "Well... you need to request at least one of the daily or weekly items.",
                 ephemeral=True,
             )
+            return
 
         embeds = []
         if daily:
@@ -238,7 +239,7 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
         if weekly:
             embeds.append(self._get_weekly_reset_embed())
 
-        return await interaction.response.send_message(embeds=embeds, ephemeral=ephemeral)
+        await interaction.response.send_message(embeds=embeds, ephemeral=ephemeral)
 
     @app_commands.command()
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -252,7 +253,7 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
         regions = [region] if region else Region
         embeds = [self._get_cactpot_embed(reg) for reg in regions]
 
-        return await interaction.response.send_message(embeds=embeds, ephemeral=ephemeral)
+        await interaction.response.send_message(embeds=embeds, ephemeral=ephemeral)
 
 
 async def setup(bot: Graha) -> None:
