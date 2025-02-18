@@ -57,11 +57,12 @@ class TripleTriad(BaseCog["Graha"]):
 
     def generate_open_tournament_embed(self, dt: datetime.datetime | None = None, /) -> discord.Embed:
         dt = dt or self._resolve_next_open_tournament_window()
+        then = ts(dt)
 
         embed = discord.Embed(title="Open Tournament signup time!", colour=random_pastel_colour()).set_thumbnail(
             url="https://media.discordapp.net/attachments/872373121292853248/991352363577250003/unknown.png?width=198&height=262",
         )
-        embed.description = f"The next start time for the Open Tournament will be {ts(dt):F} ({ts(dt):R})"
+        embed.description = f"The next start time for the Open Tournament will be {then:F} ({then:R})"
 
         return embed
 
