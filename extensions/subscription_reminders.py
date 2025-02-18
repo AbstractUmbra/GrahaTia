@@ -713,7 +713,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             LOGGER.error("[EventSub] -> [TT Tournament] :: Could not load the Triple Triad cog.")
             return
 
-        embed = tt_cog.generate_tournament_embed(now)
+        embed = tt_cog.generate_tournament_embed(now + datetime.timedelta(hours=1))
 
         to_send: list[Coroutine[Any, Any, None]] = []
 
