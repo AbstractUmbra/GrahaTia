@@ -40,6 +40,7 @@ from utilities.prefix import callable_prefix as _callable_prefix
 from utilities.shared.async_config import Config
 from utilities.shared.db import db_init
 from utilities.shared.reddit import RedditHandler
+from utilities.shared.timezones import TimezoneHandler
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -186,6 +187,7 @@ class Graha(commands.Bot):
     mb_client: mystbin.Client
     reddit: RedditHandler
     bot_app_info: discord.AppInfo
+    tz_handler: TimezoneHandler
     _original_help_command: commands.HelpCommand | None  # for help command overriding
     _stats_cog_gateway_handler: logging.Handler
 
@@ -461,6 +463,7 @@ class Graha(commands.Bot):
         self.start_time: datetime.datetime = datetime.datetime.now(datetime.UTC)
         self.bot_app_info = await self.application_info()
         self.owner_id = self.bot_app_info.owner.id
+        self.tz_handler = TimezoneHandler()
 
 
 async def main() -> None:
