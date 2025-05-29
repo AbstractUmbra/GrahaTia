@@ -17,6 +17,7 @@ dependencies = [
     "pygit2",
     "beautifulsoup4",
     "lxml",
+    "uvloop>=0.21.0",
 ]
 requires-python = "<4.0,>=3.12"
 readme = "README.md"

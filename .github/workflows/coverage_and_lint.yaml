@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.x"]
+        python-version: [ '3.12' ]
 
     name: "Type Coverage and Linting @ ${{ matrix.python-version }}"
     steps:
@@ -23,27 +23,32 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: true
+          submodules: "true"
 
-      - name: Setup PDM @ ${{ matrix.python-version }}
-        uses: pdm-project/setup-pdm@v4
+      - name: Setup uv @ ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@v5
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
-          cache: true
+          version: 0.6.2
 
       - name: Install deps @ ${{ matrix.python-version }}
         run: |
-          pdm install --check --no-editable
-
-      - name: Activate venv @ ${{ matrix.python-version }}
-        run: |
-          echo "$(pdm info --where)/.venv/bin" >> $GITHUB_PATH
+          uv sync --all-extras --all-groups
 
       - name: "Run Pyright @ ${{ matrix.python-version }}"
         uses: jakebailey/pyright-action@v2
         with:
           warnings: false
-          annotate: ${{ matrix.python-version != '3.x' }}
+          annotate: "${{ matrix.python-version != '3.x' }}"
 
-      - name: Lint
-        uses: astral-sh/ruff-action@v2
+      - name: Lint check
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: check .
+
+      - name: Formatting check
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: format --check
