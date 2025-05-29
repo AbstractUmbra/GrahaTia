@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from bot import Graha
     from extensions.fashion_report import FashionReport as FashionReportCog
     from extensions.gates import GATEs
+    from extensions.island_sanctuary import IslandSanctuary
     from extensions.ocean_fishing import OceanFishing as OceanFishingCog
     from extensions.resets import Resets as ResetsCog
     from extensions.triple_triad import TripleTriad
@@ -199,6 +200,12 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             value="1024",
             description="Opt into reminders about TT Tournament signups.",
             emoji="\U0001f3c6",
+        ),
+        discord.SelectOption(
+            label="Island Sanctuary",
+            value="2048",
+            description="Opt into reminders about the Island Sanctuary weekly reset.",
+            emoji="\U0001f334",
         ),
     ]
     __cog_is_app_commands_group__ = True
@@ -720,6 +727,47 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         for record in records:
             conf = await self.get_sub_config(record["guild_id"])
             webhook = await self._resolve_webhook_from_cache(conf, log_key="([TT Tournament])")
+
+            if not webhook:
+                await conf.delete()
+                continue
+
+            to_send.append(self.dispatcher(webhook=webhook, embeds=[embed], config=conf))
+
+        await self.handle_dispatch(to_send)
+
+    @tasks.loop(time=WEEKLY_RESET_REMINDER_TIME)
+    async def island_sanctuary_loop(self) -> None:
+        now = datetime.datetime.now(datetime.UTC)
+
+        if now.weekday() != 0:
+            return
+
+        island_cog: IslandSanctuary | None = self.bot.get_cog("IslandSanctuary")  # pyright: ignore[reportAssignmentType] # cog downcasting
+        if not island_cog:
+            LOGGER.error("[EventSub] -> [IslandSanctuary] :: Can't load cog, cancelling loop.")
+            self.island_sanctuary_loop.cancel()
+            return
+
+        query = """
+                SELECT *
+                FROM event_remind_subscriptions
+                WHERE subscriptions & $1 = $1;
+                """
+
+        records: list[SubscriptionEventRecord] = await self.bot.pool.fetch(query, BitString.from_int(2048, length=64))  # pyright: ignore[reportAssignmentType] # stub shenanigans
+
+        if not records:
+            LOGGER.warning("[EventSub] -> [Island Sanctuary] :: No subscriptions. Exiting.")
+            return
+
+        embed = island_cog.generate_embed(when=now - datetime.timedelta(minutes=15))
+
+        to_send: list[Coroutine[Any, Any, None]] = []
+
+        for record in records:
+            conf = await self.get_sub_config(record["guild_id"])
+            webhook = await self._resolve_webhook_from_cache(conf, log_key="([Island Sanctuary])")
 
             if not webhook:
                 await conf.delete()

@@ -93,3 +93,7 @@ class SubscribedEventsFlags(DpyFlags):
     @flag_value
     def triple_tournament_tournament(self) -> int:
         return 1 << 10
+
+    @flag_value
+    def island_sanctuary(self) -> int:
+        return 1 << 11

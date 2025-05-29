@@ -51,6 +51,7 @@ class EventSubConfig:
         "fashion_report_role_id",
         "gate_role_id",
         "guild_id",
+        "island_sanctuary_role_id",
         "jumbo_cactpot_role_id",
         "ocean_fishing_role_id",
         "subscriptions",
@@ -78,6 +79,7 @@ class EventSubConfig:
         gate_role_id: int | None = None,
         tt_open_tournament_role_id: int | None = None,
         tt_tournament_role_id: int | None = None,
+        island_sanctuary_role_id: int | None = None,
         webhook_id: int | None = None,
     ) -> None:
         self._bot: Graha = bot
@@ -93,6 +95,7 @@ class EventSubConfig:
         self.gate_role_id: int | None = gate_role_id
         self.tt_open_tournament_role_id: int | None = tt_open_tournament_role_id
         self.tt_tournament_role_id: int | None = tt_tournament_role_id
+        self.island_sanctuary_role_id: int | None = island_sanctuary_role_id
         self.webhook_id: int | None = webhook_id
 
     def __repr__(self) -> str:
@@ -114,6 +117,7 @@ class EventSubConfig:
             gate_role_id=record["gate_role_id"],
             tt_open_tournament_role_id=record["tt_open_tournament_role_id"],
             tt_tournament_role_id=record["tt_tournament_role_id"],
+            island_sanctuary_role_id=record["island_sanctuary_role_id"],
             webhook_id=record["webhook_id"],
         )
 
@@ -211,6 +215,13 @@ class EventSubConfig:
     def tt_tournament_role(self) -> Role | None:
         if self.guild and self.tt_tournament_role_id:
             return self.guild.get_role(self.tt_tournament_role_id)
+
+        return None
+
+    @property
+    def island_sanctuary_role(self) -> Role | None:
+        if self.guild and self.island_sanctuary_role_id:
+            return self.guild.get_role(self.island_sanctuary_role_id)
 
         return None
 
