@@ -1,3 +1,7 @@
 [submodule "utilities"]
 	path = utilities/shared
 	url = git@github.com:AbstractUmbra/_utilities.git
+
+[submodule "webserver"]
+	path = webserver
+	url = git@github.com:AbstractUmbra/graha-webserver.git
