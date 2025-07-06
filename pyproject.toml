@@ -4,22 +4,22 @@ version = "0.0.1"
 description = "A helper bot for organizing your FFXIV needs."
 authors = [{ name = "Alex Nørgaard", email = "umbra@abstractumbra.dev" }]
 dependencies = [
-    "discord-py[speed] @ git+https://github.com/Rapptz/discord.py.git@master",
-    "discord-ext-menus @ git+https://github.com/Rapptz/discord-ext-menus@master",
-    "jishaku",
-    "mystbin-py",
     "asyncpg",
-    "sentry-sdk[aiohttp,asyncpg]",
+    "beautifulsoup4",
+    "discord-ext-menus @ git+https://github.com/Rapptz/discord-ext-menus@master",
+    "discord-py[speed] @ git+https://github.com/Rapptz/discord.py.git@master",
+    "jishaku",
     "lru-dict",
+    "lxml",
+    "mystbin-py",
     "parsedatetime",
-    "python-dateutil",
     "psutil",
     "pygit2",
-    "beautifulsoup4",
-    "lxml",
+    "python-dateutil",
+    "sentry-sdk[aiohttp,asyncpg]",
     "uvloop>=0.21.0",
 ]
-requires-python = "<4.0,>=3.12"
+requires-python = "<4.0,>=3.13"
 readme = "README.md"
 license = { text = "MPL2.0" }
 
@@ -28,64 +28,16 @@ dev = ["ruff", "typing-extensions", "asyncpg-stubs"]
 super-dev = ["ipython", "ipykernel"]
 speed = ["orjson", "uvloop"]
 
-[tool.pdm]
-distribution = false
-
-[tool.pdm.build]
-includes = []
-
 [tool.ruff]
 line-length = 125
-target-version = "py312"
+target-version = "py313"
+
+[tool.ruff.format]
+line-ending = "lf"
 
 [tool.ruff.lint]
 preview = true
-select = [
-    "A",
-    "ANN",
-    "ASYNC",
-    "B",
-    "BLE",
-    "C4",
-    "COM",
-    "DTZ",
-    "E",
-    "EM",
-    "ERA",
-    "F",
-    "FA",
-    "FBT",
-    "FURB",
-    "G",
-    "I",
-    "INP",
-    "ISC",
-    "NPY",
-    "PD",
-    "PERF",
-    "PGH",
-    "PIE",
-    "PLC",
-    "PLE",
-    "PLW",
-    "PTH",
-    "PYI",
-    "Q",
-    "Q003",
-    "RET",
-    "RSE",
-    "RUF",
-    "S",
-    "SIM",
-    "SLOT",
-    "T20",
-    "TC",
-    "TID",
-    "TRY",
-    "UP",
-    "YTT",
-    # "DOC", # not in a bot, please
-]
+select = ["ALL"]
 ignore = [
     "ANN401",
     "ASYNC109", # dpy commonly uses this parameter
@@ -113,48 +65,39 @@ unfixable = [
     "ERA",  # Don't delete commented out code
 ]
 
-[tool.ruff.format]
-# Like Black, use double quotes for strings.
-quote-style = "double"
-# Like Black, indent with spaces, rather than tabs.
-indent-style = "space"
-# Like Black, respect magic trailing commas.
-skip-magic-trailing-comma = false
-# Like Black, automatically detect the appropriate line ending.
-line-ending = "auto"
-
-[tool.ruff.lint.isort]
-split-on-trailing-comma = true
-combine-as-imports = true
-
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
-[tool.ruff.lint.flake8-annotations]
-allow-star-arg-any = true
+[tool.ruff.lint.flake8-comprehensions]
+allow-dict-calls-with-keyword-arguments = true
 
-[tool.ruff.lint.flake8-pytest-style]
-fixture-parentheses = false
-mark-parentheses = false
-parametrize-names-type = "csv"
-
-[tool.ruff.lint.flake8-quotes]
-inline-quotes = "double"
+[tool.ruff.lint.flake8-import-conventions.aliases]
+"concurrent.futures" = "cf"
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 # https://discuss.python.org/t/problems-with-typeis/55410/6
 # https://discuss.python.org/t/problems-with-typeis/55410/46
 # Until what can go into a TypeIs/TypeGuard changes, these are just dangerous.
+
 "typing.TypeIs".msg = "TypeIs is fundamentally unsafe, even when using it as described to be safe"
 "typing.TypeGuard".msg = "TypeGuard is fundamentally unsafe"
 "typing_extensions.TypeIs".msg = "TypeIs is fundamentally unsafe, even when using it as described to be safe"
 "typing_extensions.TypeGuard".msg = "TypeGuard is fundamentally unsafe"
+"typing.runtime_checkable".msg = "Runtime checkable is fundamentally unsafe."
+"typing_extensions.runtime_checkable".msg = "Runtime checkable is fundamentally unsafe."
+
+# these don't work as deferred imports, intentionally, because type checkers are dumb
+# and require they be imported directly from typing to work, this breaks the deferred re-export.
+"typing.Final".msg = "see https://github.com/microsoft/pyright/issues/9664#issuecomment-2574042580"
+"typing_extensions.Final".msg = "see https://github.com/microsoft/pyright/issues/9664#issuecomment-2574042580"
+"typing.final".msg = "see https://github.com/microsoft/pyright/issues/9664#issuecomment-2574042580"
+"typing_extensions.final".msg = "see https://github.com/microsoft/pyright/issues/9664#issuecomment-2574042580"
 
 [tool.pyright]
 include = ["bot.py", "utilities/**/*.py", "extensions/**/*.py"]
 useLibraryCodeForTypes = true
 typeCheckingMode = "basic"
-pythonVersion = "3.12"
+pythonVersion = "3.13"
 pythonPlatform = "All"
 strictListInference = true
 strictDictionaryInference = true

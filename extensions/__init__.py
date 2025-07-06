@@ -1,16 +1,12 @@
 import pathlib
 from pkgutil import ModuleInfo, iter_modules
 
-assert __package__  # typeshed changed this to str | None, it is str here.
+assert __package__
 
-_ext: list[ModuleInfo] = []
-_ext.extend(
-    [
-        module
-        for module in iter_modules(__path__, prefix=__package__ + ".")
-        if not module.name.rsplit(".")[-1].startswith("_")
-    ],
-)
+_ext: list[ModuleInfo] = [
+    module for module in iter_modules(__path__, prefix=__package__ + ".") if not module.name.rsplit(".")[-1].startswith("_")
+]
+
 
 private_path = pathlib.Path(__package__ + "/private")
 if private_path.exists():

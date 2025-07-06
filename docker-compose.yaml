@@ -1,8 +1,6 @@
 services:
   bot:
     container_name: graha
-    extra_hosts:
-      - "database:host-gateway"
     image: ghcr.io/abstractumbra/graha:latest
     restart: unless-stopped
     volumes:
@@ -11,3 +9,16 @@ services:
       - ./extensions/:/app/extensions/:ro
       - ./.git/:/app/.git
       - ./.safe-gitconfig/:/root/.gitconfig
+
+  webserver:
+    container_name: graha-webserver
+    image: ghcr.io/abstractumbra/graha-webserver:latest
+    restart: unless-stopped
+    environment:
+      - CSRF_SECRET_FILE=/var/run/secrets/csrf_token
+    secrets:
+      - csrf_token
+
+secrets:
+  csrf_token:
+    file: webserver/csrf_token.txt
