@@ -1,5 +1,7 @@
 **/__pycache__/
 **/*.py[cod]
+.pdm-python
+[!__]_*.py
 **/*.ipynb
 
 .git/
@@ -12,6 +14,7 @@
 logs/
 migrations/
 docker-compose.yml
+.pre-commit-config.yaml
 Dockerfile
 LICENSE
 README.md
