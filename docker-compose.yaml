@@ -11,3 +11,18 @@ services:
       - ./extensions/:/app/extensions/:ro
       - ./.git/:/app/.git
       - ./.safe-gitconfig/:/root/.gitconfig
+
+  webserver:
+    container_name: graha-webserver
+    extra_hosts:
+      - "database:host-gateway"
+    environment:
+      - CSRF_SECRET_FILE=/var/run/secrets/csrf_token
+    image: ghcr.io/abstractumbra/graha-webserver:latest
+    restart: unless-stopped
+    secrets:
+      - csrf_token
+
+secrets:
+  csrf_token:
+    file: webserver/csrf_token.txt
