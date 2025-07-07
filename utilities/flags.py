@@ -48,6 +48,10 @@ class SubscribedEventsFlags(DpyFlags):
         self.value = self.DEFAULT_VALUE
         return self
 
+    @classmethod
+    def from_value(cls, value: int) -> Self:
+        return cls._from_value(value)
+
     def to_bitstring(self) -> BitString:
         return BitString.from_int(self.value, length=64)
 
