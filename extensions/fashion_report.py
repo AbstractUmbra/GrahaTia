@@ -18,7 +18,7 @@ from discord.ext import commands, tasks
 from discord.utils import MISSING
 
 from utilities.context import Context as BaseContext, Interaction
-from utilities.exceptions import NoSubmissionFound
+from utilities.exceptions import NoSubmissionFoundError
 from utilities.shared.cache import cache
 from utilities.shared.cog import BaseCog
 from utilities.shared.reddit import RedditError, RedditHandler
@@ -45,7 +45,8 @@ class FashionReportSubmission(NamedTuple):
     url: str
     created_at: datetime.datetime
 
-    def is_available(self) -> bool:
+    @staticmethod
+    def is_available() -> bool:
         now = datetime.datetime.now(datetime.UTC)
         wd = now.isoweekday()
         reset_time = datetime.time(hour=8, minute=0, second=0)
@@ -89,7 +90,7 @@ class FashionReport(BaseCog["Graha"]):
         super().__init__(bot)
         self.reset_cache.start()
         self.current_report: FashionReportSubmission = MISSING
-        self._report_task: asyncio.Task[None] = asyncio.create_task(self._wait_for_report())
+        self.report_task: asyncio.Task[None] = asyncio.create_task(self._wait_for_report())
         self._ready: asyncio.Event = asyncio.Event()
 
     async def cog_load(self) -> None:
@@ -98,23 +99,24 @@ class FashionReport(BaseCog["Graha"]):
         self._ready.set()
 
     def cog_unload(self) -> None:
-        self._report_task.cancel("Unloading FashionReport cog.")
+        self.report_task.cancel("Unloading FashionReport cog.")
         self.reset_cache.cancel()
         self._ready.clear()
 
-    def _reset_state(self) -> bool:
+    def reset_state(self) -> bool:
         self.current_report = MISSING
-        self._report_task.cancel("Manual cache reset.")
+        self.report_task.cancel("Manual cache reset.")
 
         try:
-            self._report_task.exception()
+            self.report_task.exception()
         except (asyncio.CancelledError, asyncio.InvalidStateError):
             LOGGER.warning("[FashionReport] -> {Reset State} :: Task was in error state.")
 
-        self._report_task = asyncio.create_task(self._wait_for_report())
+        self.report_task = asyncio.create_task(self._wait_for_report())
         return self._filter_submissions.invalidate(self)
 
-    def _resolve_next_window(self) -> datetime.datetime:
+    @staticmethod
+    def resolve_next_window() -> datetime.datetime:
         dt = datetime.datetime.now(datetime.UTC)
 
         next_weekday = Weekday.friday if 1 < dt.weekday() <= 4 else Weekday.tuesday
@@ -130,7 +132,7 @@ class FashionReport(BaseCog["Graha"]):
         LOGGER.info("[FashionReport] :: Starting loop to gain report.")
 
         while True:
-            dt = self._resolve_next_window()
+            dt = self.resolve_next_window()
             try:
                 submission = await self._filter_submissions(dt=dt)
             except ValueError:
@@ -195,7 +197,7 @@ class FashionReport(BaseCog["Graha"]):
                 )
                 break
         else:
-            raise NoSubmissionFound("No submissions matches")
+            raise NoSubmissionFoundError("No submissions matches")
 
         return FashionReportSubmission(
             f"Fashion Report details for week of {match['date']} (Week {match['week_num']})",
@@ -251,7 +253,7 @@ class FashionReport(BaseCog["Graha"]):
             send = ctx.send
         else:
             await ctx.send("Sorry, the post for this week isn't up yet, I'll reply when it is!")
-            await self._report_task
+            await self.report_task
             embed = self.generate_fashion_embed()
             send = ctx.message.reply
 
@@ -260,7 +262,7 @@ class FashionReport(BaseCog["Graha"]):
     @commands.is_owner()
     @fashion_report.command(name="cache", aliases=["cache-reset"], hidden=True)
     async def fr_cache(self, ctx: Context) -> None:
-        invalidated = self._reset_state()
+        invalidated = self.reset_state()
         return await ctx.message.add_reaction(ctx.tick(invalidated))
 
     @tasks.loop(time=datetime.time(hour=8, tzinfo=datetime.UTC))
@@ -270,7 +272,7 @@ class FashionReport(BaseCog["Graha"]):
             return
 
         LOGGER.warning("[FashionReport] :: Resetting cache and state.")
-        self._reset_state()
+        self.reset_state()
 
 
 async def setup(bot: Graha) -> None:

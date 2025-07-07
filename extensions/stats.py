@@ -30,7 +30,7 @@ import pygit2
 from discord.ext import commands, menus, tasks
 
 from utilities import formats, time
-from utilities.context import Context
+from utilities.context import Context, GuildContext
 from utilities.shared.cog import BaseCog
 from utilities.shared.formats import to_codeblock
 from utilities.shared.paginator import FieldPageSource, RoboPages
@@ -59,7 +59,7 @@ class LoggingHandler(logging.Handler):
         self.cog: Stats = cog
         super().__init__(logging.INFO)
 
-    def filter(self, record: logging.LogRecord) -> bool:
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa: PLR6301 # override
         return record.name == "discord.gateway"
 
     def emit(self, record: logging.LogRecord) -> None:
@@ -84,7 +84,7 @@ def object_at(addr: int) -> Any | None:
     return None
 
 
-class Stats(BaseCog["Graha"]):
+class Stats(BaseCog["Graha"]):  # noqa: PLR0904
     """Bot usage statistics."""
 
     def __init__(self, bot: Graha) -> None:
@@ -128,7 +128,7 @@ class Stats(BaseCog["Graha"]):
         self.bulk_insert_loop.stop()
         self.logging_worker.cancel()
 
-    async def cog_check(self, ctx: Context) -> bool:
+    async def cog_check(self, ctx: Context) -> bool:  # noqa: PLR6301 # override
         return await ctx.bot.is_owner(ctx.author)
 
     @tasks.loop(seconds=10.0)
@@ -252,7 +252,8 @@ class Stats(BaseCog["Graha"]):
         """Tells you how long the bot has been up for."""
         await ctx.send(f"Uptime: **{self.get_bot_uptime()}**")
 
-    def format_commit(self, commit: pygit2.Commit) -> str:
+    @staticmethod
+    def format_commit(commit: pygit2.Commit) -> str:
         short, _, _ = commit.message.partition("\n")
         short_sha2 = str(commit.id)[0:6]
         commit_tz = datetime.timezone(datetime.timedelta(minutes=commit.commit_time_offset))
@@ -264,7 +265,7 @@ class Stats(BaseCog["Graha"]):
 
     def get_last_commits(self, count: int = 3) -> str:
         repo = pygit2.Repository(".git")  # pyright: ignore[reportPrivateImportUsage] module not exported by upstream
-        commits = list(itertools.islice(repo.walk(repo.head.target, pygit2.enums.SortMode.TOPOLOGICAL), count))  # pyright: ignore[reportAttributeAccessIssue] item definition issue in upstream types
+        commits = list(itertools.islice(repo.walk(repo.head.target, pygit2.enums.SortMode.TOPOLOGICAL), count))
         return "\n".join(self.format_commit(c) for c in commits)
 
     @commands.command()
@@ -317,11 +318,12 @@ class Stats(BaseCog["Graha"]):
         await ctx.send(embeds=[embed])
 
     def censor_object(self, obj: str | discord.abc.Snowflake) -> str:
-        if not isinstance(obj, str) and obj.id in self.bot._blacklist_data:
+        if not isinstance(obj, str) and obj.id in self.bot.blacklist_data:
             return "[censored]"
         return censor_invite(obj)
 
-    async def show_guild_stats(self, ctx: Context) -> None:
+    @staticmethod
+    async def show_guild_stats(ctx: Context) -> None:
         assert ctx.guild
 
         lookup = (
@@ -422,9 +424,8 @@ class Stats(BaseCog["Graha"]):
         embed.add_field(name="Top Command Users Today", value=value, inline=True)
         await ctx.send(embeds=[embed])
 
-    async def show_member_stats(self, ctx: Context, member: discord.Member) -> None:
-        assert ctx.guild
-
+    @staticmethod
+    async def show_member_stats(ctx: GuildContext, member: discord.Member) -> None:
         lookup = (
             "\N{FIRST PLACE MEDAL}",
             "\N{SECOND PLACE MEDAL}",
@@ -487,7 +488,7 @@ class Stats(BaseCog["Graha"]):
     @commands.group(invoke_without_command=True)
     @commands.guild_only()
     @commands.cooldown(1, 30.0, type=commands.BucketType.member)
-    async def stats(self, ctx: Context, *, member: discord.Member | None = None) -> None:
+    async def stats(self, ctx: GuildContext, *, member: discord.Member | None = None) -> None:
         """Tells you command usage stats for the server or a member."""
         async with ctx.typing():
             if member is None:
@@ -664,7 +665,7 @@ class Stats(BaseCog["Graha"]):
 
     @stats_today.before_invoke
     @stats_global.before_invoke
-    async def before_stats_invoke(self, ctx: Context) -> None:
+    async def before_stats_invoke(self, ctx: Context) -> None:  # noqa: PLR6301 # required for callbacks
         await ctx.typing()
 
     @commands.Cog.listener()
@@ -731,52 +732,51 @@ class Stats(BaseCog["Graha"]):
 
     @commands.command(hidden=True)
     @commands.is_owner()
-    async def bothealth(self, ctx: Context) -> None:
+    async def bothealth(self, ctx: Context) -> None:  # noqa: PLR0914, PLR0915 # large function call
         """Various bot health monitoring tools."""
 
         # This uses a lot of private methods because there is no
         # clean way of doing this otherwise.
 
-        HEALTHY = discord.Colour(value=0x43B581)
-        UNHEALTHY = discord.Colour(value=0xF04947)
-        WARNING = discord.Colour(value=0xF09E47)
+        HEALTHY = discord.Colour(value=0x43B581)  # noqa: N806
+        UNHEALTHY = discord.Colour(value=0xF04947)  # noqa: N806
+        WARNING = discord.Colour(value=0xF09E47)  # noqa: N806
+
         total_warnings = 0
 
         embed = discord.Embed(title="Bot Health Report", colour=HEALTHY)
 
         # Check the connection pool health.
         pool = self.bot.pool
-        total_waiting = len(pool._queue._getters)
-        current_generation = pool._generation
+        total_waiting = len(pool._queue._getters)  # noqa: SLF001
+        current_generation = pool._generation  # noqa: SLF001
 
         description = [
             f"Total `Pool.acquire` Waiters: {total_waiting}",
             f"Current Pool Generation: {current_generation}",
-            f"Connections In Use: {len(pool._holders) - pool._queue.qsize()}",
+            f"Connections In Use: {len(pool._holders) - pool._queue.qsize()}",  # noqa: SLF001
         ]
 
         questionable_connections = 0
         connection_value = []
-        for index, holder in enumerate(pool._holders, start=1):
-            generation = holder._generation
-            in_use = holder._in_use is not None
-            is_closed = holder._con is None or holder._con.is_closed()
-            display = f"gen={holder._generation} in_use={in_use} closed={is_closed}"
+        for index, holder in enumerate(pool._holders, start=1):  # noqa: SLF001
+            generation = holder._generation  # noqa: SLF001
+            in_use = holder._in_use is not None  # noqa: SLF001
+            is_closed = holder._con is None or holder._con.is_closed()  # noqa: SLF001
+            display = f"gen={holder._generation} in_use={in_use} closed={is_closed}"  # noqa: SLF001
             questionable_connections += any((in_use, generation != current_generation))
             connection_value.append(f"<Holder i={index} {display}>")
 
         joined_value = "\n".join(connection_value)
         embed.add_field(name="Connections", value=f"```py\n{joined_value}\n```", inline=False)
 
-        spam_control = self.bot._spam_cooldown_mapping
-        being_spammed = [str(key) for key, value in spam_control._cache.items() if value._tokens == 0]
+        spam_control = self.bot.spam_cooldown_mapping
+        being_spammed = [str(key) for key, value in spam_control._cache.items() if value._tokens == 0]  # noqa: SLF001
 
-        description.extend(
-            (
-                f"Current Spammers: {', '.join(being_spammed) if being_spammed else 'None'}",
-                f"Questionable Connections: {questionable_connections}",
-            )
-        )
+        description.extend((
+            f"Current Spammers: {', '.join(being_spammed) if being_spammed else 'None'}",
+            f"Questionable Connections: {questionable_connections}",
+        ))
 
         total_warnings += questionable_connections
         if being_spammed:
@@ -790,7 +790,7 @@ class Stats(BaseCog["Graha"]):
         tasks_directory = pathlib.Path("discord") / "ext" / "tasks" / "__init__.py"
         inner_tasks = [t for t in all_tasks if str(cogs_directory) in repr(t) or str(tasks_directory) in repr(t)]
 
-        bad_inner_tasks = ", ".join(hex(id(t)) for t in inner_tasks if t.done() and t._exception is not None)
+        bad_inner_tasks = ", ".join(hex(id(t)) for t in inner_tasks if t.done() and t._exception is not None)  # noqa: SLF001
         total_warnings += bool(bad_inner_tasks)
         embed.add_field(name="Inner Tasks", value=f"Total: {len(inner_tasks)}\nFailed: {bad_inner_tasks or 'None'}")
         embed.add_field(name="Events Waiting", value=f"Total: {len(event_tasks)}", inline=False)
@@ -806,7 +806,7 @@ class Stats(BaseCog["Graha"]):
         cpu_usage = self.process.cpu_percent() / cpu_count
         embed.add_field(name="Process", value=f"{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU", inline=False)
 
-        global_rate_limit = not self.bot.http._global_over.is_set()
+        global_rate_limit = not self.bot.http._global_over.is_set()  # noqa: SLF001
         description.append(f"Global Rate Limit: {global_rate_limit}")
 
         if command_waiters >= 8:
@@ -822,7 +822,7 @@ class Stats(BaseCog["Graha"]):
 
     @commands.command(hidden=True, aliases=["cancel_task"])
     @commands.is_owner()
-    async def debug_task(self, ctx: Context, memory_id: Annotated[int, hex_value]) -> None:
+    async def debug_task(self, ctx: Context, memory_id: Annotated[int, hex_value]) -> None:  # noqa: PLR6301 # required
         """Debug a task by a memory location."""
         task = object_at(memory_id)
         if task is None or not isinstance(task, asyncio.Task):
@@ -846,7 +846,8 @@ class Stats(BaseCog["Graha"]):
         for page in paginator.pages:
             await ctx.send(page)
 
-    async def tabulate_query(self, ctx: Context, query: str, *args: Any) -> None:
+    @staticmethod
+    async def tabulate_query(ctx: Context, query: str, *args: Any) -> None:
         records = await ctx.db.fetch(query, *args)
 
         if len(records) == 0:
@@ -1063,7 +1064,7 @@ class Stats(BaseCog["Graha"]):
 old_on_error = commands.Bot.on_error
 
 
-async def on_error(self: Graha, event: str, *args: Any, **kwargs: Any) -> None:
+async def on_error(self: Graha, event: str, *args: Any, **_: Any) -> None:
     (exception_type, exception, tb) = sys.exc_info()
     ray_id = secrets.token_hex(16)
 
@@ -1095,12 +1096,12 @@ async def setup(bot: Graha) -> None:
 
     cog = Stats(bot)
     await bot.add_cog(cog)
-    bot._stats_cog_gateway_handler = handler = LoggingHandler(cog)
+    bot._stats_cog_gateway_handler = handler = LoggingHandler(cog)  # noqa: SLF001
     logging.getLogger().addHandler(handler)
     commands.Bot.on_error = on_error  # pyright: ignore[reportAttributeAccessIssue] # monkeypatching
 
 
 async def teardown(bot: Graha) -> None:  # noqa: RUF029 # expected by the extension handler
     commands.Bot.on_error = old_on_error
-    logging.getLogger().removeHandler(bot._stats_cog_gateway_handler)
-    del bot._stats_cog_gateway_handler
+    logging.getLogger().removeHandler(bot._stats_cog_gateway_handler)  # noqa: SLF001
+    del bot._stats_cog_gateway_handler  # noqa: SLF001

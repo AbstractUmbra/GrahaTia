@@ -269,7 +269,7 @@ class OceanFishing(BaseCog["Graha"]):
 
         return embed
 
-    def _generate_both_embeds(self, dt: datetime.datetime, /) -> list[discord.Embed]:
+    def generate_both_embeds(self, dt: datetime.datetime, /) -> list[discord.Embed]:
         return [
             self._generate_ocean_fishing_embed(dt, route=Route.indigo),
             self._generate_ocean_fishing_embed(dt, route=Route.ruby),
@@ -285,7 +285,7 @@ class OceanFishing(BaseCog["Graha"]):
 
         await interaction.response.send_message(
             content="You can view Lulu's helpful tools on Ocean Fishing data [here](https://ffxiv.pf-n.co/ocean-fishing)!",
-            embeds=self._generate_both_embeds(now),
+            embeds=self.generate_both_embeds(now),
             ephemeral=ephemeral,
         )
 

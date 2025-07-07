@@ -21,7 +21,8 @@ class TripleTriad(BaseCog["Graha"]):
     def __init__(self, bot: Graha, /) -> None:
         super().__init__(bot)
 
-    def _resolve_next_tournament_window(self, dt: datetime.datetime | None = None, /) -> datetime.datetime:
+    @staticmethod
+    def resolve_next_tournament_window(dt: datetime.datetime | None = None, /) -> datetime.datetime:
         dt = dt or datetime.datetime.now(datetime.UTC)
 
         then = resolve_next_weekday(
@@ -40,14 +41,16 @@ class TripleTriad(BaseCog["Graha"]):
 
         return then.replace(hour=8, minute=0, second=0, microsecond=0, tzinfo=datetime.UTC)
 
-    def _in_tournament_week(self, dt: datetime.datetime | None = None, /) -> bool:
+    @staticmethod
+    def in_tournament_week(dt: datetime.datetime | None = None, /) -> bool:
         dt = dt or datetime.datetime.now(datetime.UTC)
 
         td = dt - TOURNAMENT_START_DATE
 
         return (td.days % 14) < 7
 
-    def _resolve_next_open_tournament_window(self, dt: datetime.datetime | None = None, /) -> datetime.datetime:
+    @staticmethod
+    def resolve_next_open_tournament_window(dt: datetime.datetime | None = None, /) -> datetime.datetime:
         dt = dt or datetime.datetime.now(datetime.UTC)
 
         hour = dt.hour
@@ -56,7 +59,7 @@ class TripleTriad(BaseCog["Graha"]):
         return (dt + datetime.timedelta(hours=hours)).replace(minute=0, second=0, microsecond=0)
 
     def generate_open_tournament_embed(self, dt: datetime.datetime | None = None, /) -> discord.Embed:
-        dt = dt or self._resolve_next_open_tournament_window()
+        dt = dt or self.resolve_next_open_tournament_window()
         then = ts(dt)
 
         embed = discord.Embed(title="Open Tournament signup time!", colour=random_pastel_colour()).set_thumbnail(
@@ -67,10 +70,10 @@ class TripleTriad(BaseCog["Graha"]):
         return embed
 
     def generate_tournament_embed(self, dt: datetime.datetime | None = None, /) -> discord.Embed:
-        dt = dt or self._resolve_next_tournament_window()
+        dt = dt or self.resolve_next_tournament_window()
         then = ts(dt + datetime.timedelta(days=7))
 
-        if self._in_tournament_week(dt):
+        if self.in_tournament_week(dt):
             embed = discord.Embed(title="Triple Triad Tournament signup time!", colour=random_pastel_colour()).set_thumbnail(
                 url="https://media.discordapp.net/attachments/872373121292853248/991352363577250003/unknown.png?width=198&height=262",
             )

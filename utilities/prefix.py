@@ -24,7 +24,7 @@ def callable_prefix(bot: Graha, message: Message, /) -> list[str]:
     if message.guild is None:
         return commands.when_mentioned_or(*ret)(bot, message)
 
-    guild_prefixes: list[str] | None = bot._prefix_data.get(str(message.guild.id))
+    guild_prefixes: list[str] | None = bot._prefix_data.get(str(message.guild.id))  # noqa: SLF001 # we'll allow this one
     if guild_prefixes is None:
         guild_prefixes = ret
     else:

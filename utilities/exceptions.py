@@ -9,13 +9,13 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sentry_sdk.types import Event, Hint
 
-__all__ = ("NoSubmissionFound",)
+__all__ = ("NoSubmissionFoundError",)
 
 
 def sentry_before_send(event: "Event", hint: "Hint") -> "Event | None":
     if "exc_info" in hint:
         _, exc_value, _ = hint["exc_type"]
-        if isinstance(exc_value, NoSubmissionFound):
+        if isinstance(exc_value, NoSubmissionFoundError):
             return None
 
         return event
@@ -23,5 +23,5 @@ def sentry_before_send(event: "Event", hint: "Hint") -> "Event | None":
     return None
 
 
-class NoSubmissionFound(ValueError):
+class NoSubmissionFoundError(ValueError):
     """A generic error for when no submissions are found for the fashion report on reddit."""

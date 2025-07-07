@@ -49,9 +49,10 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
     def __init__(self, bot: Graha) -> None:
         super().__init__(bot)
 
-    async def _wait_for_next_cactpot(self, dt: datetime.datetime, /) -> tuple[Region, int]:
+    @staticmethod
+    async def wait_for_next_cactpot(dt: datetime.datetime, /) -> tuple[Region, int]:
         wd = dt.weekday()
-        if wd not in (5, 6):
+        if wd not in {5, 6}:
             LOGGER.warning(
                 "[Resets] -> {Waiting for Cactpot} :: Called on a non-weekend (at %r). Altering and waiting.",
                 str(dt),
@@ -111,7 +112,8 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
         await discord.utils.sleep_until(when)
         return Region.EU, 32
 
-    def _get_cactpot_reset_data(self, region_or_dc: Datacenter | Region, /) -> tuple[datetime.datetime, Region]:
+    @staticmethod
+    def get_cactpot_reset_data(region_or_dc: Datacenter | Region, /) -> tuple[datetime.datetime, Region]:
         value = region_or_dc.value if isinstance(region_or_dc, Datacenter) else region_or_dc
 
         match value:
@@ -137,8 +139,8 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
         )
         return datetime.datetime.combine(date.date(), time, tzinfo=datetime.UTC), value
 
-    def _get_cactpot_embed(self, datacenter: Datacenter | Region, /) -> discord.Embed:
-        next_, region = self._get_cactpot_reset_data(datacenter)
+    def get_cactpot_embed(self, datacenter: Datacenter | Region, /) -> discord.Embed:
+        next_, region = self.get_cactpot_reset_data(datacenter)
 
         next_full_fmt = discord.utils.format_dt(next_, "F")
         next_rel_fmt = discord.utils.format_dt(next_, "R")
@@ -153,14 +155,15 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
 
         return embed
 
-    def _get_daily_reset_time(self) -> datetime.datetime:
+    @staticmethod
+    def get_daily_reset_time() -> datetime.datetime:
         now = datetime.datetime.now(datetime.UTC)
         next_reset = now + datetime.timedelta(days=1) if now.hour >= 15 else now
 
         return next_reset.replace(hour=15, minute=0, second=0, microsecond=0)
 
-    def _get_daily_reset_embed(self) -> discord.Embed:
-        next_daily = self._get_daily_reset_time()
+    def get_daily_reset_embed(self) -> discord.Embed:
+        next_daily = self.get_daily_reset_time()
 
         daily_dt_full = discord.utils.format_dt(next_daily, "F")
         daily_dt_relative = discord.utils.format_dt(next_daily, "R")
@@ -176,7 +179,8 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
 
         return embed
 
-    def _get_weekly_reset_time(self) -> datetime.datetime:
+    @staticmethod
+    def get_weekly_reset_time() -> datetime.datetime:
         time_ = datetime.time(hour=8, minute=0, second=0, microsecond=0)
         next_ = resolve_next_weekday(
             target=Weekday.tuesday,
@@ -186,15 +190,15 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
 
         return datetime.datetime.combine(next_, time_, tzinfo=datetime.UTC)
 
-    def _get_weekly_reset_embed(self) -> discord.Embed:
-        next_weekly = self._get_weekly_reset_time()
+    def get_weekly_reset_embed(self) -> discord.Embed:
+        next_weekly = self.get_weekly_reset_time()
 
         weekly_dt_full = discord.utils.format_dt(next_weekly, "F")
         weekly_dt_relative = discord.utils.format_dt(next_weekly, "R")
         weeklies_fmt = self.WEEKLIES[:]
         tt: TripleTriad | None = self.bot.get_cog("TripleTriad")  # pyright: ignore[reportAssignmentType] # cog downcasting
         if tt:
-            tournament_prose = "TT Tourament entry" if tt._in_tournament_week(next_weekly) else "TT Tournament rewards"
+            tournament_prose = "TT Tourament entry" if tt.in_tournament_week(next_weekly) else "TT Tournament rewards"
             weeklies_fmt.insert(3, tournament_prose)
 
         weekly_fmt = f"Resets at {weekly_dt_full} ({weekly_dt_relative})\n\n" + "\n".join(weeklies_fmt)
@@ -235,9 +239,9 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
 
         embeds = []
         if daily:
-            embeds.append(self._get_daily_reset_embed())
+            embeds.append(self.get_daily_reset_embed())
         if weekly:
-            embeds.append(self._get_weekly_reset_embed())
+            embeds.append(self.get_weekly_reset_embed())
 
         await interaction.response.send_message(embeds=embeds, ephemeral=ephemeral)
 
@@ -251,7 +255,7 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
     async def cactpot(self, interaction: Interaction, region: Region | None = None, ephemeral: bool = True) -> None:  # noqa: FBT001, FBT002 # required by dpy
         """Shows data on when the next Jumbo Cactpot calling is!"""
         regions = [region] if region else Region
-        embeds = [self._get_cactpot_embed(reg) for reg in regions]
+        embeds = [self.get_cactpot_embed(reg) for reg in regions]
 
         await interaction.response.send_message(embeds=embeds, ephemeral=ephemeral)
 

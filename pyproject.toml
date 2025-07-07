@@ -18,8 +18,9 @@ dependencies = [
     "python-dateutil",
     "sentry-sdk[aiohttp,asyncpg]",
     "uvloop>=0.21.0",
+    "webserver",
 ]
-requires-python = "<4.0,>=3.13"
+requires-python = "<4.0,>=3.12"
 readme = "README.md"
 license = { text = "MPL2.0" }
 
@@ -28,12 +29,15 @@ dev = ["ruff", "typing-extensions", "asyncpg-stubs"]
 super-dev = ["ipython", "ipykernel"]
 speed = ["orjson", "uvloop"]
 
+[tool.uv.workspace]
+members = ["webserver/"]
+
+[tool.uv.sources]
+webserver = { workspace = true }
+
 [tool.ruff]
 line-length = 125
-target-version = "py313"
-
-[tool.ruff.format]
-line-ending = "lf"
+target-version = "py312"
 
 [tool.ruff.lint]
 preview = true
@@ -41,7 +45,11 @@ select = ["ALL"]
 ignore = [
     "ANN401",
     "ASYNC109", # dpy commonly uses this parameter
+    "C901",
     "COM812",   # unnecessary since we use the formatter
+    "CPY001",   # can't detect MPL for some reason
+    "D",        # no docs in a bot
+    "DOC",      # no docs in a bot
     "EM101",    # in this case this is okay
     "F401",
     "F402",
@@ -50,6 +58,9 @@ ignore = [
     "PD011",    # this is not a numpy codebase
     "PERF203",
     "PLC0414",  # pyright ruling for `as` imports needed
+    "PLR0912",
+    "PLR0913",
+    "PLR2004",  # overeager
     "Q000",
     "RUF001",
     "RUF009",
@@ -61,12 +72,41 @@ ignore = [
     "UP038",
 ]
 unfixable = [
-    "E501", # line length handled in other ways by ruff format
-    "ERA",  # Don't delete commented out code
+    "E501",   # line length handled in other ways by ruff format
+    "ERA",    # Don't delete commented out code
+    "FIX002", # We'll resolve these later
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"utilities/flags.py" = ["PLR6301"]
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "lf"
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = true
+combine-as-imports = true
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.ruff.lint.flake8-annotations]
+allow-star-arg-any = true
+
+[tool.ruff.lint.flake8-pytest-style]
+fixture-parentheses = false
+mark-parentheses = false
+parametrize-names-type = "csv"
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "double"
 
 [tool.ruff.lint.flake8-comprehensions]
 allow-dict-calls-with-keyword-arguments = true
@@ -99,16 +139,16 @@ useLibraryCodeForTypes = true
 typeCheckingMode = "basic"
 pythonVersion = "3.13"
 pythonPlatform = "All"
-strictListInference = true
-strictDictionaryInference = true
-strictSetInference = true
-strictParameterNoneValue = true
+reportDuplicateImport = "error"
+reportGeneralTypeIssues = "error"
 reportMissingImports = "error"
-reportUnusedImport = "error"
+reportUnnecessaryTypeIgnoreComment = "warning"
+reportUntypedFunctionDecorator = "error"
 reportUnusedClass = "error"
 reportUnusedFunction = "error"
+reportUnusedImport = "error"
 reportUnusedVariable = "error"
-reportGeneralTypeIssues = "error"
-reportDuplicateImport = "error"
-reportUntypedFunctionDecorator = "error"
-reportUnnecessaryTypeIgnoreComment = "warning"
+strictDictionaryInference = true
+strictListInference = true
+strictParameterNoneValue = true
+strictSetInference = true

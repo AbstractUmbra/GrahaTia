@@ -30,7 +30,7 @@ SANE_EXTENSION_REGEX = re.compile(r"(?P<prefix>extensions(?:\.|\\|\/))?(?P<exten
 
 
 class ModuleConverter(commands.Converter[str]):
-    async def convert(self, ctx: Context, argument: str, /) -> str:
+    async def convert(self, _: Context, argument: str, /) -> str:  # noqa: PLR6301 # override
         match = SANE_EXTENSION_REGEX.search(argument)
 
         if not match:
@@ -52,7 +52,8 @@ class ModuleConverter(commands.Converter[str]):
 class Admin(BaseCog["Graha"]):
     """Admin-only commands that make the bot dynamic."""
 
-    def cleanup_code(self, content: str) -> str:
+    @staticmethod
+    def cleanup_code(content: str) -> str:
         """Automatically removes code blocks from the code."""
         if content.startswith("```") and content.endswith("```"):
             return "\n".join(content.split("\n")[1:-1])
@@ -65,7 +66,7 @@ class Admin(BaseCog["Graha"]):
 
     @commands.command()
     @commands.guild_only()
-    async def leave(self, ctx: GuildContext) -> None:
+    async def leave(self, ctx: GuildContext) -> None:  # noqa: PLR6301 # required for command callbacks
         """Leaves the current guild."""
         await ctx.guild.leave()
 
@@ -163,7 +164,7 @@ class Admin(BaseCog["Graha"]):
             await ctx.send(fmt)
 
     @sql.command(name="table")
-    async def sql_table(self, ctx: Context, *, table_name: str) -> None:
+    async def sql_table(self, ctx: Context, *, table_name: str) -> None:  # noqa: PLR6301 # required for command callbacks
         """Runs a query describing the table schema."""
         query = """SELECT column_name, data_type, column_default, is_nullable
                    FROM INFORMATION_SCHEMA.COLUMNS
@@ -187,7 +188,7 @@ class Admin(BaseCog["Graha"]):
 
     @commands.command()
     @commands.guild_only()
-    async def sync(
+    async def sync(  # noqa: PLR6301 # required for command callbacks
         self,
         ctx: GuildContext,
         guilds: Greedy[discord.Object],

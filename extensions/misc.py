@@ -32,7 +32,8 @@ TZ_NAME_MAPPING = {
 
 
 class Misc(BaseCog["Graha"]):
-    def _clean_dt(self, dt: datetime.datetime) -> str:
+    @staticmethod
+    def clean_dt(dt: datetime.datetime) -> str:
         ord_ = ordinal(dt.day)
         return dt.strftime(f"%H:%M on %A, {ord_} of %B %Y")
 
@@ -42,7 +43,7 @@ class Misc(BaseCog["Graha"]):
             embed = discord.Embed(colour=discord.Colour.random())
 
             guild = message.guild or discord.Object(id=0)
-            prefixes = self.bot._get_guild_prefixes(guild=guild, raw=True)
+            prefixes = self.bot.get_guild_prefixes(guild=guild, raw=True)
 
             fmt = "Hey there, my prefixes in this server are:-\n\n"
             fmt += f"{self.bot.user.mention} \n"
@@ -57,7 +58,7 @@ class Misc(BaseCog["Graha"]):
             await message.reply(embed=embed, mention_author=False)
 
     @app_commands.command(name="invite")
-    async def invite_graha(self, interaction: Interaction) -> None:
+    async def invite_graha(self, interaction: Interaction) -> None:  # noqa: PLR6301 # required for command callbacks
         """Invite G'raha Tia to your server or as an installation!"""
         assert interaction.client.user
 
@@ -103,7 +104,7 @@ class Misc(BaseCog["Graha"]):
 
         for tz, name in TZ_NAME_MAPPING.items():
             local = utc.astimezone(zoneinfo.ZoneInfo(tz))
-            embed.add_field(name=name, value=self._clean_dt(local), inline=False)
+            embed.add_field(name=name, value=self.clean_dt(local), inline=False)
 
         await interaction.followup.send(embed=embed, ephemeral=ephemeral)
 

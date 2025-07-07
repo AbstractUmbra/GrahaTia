@@ -69,8 +69,8 @@ class YokaiWatch(commands.GroupCog, name="yokai-watch"):
         self._weapon_choices = self._populate_weapons()
         self._area_to_yokai = self._populate_areas()
         self._yokai_choices = self._populate_yokai()
-        _populate_choices(self.yokai_info._params, {"yokai": self._yokai_choices})
-        _populate_choices(self.yokai_weapon_info._params, {"weapon": self._weapon_choices})
+        _populate_choices(self.yokai_info._params, {"yokai": self._yokai_choices})  # noqa: SLF001 # required for loading dynamically
+        _populate_choices(self.yokai_weapon_info._params, {"weapon": self._weapon_choices})  # noqa: SLF001 # required for loading dynamically
 
     def _populate_areas(self) -> defaultdict[str, list[Yokai]]:
         ret = defaultdict[str, list[Yokai]](list)

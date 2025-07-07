@@ -14,10 +14,10 @@ from discord.utils import MISSING
 from utilities.constants import DAILY_RESET_REMINDER_TIME, WEEKLY_RESET_REMINDER_TIME
 from utilities.containers.event_subscription import (
     EventSubConfig,
-    MisconfiguredSubscription,
-    NoWebhookFound,
+    MisconfiguredSubscriptionError,
+    NoWebhookFoundError,
 )
-from utilities.exceptions import NoSubmissionFound
+from utilities.exceptions import NoSubmissionFoundError
 from utilities.flags import SubscribedEventsFlags
 from utilities.shared.cache import cache
 from utilities.shared.cog import BaseCog
@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
-class NoFashionReportPost(Exception):
+class NoFashionReportPostError(Exception):
     pass
 
 
@@ -63,7 +63,7 @@ class EventSubView(BaseView):
         self.sub_selection.options = options
         self.cog: EventSubscriptions = cog
 
-    async def on_timeout(self) -> None:
+    async def on_timeout(self) -> None:  # noqa: PLR6301 # override
         return
 
     async def interaction_check(self, interaction: Interaction) -> bool:
@@ -81,13 +81,13 @@ class EventSubView(BaseView):
         await super().on_error(interaction, error, item)
 
     @discord.ui.select(min_values=1, max_values=10)
-    async def sub_selection(self, interaction: Interaction, item: discord.ui.Select[Self]) -> None:
+    async def sub_selection(self, interaction: Interaction, _: discord.ui.Select[Self]) -> None:
         assert interaction.guild  # guarded in earlier check
         await interaction.response.defer()
 
         config = await self.cog.get_sub_config(interaction.guild.id)
 
-        resolved_flags = SubscribedEventsFlags._from_value(sum(map(int, self.sub_selection.values)))
+        resolved_flags = SubscribedEventsFlags.from_value(sum(map(int, self.sub_selection.values)))
 
         if isinstance(interaction.channel, discord.Thread):
             current_channel = interaction.channel.parent
@@ -104,7 +104,7 @@ class EventSubView(BaseView):
             channel_id = current_channel.id
             thread_id = None
 
-        await self.cog._set_subscriptions(interaction.guild.id, resolved_flags, channel_id, thread_id)
+        await self.cog.set_subscriptions(interaction.guild.id, resolved_flags, channel_id, thread_id)
         self.cog.get_sub_config.invalidate(self.cog, interaction.guild.id)
 
         content = "Your subscription choices have been recorded, thank you!"
@@ -131,7 +131,7 @@ class EventSubView(BaseView):
         )
 
 
-class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
+class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):  # noqa: PLR0904
     POSSIBLE_SUBSCRIPTIONS: ClassVar[list[discord.SelectOption]] = [
         discord.SelectOption(
             label="Daily Resets",
@@ -215,13 +215,14 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         self.avatar_url: str = "https://static.abstractumbra.dev/images/graha.png"
         self.daily_reset_loop.start()
         self.weekly_reset_loop.start()
-        self.fashion_report_loop.add_exception_type(NoSubmissionFound)
+        self.fashion_report_loop.add_exception_type(NoSubmissionFoundError)
         self.fashion_report_loop.start()
         self.ocean_fishing_loop.start()
         self.jumbo_cactpot_loop.start()
         self.gate_loop.start()
         self.open_tournament_loop.start()
         self.tt_tournament_loop.start()
+        self.island_sanctuary_loop.start()
 
     async def cog_unload(self) -> None:
         self.daily_reset_loop.cancel()
@@ -232,8 +233,9 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         self.gate_loop.cancel()
         self.open_tournament_loop.cancel()
         self.tt_tournament_loop.cancel()
+        self.island_sanctuary_loop.cancel()
 
-    async def _set_subscriptions(
+    async def set_subscriptions(
         self,
         guild_id: int,
         subscriptions: SubscribedEventsFlags,
@@ -262,7 +264,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             thread_id,
         )
         config = await self.get_sub_config(guild_id)
-        webhook = config._get_patch() or await config.get_webhook()
+        webhook = config.get_patch_webhook() or await config.get_webhook()
 
         webhook_query = """
                         WITH sub_update AS (
@@ -285,7 +287,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
                         """
         await self.bot.pool.execute(webhook_query, webhook.id, guild_id, webhook.url, webhook.token)
 
-        config._del_patch()
+        config.clear_patch_webhook()
         self.get_sub_config.invalidate(self, guild_id)
 
     async def _delete_subscription(self, config: EventSubConfig) -> None:
@@ -320,7 +322,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     ) -> discord.Webhook | None:
         try:
             wh = await config.get_webhook()
-        except MisconfiguredSubscription:
+        except MisconfiguredSubscriptionError:
             LOGGER.exception("[EventSub] -> [Delete] %s :: Subscription %r is misconfigured. Deleting.", log_key, config)
             await self._delete_subscription(config)
             return None
@@ -358,7 +360,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
         config = await self.get_sub_config(interaction.guild.id, webhook=webhook)
         if webhook:
-            config._patch_webhook = webhook
+            config.patch_webhook_ = webhook
 
         options = self.POSSIBLE_SUBSCRIPTIONS[:]
 
@@ -390,7 +392,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             try:
                 wh = await config.get_webhook(recreate=False)
                 await wh.delete()
-            except NoWebhookFound:
+            except NoWebhookFoundError:
                 content += "But it seems the webhook has already been deleted."
             except discord.HTTPException:
                 content += "But I was unable to delete the webhook created for this. You may want to check on this yourself!"
@@ -405,11 +407,12 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
         )
 
     @select_subscriptions.error
-    async def on_subscription_select_error(self, interaction: Interaction, error: app_commands.AppCommandError) -> None:
+    async def on_subscription_select_error(self, interaction: Interaction, error: app_commands.AppCommandError) -> None:  # noqa: PLR6301
         if not interaction.response.is_done():
             await interaction.response.defer(ephemeral=True, thinking=False)
 
         await interaction.followup.send("Sorry, there was an error processing this command!")
+        LOGGER.error("[Subscription Reminder] => {Select Error}", exc_info=error)
 
     async def dispatcher(
         self,
@@ -421,13 +424,14 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     ) -> None:
         try:
             await webhook.send(content=content, embeds=embeds, thread=config.thread, avatar_url=self.avatar_url)
-        except (discord.NotFound, MisconfiguredSubscription):
+        except (discord.NotFound, MisconfiguredSubscriptionError):
             await self._delete_subscription(config)
 
-    async def handle_dispatch(self, to_dispatch: list[Coroutine[Any, Any, None]]) -> None:
+    @staticmethod
+    async def handle_dispatch(to_dispatch: list[Coroutine[Any, Any, None]]) -> None:
         await asyncio.gather(*to_dispatch, return_exceptions=False)
 
-        # TODO handle exceptions cleanly?
+        # TODO handle exceptions cleanly?  # noqa: TD002, TD003, TD004
 
     @tasks.loop(time=DAILY_RESET_REMINDER_TIME)
     async def daily_reset_loop(self) -> None:
@@ -449,7 +453,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             LOGGER.error("[EventSub] -> [DailyReset] :: Resets cog is not available.")
             return
 
-        embed = resets_cog._get_daily_reset_embed()
+        embed = resets_cog.get_daily_reset_embed()
 
         to_send: list[Coroutine[Any, Any, None]] = []
         for record in records:
@@ -487,7 +491,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             LOGGER.error("[EventSub] -> [WeeklyReset] :: Resets cog is not available.")
             return
 
-        embed = resets_cog._get_weekly_reset_embed()
+        embed = resets_cog.get_weekly_reset_embed()
 
         to_send: list[Coroutine[Any, Any, None]] = []
         for record in records:
@@ -525,8 +529,8 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
 
         fmt: str = MISSING
 
-        fashion_report_cog._reset_state()
-        await fashion_report_cog._report_task
+        fashion_report_cog.reset_state()
+        await fashion_report_cog.report_task
         embed = fashion_report_cog.generate_fashion_embed()
 
         to_send: list[Coroutine[Any, Any, None]] = []
@@ -562,7 +566,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             return
 
         now = datetime.datetime.now(datetime.UTC)
-        embeds = ocean_fishing_cog._generate_both_embeds(now)
+        embeds = ocean_fishing_cog.generate_both_embeds(now)
 
         to_send: list[Coroutine[Any, Any, None]] = []
         for record in records:
@@ -593,8 +597,8 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             LOGGER.error("[EventSub] -> [Jumbo Cactpot] :: Could not load the resets Cog.")
             return
 
-        region, bitstring_value = await resets._wait_for_next_cactpot(now)
-        embed = resets._get_cactpot_embed(region)
+        region, bitstring_value = await resets.wait_for_next_cactpot(now)
+        embed = resets.get_cactpot_embed(region)
 
         query = """
                 SELECT *
@@ -740,7 +744,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     async def island_sanctuary_loop(self) -> None:
         now = datetime.datetime.now(datetime.UTC)
 
-        if now.weekday() != 0:
+        if now.weekday() != 1:
             return
 
         island_cog: IslandSanctuary | None = self.bot.get_cog("IslandSanctuary")  # pyright: ignore[reportAssignmentType] # cog downcasting
@@ -788,7 +792,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
             return
 
         next_iter = datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=10)
-        next_time, _ = gate_cog._resolve_next_gate(dt=next_iter)
+        next_time, _ = gate_cog.resolve_next_gate(dt=next_iter)
         next_time -= datetime.timedelta(minutes=5)
 
         LOGGER.info("[EventSub] -> [Pre-GATEs] :: Sleeping until %s", next_time)
@@ -832,6 +836,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):
     @daily_reset_loop.before_loop
     @fashion_report_loop.before_loop
     @tt_tournament_loop.before_loop
+    @island_sanctuary_loop.before_loop
     async def before_loop(self) -> None:
         await self.bot.wait_until_ready()
 

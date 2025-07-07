@@ -49,7 +49,7 @@ class GATEs(BaseCog["Graha"]):
         40: [GATE.the_slice_is_right, GATE.air_force_one, GATE.leap_of_faith],
     }
 
-    def _resolve_next_gate(self, dt: datetime.datetime | None = None) -> tuple[datetime.datetime, list[GATE]]:
+    def resolve_next_gate(self, dt: datetime.datetime | None = None) -> tuple[datetime.datetime, list[GATE]]:
         resolved = (dt or datetime.datetime.now(datetime.UTC)).replace(second=0, microsecond=0)
 
         if 0 <= resolved.minute < 20:
@@ -63,7 +63,8 @@ class GATEs(BaseCog["Graha"]):
 
         return resolved.replace(minute=min_), self.GATES[min_]
 
-    def _resolve_leap_of_faith(self, minute: GateSpawnMinute) -> LeapOfFaith:
+    @staticmethod
+    def resolve_leap_of_faith(minute: GateSpawnMinute) -> LeapOfFaith:
         if minute == 0:
             return LeapOfFaith.nym
         if minute == 20:
@@ -71,14 +72,14 @@ class GATEs(BaseCog["Graha"]):
         return LeapOfFaith.sylphstep
 
     def generate_gate_embed(self, when: datetime.datetime | None = None) -> discord.Embed:
-        when, gates = self._resolve_next_gate(when)
+        when, gates = self.resolve_next_gate(when)
 
         embed = discord.Embed(title="GATEs coming up!", colour=discord.Colour.random(), timestamp=when)
 
         fmt = f"A random GATE from the below 3 opens up {ts(when):R}!\n\n"
         for gate in gates:
             if gate is GATE.leap_of_faith:
-                leap_of_faith = self._resolve_leap_of_faith(when.minute)  # pyright: ignore[reportArgumentType] # resolved in earlier call
+                leap_of_faith = self.resolve_leap_of_faith(when.minute)  # pyright: ignore[reportArgumentType] # resolved in earlier call
                 fmt += f"[{leap_of_faith.clean()}]({leap_of_faith.url})" + "\n"
                 continue
             fmt += f"[{gate.clean()}]({gate.value})" + "\n"

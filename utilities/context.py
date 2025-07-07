@@ -23,10 +23,10 @@ from .shared.ui import BaseView, ConfirmationView
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Sequence
     from types import TracebackType
+    from typing import TypeVar  # noqa: TC004
 
     from aiohttp import ClientSession
     from asyncpg import Connection
-    from typing_extensions import TypeVar  # noqa: TC004
 
     from bot import Graha
 
@@ -223,7 +223,8 @@ class Context[CogT_co: commands.Cog](commands.Context["Graha"]):
         await view.wait()
         return view.value
 
-    def tick(self, opt: bool | None, label: str | None = None) -> str:  # noqa: FBT001 # quick hack shortcut
+    @staticmethod
+    def tick(opt: bool | None, label: str | None = None) -> str:  # noqa: FBT001 # quick hack shortcut
         lookup = {
             True: "<:TickYes:735498312861351937>",
             False: "<:CrossNo:735498453181923377>",

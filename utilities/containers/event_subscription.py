@@ -22,10 +22,10 @@ if TYPE_CHECKING:
     from utilities.shared._types.xiv.record_aliases.subscription import EventRecord
     from utilities.shared._types.xiv.record_aliases.webhooks import WebhooksRecord
 
-__all__ = ("EventSubConfig", "MisconfiguredSubscription", "NoWebhookFound")
+__all__ = ("EventSubConfig", "MisconfiguredSubscriptionError", "NoWebhookFoundError")
 
 
-class MisconfiguredSubscription(Exception):
+class MisconfiguredSubscriptionError(Exception):
     __slots__ = ("subscription_config",)
 
     def __init__(self, subscription_config: EventSubConfig, *args: Any, **kwargs: Any) -> None:
@@ -33,7 +33,7 @@ class MisconfiguredSubscription(Exception):
         self.subscription_config = subscription_config
 
 
-class NoWebhookFound(Exception):
+class NoWebhookFoundError(Exception):
     __slots__ = ("subscription_config",)
 
     def __init__(self, subscription_config: EventSubConfig, *args: Any, **kwargs: Any) -> None:
@@ -41,11 +41,10 @@ class NoWebhookFound(Exception):
         self.subscription_config = subscription_config
 
 
-class EventSubConfig:
-    _patch_webhook: discord.Webhook
+class EventSubConfig:  # noqa: PLR0904
+    patch_webhook_: discord.Webhook
     __slots__ = (
         "_bot",
-        "_patch_webhook",
         "channel_id",
         "daily_role_id",
         "fashion_report_role_id",
@@ -54,6 +53,7 @@ class EventSubConfig:
         "island_sanctuary_role_id",
         "jumbo_cactpot_role_id",
         "ocean_fishing_role_id",
+        "patch_webhook_",
         "subscriptions",
         "thread_id",
         "tt_open_tournament_role_id",
@@ -86,7 +86,7 @@ class EventSubConfig:
         self.guild_id: int = guild_id
         self.channel_id: int | None = channel_id
         self.thread_id: int | None = thread_id
-        self.subscriptions: SubscribedEventsFlags = SubscribedEventsFlags._from_value(subscriptions)
+        self.subscriptions: SubscribedEventsFlags = SubscribedEventsFlags.from_value(subscriptions)
         self.daily_role_id: int | None = daily_role_id
         self.weekly_role_id: int | None = weekly_role_id
         self.fashion_report_role_id: int | None = fashion_report_role_id
@@ -125,14 +125,14 @@ class EventSubConfig:
     def with_webhook(cls, bot: Graha, /, *, guild_id: int, webhook: discord.Webhook) -> Self:
         return cls(bot, guild_id=guild_id, webhook_id=webhook.id)
 
-    def _get_patch(self) -> discord.Webhook | None:
+    def get_patch_webhook(self) -> discord.Webhook | None:
         if hasattr(self, "_patch_webhook"):
-            return self._patch_webhook
+            return self.patch_webhook_
         return None
 
-    def _del_patch(self) -> None:
+    def clear_patch_webhook(self) -> None:
         if hasattr(self, "_patch_webhook"):
-            del self._patch_webhook
+            del self.patch_webhook_
 
     @property
     def guild(self) -> Guild | None:
@@ -227,7 +227,7 @@ class EventSubConfig:
 
     async def _create_or_replace_webhook(self) -> discord.Webhook:
         if not self.channel:
-            raise MisconfiguredSubscription(self)
+            raise MisconfiguredSubscriptionError(self)
 
         fetch_query = """
                       SELECT webhook_id
@@ -246,7 +246,7 @@ class EventSubConfig:
                 await existing_webhook.delete(reason="Deleted by G'raha Tia due to misconfiguration.")
             except discord.Forbidden as err:
                 # we can't do anything here.
-                raise MisconfiguredSubscription(self, "Unable to delete webhooks within guild.") from err
+                raise MisconfiguredSubscriptionError(self, "Unable to delete webhooks within guild.") from err
 
         webhook = await self.channel.create_webhook(name="XIV Timers", reason="Created via G'raha Tia subscriptions!")
         query = """
@@ -280,7 +280,7 @@ class EventSubConfig:
             return discord.Webhook.from_url(url, client=self._bot)
 
         if not recreate:
-            raise NoWebhookFound(self)
+            raise NoWebhookFoundError(self)
         return await self._create_or_replace_webhook()
 
     async def delete(self) -> bool:

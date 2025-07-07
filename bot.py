@@ -74,7 +74,7 @@ class GrahaCommandTree(app_commands.CommandTree):
         interaction: discord.Interaction,
         error: app_commands.AppCommandError,
     ) -> None:
-        LOGGER.exception("Exception occurred in the CommandTree:\n%s", error)
+        LOGGER.error("Exception occurred in the CommandTree:\n", exc_info=error)
 
         e = discord.Embed(title="Command Error", colour=0xA32952)
         e.add_field(name="Command", value=(interaction.command and interaction.command.name) or "No command.")
@@ -106,7 +106,7 @@ class RemoveNoise(logging.Filter):
     def __init__(self) -> None:
         super().__init__(name="discord.state")
 
-    def filter(self, record: logging.LogRecord) -> bool:
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa: PLR6301 # override
         return not (record.levelname == "WARNING" and "referencing an unknown" in record.msg)
 
 
@@ -200,10 +200,10 @@ class Graha(commands.Bot):
             activity=discord.Game(name="My default prefix is 'gt ', but mention me to see all of them!"),
         )
         self._prefix_data: Config[list[str]] = Config(pathlib.Path("configs/prefixes.json"))
-        self._blacklist_data: Config[bool] = Config(pathlib.Path("configs/blacklist.json"))
+        self.blacklist_data: Config[bool] = Config(pathlib.Path("configs/blacklist.json"))
 
         # auto spam detection
-        self._spam_cooldown_mapping: commands.CooldownMapping = commands.CooldownMapping.from_cooldown(
+        self.spam_cooldown_mapping: commands.CooldownMapping = commands.CooldownMapping.from_cooldown(
             10,
             12.0,
             commands.BucketType.user,
@@ -222,7 +222,7 @@ class Graha(commands.Bot):
         self.global_log: logging.Logger = LOGGER
         self.start_time: datetime.datetime = datetime.datetime.now(datetime.UTC)
 
-    def bot_check(self, ctx: Context) -> bool:
+    def bot_check(self, ctx: Context) -> bool:  # noqa: PLR6301 # override
         if ctx.guild and ctx.guild.id == 149998214810959872:
             return ctx.channel.id in {995124873259135067, 872379715443380295}
         return True
@@ -277,7 +277,7 @@ class Graha(commands.Bot):
             clean = "".join(tb_fmt)
 
             if not isinstance(origin_, discord.HTTPException):
-                LOGGER.exception("in `%s` with ray id: '%s' ::\n%s", ctx.command.name, ctx.ray_id, clean, exc_info=True)
+                LOGGER.error("in `%s` with ray id: '%s' ::\n%s", ctx.command.name, ctx.ray_id, clean, exc_info=True)  # noqa: LOG014
 
             ret += (
                 "There was an error in that command. My developer has been notified, "
@@ -289,7 +289,7 @@ class Graha(commands.Bot):
 
         await ctx.send(content=ret)
 
-    def _get_guild_prefixes(
+    def get_guild_prefixes(
         self,
         guild: discord.abc.Snowflake,
         *,
@@ -312,11 +312,11 @@ class Graha(commands.Bot):
             await self._prefix_data.put(guild.id, prefixes)
 
     async def _blacklist_add(self, object_id: int) -> None:
-        await self._blacklist_data.put(object_id, True)  # noqa: FBT003
+        await self.blacklist_data.put(object_id, True)  # noqa: FBT003
 
     async def _blacklist_remove(self, object_id: int) -> None:
         try:
-            await self._blacklist_data.remove(object_id)
+            await self.blacklist_data.remove(object_id)
         except KeyError:
             pass
 
@@ -373,13 +373,13 @@ class Graha(commands.Bot):
         if ctx.command is None:
             return
 
-        if ctx.author.id in self._blacklist_data:
+        if ctx.author.id in self.blacklist_data:
             return
 
-        if ctx.guild is not None and ctx.guild.id in self._blacklist_data:
+        if ctx.guild is not None and ctx.guild.id in self.blacklist_data:
             return
 
-        bucket = self._spam_cooldown_mapping.get_bucket(message)
+        bucket = self.spam_cooldown_mapping.get_bucket(message)
         if not bucket:
             return
         current = message.created_at.timestamp()
@@ -421,7 +421,7 @@ class Graha(commands.Bot):
 
     async def on_guild_join(self, guild: discord.Guild, /) -> None:
         """When the bot joins a guild."""
-        if guild.id in self._blacklist_data:
+        if guild.id in self.blacklist_data:
             await guild.leave()
 
     async def create_paste(

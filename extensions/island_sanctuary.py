@@ -17,7 +17,8 @@ OC_BOT_CHANNEL: str = "https://canary.discord.com/channels/1034534280757522442/1
 
 
 class IslandSanctuary(BaseCog["Graha"]):
-    def next_reset(self, *, source: datetime.datetime | None = None) -> datetime.datetime:
+    @staticmethod
+    def next_reset(*, source: datetime.datetime | None = None) -> datetime.datetime:
         return resolve_next_weekday(
             target=Weekday.tuesday, source=source, current_week_included=True, before_time=datetime.time(hour=8)
         )

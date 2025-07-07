@@ -28,11 +28,12 @@ class SubscribedEventsFlags(DpyFlags):
 
     def __init__(self, value: int = 0, **kwargs: bool) -> None:
         self.value: int = value
-        for key, value in kwargs.items():
+
+        for key, inner_value in kwargs.items():
             if key not in self.VALID_FLAGS:
                 msg = f"{key!r} is not a valid flag name."
                 raise TypeError(msg)
-            setattr(self, key, value)
+            setattr(self, key, inner_value)
 
     @classmethod
     def all(cls) -> Self:
