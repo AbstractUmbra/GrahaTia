@@ -3,6 +3,10 @@ services:
     container_name: graha
     image: ghcr.io/abstractumbra/graha:latest
     restart: unless-stopped
+    depends_on:
+      database:
+        restart: true
+        condition: service_healthy
     volumes:
       - ./configs/:/app/configs/:ro
       - ./logs/:/app/logs/:rw
@@ -14,11 +18,62 @@ services:
     container_name: graha-webserver
     image: ghcr.io/abstractumbra/graha-webserver:latest
     restart: unless-stopped
+    depends_on:
+      database:
+        restart: true
+        condition: service_healthy
+    ports:
+      - "8080:${GRAHA_WS_PORT:-8032}"
     environment:
       - CSRF_SECRET_FILE=/var/run/secrets/csrf_token
+      - POSTGRES_PASSWORD_FILE=/var/run/secrets/postgres_password
     secrets:
       - csrf_token
+      - postgres_password
+
+  database:
+    container_name: graha-database
+    image: postgres:17-alpine
+    restart: unless-stopped
+    tmpfs:
+      - /tmp
+      - /run/postgresql
+    cap_add:
+      - CHOWN
+      - DAC_READ_SEARCH
+      - FOWNER
+      - SETGID
+      - SETUID
+    cap_drop:
+      - ALL
+    read_only: true
+    security_opt:
+      - no-new-privileges=true
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_USER=graha
+      - POSTGRES_DB=graha
+      - POSTGRES_PASSWORD_FILE=/var/run/secrets/postgres_password
+      - PG_DATA=/var/lib/postgresql/data/pgdata
+    secrets:
+      - postgres_password
+    volumes:
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+      - graha_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "graha"]
+      interval: 5s
+      start_interval: 1s
+      retries: 1
+      timeout: 5s
+      start_period: 1m
+
+
+volumes:
+  graha_db:
 
 secrets:
   csrf_token:
     file: webserver/csrf_token.txt
+  postgres_password:
+    file: ./db_password.txt

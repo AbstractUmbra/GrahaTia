@@ -11,3 +11,4 @@ compose.override.yaml
 
 configs/config.toml
 configs/*.json
+db_password.txt
