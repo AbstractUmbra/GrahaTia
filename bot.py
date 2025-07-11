@@ -487,7 +487,10 @@ async def main() -> None:
 
         await bot.load_extension("jishaku")
         for extension in EXTENSIONS:
-            await bot.load_extension(extension.name)
+            try:
+                await bot.load_extension(extension.name)
+            except commands.ExtensionError as e:
+                bot.log_handler.exception("Unable to load extension %r", extension.name, exc_info=e)
             bot.log_handler.info("Loaded %sextension: %s", "module " if extension.ispkg else "", extension.name)
 
         await bot.start()
