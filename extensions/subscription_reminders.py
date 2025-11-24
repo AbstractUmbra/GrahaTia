@@ -391,7 +391,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):  # noqa: 
         if delete_webhook:
             try:
                 wh = await config.get_webhook(recreate=False)
-                await wh.delete()
+                await wh.delete(reason=f"Requested by {interaction.user} ({interaction.user.id})")
             except NoWebhookFoundError:
                 content += "But it seems the webhook has already been deleted."
             except discord.HTTPException:
@@ -424,14 +424,12 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):  # noqa: 
     ) -> None:
         try:
             await webhook.send(content=content, embeds=embeds, thread=config.thread, avatar_url=self.avatar_url)
-        except (discord.NotFound, MisconfiguredSubscriptionError):
+        except (discord.NotFound, discord.Forbidden):
             await self._delete_subscription(config)
 
     @staticmethod
     async def handle_dispatch(to_dispatch: list[Coroutine[Any, Any, None]]) -> None:
         await asyncio.gather(*to_dispatch, return_exceptions=False)
-
-        # TODO handle exceptions cleanly?  # noqa: TD002, TD003, TD004
 
     @tasks.loop(time=DAILY_RESET_REMINDER_TIME)
     async def daily_reset_loop(self) -> None:

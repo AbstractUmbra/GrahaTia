@@ -25,7 +25,7 @@ _worlds_path = pathlib.Path("configs/worlds.json")
 if not _worlds_path.exists():
     raise RuntimeError("Worlds data is not present.")
 
-with _worlds_path.open("r") as fp:
+with _worlds_path.open("r", encoding="utf-8") as fp:
     WORLDS_DATA: WorldsData = from_json(fp.read())
 
 
@@ -44,7 +44,7 @@ class CharacterCards(BaseCog["Graha"]):
     def __init__(self, bot: Graha, /) -> None:
         super().__init__(bot)
         self._cache_data()
-        _populate_choices(self.character_card._params, {"datacenter": self.datacenters})
+        _populate_choices(self.character_card._params, {"datacenter": self.datacenters})  # noqa: SLF001
 
     def _cache_data(self) -> None:
         datacenters: list[app_commands.Choice[str]] = []
@@ -69,7 +69,8 @@ class CharacterCards(BaseCog["Graha"]):
 
         return None
 
-    def _resolve_dc_to_region(self, datacenter: str, /) -> str | None:
+    @staticmethod
+    def _resolve_dc_to_region(datacenter: str, /) -> str | None:
         for key, value in WORLDS_DATA.items():
             for dc in value["datacenters"]:  # pyright: ignore[reportIndexIssue] # typing grievance with TypedDict.items()
                 if datacenter in dc:
@@ -100,7 +101,7 @@ class CharacterCards(BaseCog["Graha"]):
 
     @app_commands.command()
     @app_commands.describe(datacenter="The datacenter the character exists in.", world="Your character's home world.")
-    async def character_card(self, interaction: discord.Interaction, datacenter: str, world: str, character: str) -> None:
+    async def character_card(self, interaction: discord.Interaction, _: str, world: str, character: str) -> None:
         """
         Generates a character card displaying information about a given character.
         """
@@ -124,7 +125,7 @@ class CharacterCards(BaseCog["Graha"]):
     # @character_card.autocomplete("datacenter")
     async def datacenter_autocomplete(
         self,
-        interaction: discord.Interaction,
+        __: discord.Interaction,
         current: str,
     ) -> list[app_commands.Choice[str]]:
         if not current:
@@ -134,9 +135,9 @@ class CharacterCards(BaseCog["Graha"]):
 
         ret: list[app_commands.Choice[str]] = []
         for item, _ in matches:
-            _x = discord.utils.get(self.datacenters, name=item)
-            if _x:
-                ret.append(_x)
+            choice = discord.utils.get(self.datacenters, name=item)
+            if choice:
+                ret.append(choice)
 
         return ret[:25]
 
@@ -155,9 +156,9 @@ class CharacterCards(BaseCog["Graha"]):
 
         ret: list[app_commands.Choice[str]] = []
         for item, _ in matches:
-            _x = discord.utils.get(self.all_worlds, name=item)
-            if _x:
-                ret.append(_x)
+            choice = discord.utils.get(self.all_worlds, name=item)
+            if choice:
+                ret.append(choice)
 
         return ret[:25]
 

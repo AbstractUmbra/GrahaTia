@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING, Literal
 
 import discord
 from discord import Enum, app_commands
-from discord.app_commands.commands import _populate_choices  # noqa: PLC2701 # we do some cheating
 from discord.enums import try_enum
 from discord.ext import commands
 
-from utilities.shared.formats import from_json, random_pastel_colour
+from utilities.shared.async_config import Config
+from utilities.shared.formats import random_pastel_colour
 
 if TYPE_CHECKING:
     from bot import Graha
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 CONFIG_PATH = pathlib.Path("./configs/yokai.json")
 
 
-ALLOWED_LOCATIONS: Literal[
+type ALLOWED_LOCATIONS = Literal[
     "Stormblood",
     "Heavensward",
     "Central Shroud",
@@ -63,14 +63,14 @@ class Yokai(Enum):
 
 
 class YokaiWatch(commands.GroupCog, name="yokai-watch"):
-    def __init__(self, bot: Graha, /, *, config: YokaiConfig) -> None:
+    def __init__(self, bot: Graha, /, *, config: Config[YokaiConfig]) -> None:
         self.bot: Graha = bot
-        self.config: YokaiConfig = config
+        self.config: YokaiConfig = config["0"]
         self._weapon_choices = self._populate_weapons()
         self._area_to_yokai = self._populate_areas()
         self._yokai_choices = self._populate_yokai()
-        _populate_choices(self.yokai_info._params, {"yokai": self._yokai_choices})  # noqa: SLF001 # required for loading dynamically
-        _populate_choices(self.yokai_weapon_info._params, {"weapon": self._weapon_choices})  # noqa: SLF001 # required for loading dynamically
+        app_commands.choices(yokai=self._yokai_choices)(self.yokai_info)
+        app_commands.choices(weapon=self._weapon_choices)(self.yokai_weapon_info)
 
     def _populate_areas(self) -> defaultdict[str, list[Yokai]]:
         ret = defaultdict[str, list[Yokai]](list)
@@ -129,23 +129,7 @@ class YokaiWatch(commands.GroupCog, name="yokai-watch"):
     async def location_info_command(
         self,
         interaction: Interaction,
-        area: Literal[
-            "Stormblood",
-            "Heavensward",
-            "Central Shroud",
-            "Central Thanalan",
-            "East Shroud",
-            "Eastern Thanalan",
-            "Lower La Noscea",
-            "Middle La Noscea",
-            "North Shroud",
-            "Outer La Noscea",
-            "South Shroud",
-            "Southern Thanalan",
-            "Upper La Noscea",
-            "Western La Noscea",
-            "Western Thanalan",
-        ],
+        area: ALLOWED_LOCATIONS,
     ) -> None:
         """Get information about Yokai farming areas specifically."""
         await interaction.response.defer()
@@ -182,8 +166,8 @@ class YokaiWatch(commands.GroupCog, name="yokai-watch"):
 
 
 async def setup(bot: Graha) -> None:
-    if not CONFIG_PATH.exists():
+    if not CONFIG_PATH.exists():  # noqa: ASYNC240
         return
 
-    config: YokaiConfig = from_json(CONFIG_PATH.read_text())
+    config: Config[YokaiConfig] = Config(CONFIG_PATH)
     await bot.add_cog(YokaiWatch(bot, config=config))

@@ -40,7 +40,7 @@ class ModuleConverter(commands.Converter[str]):
             argument = "extensions/" + match["extension"]
 
         extension_path = pathlib.Path(argument)
-        if not extension_path.is_dir():
+        if not extension_path.is_dir():  # noqa: ASYNC240
             extension_path = extension_path.with_suffix(".py")
 
         if not extension_path.exists():
