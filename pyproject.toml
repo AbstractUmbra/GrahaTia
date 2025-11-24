@@ -18,7 +18,7 @@ dependencies = [
     "python-dateutil",
     "sentry-sdk[aiohttp,asyncpg]",
     "uvloop>=0.21.0",
-    "webserver",
+    # "webserver",
 ]
 requires-python = "<4.0,>=3.12"
 readme = "README.md"
