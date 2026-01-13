@@ -1,241 +1,243 @@
 {
-    "infographic": "https://i.imgur.com/Ae3cs2e.png",
-    "event": "https://ffxiv.consolegameswiki.com/wiki/Yo-kai_Watch:_Gather_One,_Gather_All!",
-    "weapons": "https://ffxiv.consolegameswiki.com/wiki/Yo-kai_Weapons",
-    "mounts": [
-        "https://ffxiv.consolegameswiki.com/wiki/Whisper-go",
-        "https://ffxiv.consolegameswiki.com/wiki/Whisper_A-go-go",
-        "https://ffxiv.consolegameswiki.com/wiki/Jibanyan_Couch"
-    ],
-    "yokai": {
-        "Jibanyan": {
-            "id": 1,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Jibanyan",
-            "areas": [
-                "Central Shroud",
-                "Lower La Noscea",
-                "Central Thanalan"
-            ],
-            "weapon": {
-                "name": "Paw of the Crimson Cat",
-                "job": "WAR",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Paw_of_the_Crimson_Cat"
-            }
-        },
-        "Komasan": {
-            "id": 2,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Komasan",
-            "areas": [
-                "East Shroud",
-                "Western La Noscea",
-                "Eastern Thanalan"
-            ],
-            "weapon": {
-                "name": "Cane of the Shrine Guardian",
-                "job": "WHM",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Cane_of_the_Shrine_Guardian"
-            }
-        },
-        "USApyon": {
-            "id": 3,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/USApyon",
-            "areas": [
-                "Outer La Noscea",
-                "Middle La Noscea",
-                "Western Thanalan"
-            ],
-            "weapon": {
-                "name": "Ears of the Moon Rabbit",
-                "job": "MNK",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Ears_of_the_Moon_Rabbit"
-            }
-        },
-        "Whisper": {
-            "id": 4,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Whisper",
-            "areas": [
-                "South Shroud",
-                "Upper La Noscea",
-                "Southern Thanalan"
-            ],
-            "weapon": {
-                "name": "Bow of the White Whisp",
-                "job": "BRD",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Bow_of_the_White_Wisp"
-            }
-        },
-        "Shogunyan": {
-            "id": 5,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Shogunyan",
-            "areas": [
-                "Lower La Noscea",
-                "Central Thanalan",
-                "East Shroud"
-            ],
-            "weapon": {
-                "name": "Whisker of the Brave Cat|Buckler of the Legendary",
-                "job": "PLD",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Whisker_of_the_Brave_Cat|https://ffxiv.consolegameswiki.com/wiki/Buckler_of_the_Legendary_Cat"
-            }
-        },
-        "Hovernyan": {
-            "id": 6,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Hovernyan",
-            "areas": [
-                "Western La Noscea",
-                "Eastern Thanalan",
-                "South Shroud"
-            ],
-            "weapon": {
-                "name": "Fang of the Fearless Cat",
-                "job": "DRK",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Fang_of_the_Fearless_Cat"
-            }
-        },
-        "Komajiro": {
-            "id": 7,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Komajiro",
-            "areas": [
-                "Central Thanalan",
-                "East Shroud",
-                "Western La Noscea"
-            ],
-            "weapon": {
-                "name": "Codex of the Shrine Guardian",
-                "job": "SCH",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Codex_of_the_Shrine_Guardian"
-            }
-        },
-        "Noko": {
-            "id": 8,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Noko",
-            "areas": [
-                "Southern Thanalan",
-                "North Shroud",
-                "Outer La Noscea"
-            ],
-            "weapon": {
-                "name": "Globe of the Lucky Snake",
-                "job": "AST",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Globe_of_the_Lucky_Snake"
-            }
-        },
-        "Venoct": {
-            "id": 9,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Venoct",
-            "areas": [
-                "Middle La Noscea",
-                "Western Thanalan",
-                "Central Shroud"
-            ],
-            "weapon": {
-                "name": "Spear of the Spark Serpent",
-                "job": "DRG",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Spear_of_the_Spark_Serpent"
-            }
-        },
-        "Kyubi": {
-            "id": 10,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Kyubi",
-            "areas": [
-                "Western Thanalan",
-                "Central Shroud",
-                "Lower La Noscea"
-            ],
-            "weapon": {
-                "name": "Twintails of the Flame Fox",
-                "job": "NIN",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Twintails_of_the_Flame_Fox"
-            }
-        },
-        "Robonyan_F__type": {
-            "id": 11,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Robonyan_F-type",
-            "areas": [
-                "Upper La Noscea",
-                "Southern Thanalan",
-                "North Shroud"
-            ],
-            "weapon": {
-                "name": "Musket of the Metal Cat",
-                "job": "MCH",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Musket_of_the_Metal_Cat"
-            }
-        },
-        "Blizzaria": {
-            "id": 12,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Blizzaria",
-            "areas": [
-                "North Shroud",
-                "Outer La Noscea",
-                "Middle La Noscea"
-            ],
-            "weapon": {
-                "name": "Staff of the Snow Maiden",
-                "job": "BLM",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Staff_of_the_Snow_Maiden"
-            }
-        },
-        "Manjimutt": {
-            "id": 13,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Manjimutt",
-            "areas": [
-                "Eastern Thanalan",
-                "South Shroud",
-                "Upper La Noscea"
-            ],
-            "weapon": {
-                "name": "Book of the Eerie Mutt",
-                "job": "SMN",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Book_of_the_Eerie_Mutt"
-            }
-        },
-        "Lord_Enma": {
-            "id": 14,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Lord_Enma",
-            "areas": [
-                "Stormblood"
-            ],
-            "weapon": {
-                "name": "Gunblade of the Yo-kai King",
-                "job": "GNB",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Gunblade_of_the_Yo-kai_King"
-            }
-        },
-        "Lord_Ananta": {
-            "id": 15,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Lord_Ananta",
-            "areas": [
-                "Heavensward"
-            ],
-            "weapon": {
-                "name": "Rapier of the Serpent Lord",
-                "job": "RDM",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Rapier_of_the_Serpent_Lord"
-            }
-        },
-        "Zazel": {
-            "id": 16,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Zazel",
-            "areas": [
-                "Heavensward"
-            ],
-            "weapon": {
-                "name": "Katana of the King's Council",
-                "job": "SAM",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Katana_of_the_King%27s_Counsel"
-            }
-        },
-        "Damona": {
-            "id": 17,
-            "url": "https://ffxiv.consolegameswiki.com/wiki/Damona",
-            "areas": [
-                "Stormblood"
-            ],
-            "weapon": {
-                "name": "Glaives of the Dark Princes",
-                "job": "DNC",
-                "url": "https://ffxiv.consolegameswiki.com/wiki/Glaives_of_the_Dark_Princess"
+    "0": {
+        "infographic": "https://i.imgur.com/Ae3cs2e.png",
+        "event": "https://ffxiv.consolegameswiki.com/wiki/Yo-kai_Watch:_Gather_One,_Gather_All!",
+        "weapons": "https://ffxiv.consolegameswiki.com/wiki/Yo-kai_Weapons",
+        "mounts": [
+            "https://ffxiv.consolegameswiki.com/wiki/Whisper-go",
+            "https://ffxiv.consolegameswiki.com/wiki/Whisper_A-go-go",
+            "https://ffxiv.consolegameswiki.com/wiki/Jibanyan_Couch"
+        ],
+        "yokai": {
+            "Jibanyan": {
+                "id": 1,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Jibanyan",
+                "areas": [
+                    "Central Shroud",
+                    "Lower La Noscea",
+                    "Central Thanalan"
+                ],
+                "weapon": {
+                    "name": "Paw of the Crimson Cat",
+                    "job": "WAR",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Paw_of_the_Crimson_Cat"
+                }
+            },
+            "Komasan": {
+                "id": 2,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Komasan",
+                "areas": [
+                    "East Shroud",
+                    "Western La Noscea",
+                    "Eastern Thanalan"
+                ],
+                "weapon": {
+                    "name": "Cane of the Shrine Guardian",
+                    "job": "WHM",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Cane_of_the_Shrine_Guardian"
+                }
+            },
+            "USApyon": {
+                "id": 3,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/USApyon",
+                "areas": [
+                    "Outer La Noscea",
+                    "Middle La Noscea",
+                    "Western Thanalan"
+                ],
+                "weapon": {
+                    "name": "Ears of the Moon Rabbit",
+                    "job": "MNK",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Ears_of_the_Moon_Rabbit"
+                }
+            },
+            "Whisper": {
+                "id": 4,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Whisper",
+                "areas": [
+                    "South Shroud",
+                    "Upper La Noscea",
+                    "Southern Thanalan"
+                ],
+                "weapon": {
+                    "name": "Bow of the White Whisp",
+                    "job": "BRD",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Bow_of_the_White_Wisp"
+                }
+            },
+            "Shogunyan": {
+                "id": 5,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Shogunyan",
+                "areas": [
+                    "Lower La Noscea",
+                    "Central Thanalan",
+                    "East Shroud"
+                ],
+                "weapon": {
+                    "name": "Whisker of the Brave Cat|Buckler of the Legendary",
+                    "job": "PLD",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Whisker_of_the_Brave_Cat|https://ffxiv.consolegameswiki.com/wiki/Buckler_of_the_Legendary_Cat"
+                }
+            },
+            "Hovernyan": {
+                "id": 6,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Hovernyan",
+                "areas": [
+                    "Western La Noscea",
+                    "Eastern Thanalan",
+                    "South Shroud"
+                ],
+                "weapon": {
+                    "name": "Fang of the Fearless Cat",
+                    "job": "DRK",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Fang_of_the_Fearless_Cat"
+                }
+            },
+            "Komajiro": {
+                "id": 7,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Komajiro",
+                "areas": [
+                    "Central Thanalan",
+                    "East Shroud",
+                    "Western La Noscea"
+                ],
+                "weapon": {
+                    "name": "Codex of the Shrine Guardian",
+                    "job": "SCH",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Codex_of_the_Shrine_Guardian"
+                }
+            },
+            "Noko": {
+                "id": 8,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Noko",
+                "areas": [
+                    "Southern Thanalan",
+                    "North Shroud",
+                    "Outer La Noscea"
+                ],
+                "weapon": {
+                    "name": "Globe of the Lucky Snake",
+                    "job": "AST",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Globe_of_the_Lucky_Snake"
+                }
+            },
+            "Venoct": {
+                "id": 9,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Venoct",
+                "areas": [
+                    "Middle La Noscea",
+                    "Western Thanalan",
+                    "Central Shroud"
+                ],
+                "weapon": {
+                    "name": "Spear of the Spark Serpent",
+                    "job": "DRG",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Spear_of_the_Spark_Serpent"
+                }
+            },
+            "Kyubi": {
+                "id": 10,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Kyubi",
+                "areas": [
+                    "Western Thanalan",
+                    "Central Shroud",
+                    "Lower La Noscea"
+                ],
+                "weapon": {
+                    "name": "Twintails of the Flame Fox",
+                    "job": "NIN",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Twintails_of_the_Flame_Fox"
+                }
+            },
+            "Robonyan_F__type": {
+                "id": 11,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Robonyan_F-type",
+                "areas": [
+                    "Upper La Noscea",
+                    "Southern Thanalan",
+                    "North Shroud"
+                ],
+                "weapon": {
+                    "name": "Musket of the Metal Cat",
+                    "job": "MCH",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Musket_of_the_Metal_Cat"
+                }
+            },
+            "Blizzaria": {
+                "id": 12,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Blizzaria",
+                "areas": [
+                    "North Shroud",
+                    "Outer La Noscea",
+                    "Middle La Noscea"
+                ],
+                "weapon": {
+                    "name": "Staff of the Snow Maiden",
+                    "job": "BLM",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Staff_of_the_Snow_Maiden"
+                }
+            },
+            "Manjimutt": {
+                "id": 13,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Manjimutt",
+                "areas": [
+                    "Eastern Thanalan",
+                    "South Shroud",
+                    "Upper La Noscea"
+                ],
+                "weapon": {
+                    "name": "Book of the Eerie Mutt",
+                    "job": "SMN",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Book_of_the_Eerie_Mutt"
+                }
+            },
+            "Lord_Enma": {
+                "id": 14,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Lord_Enma",
+                "areas": [
+                    "Stormblood"
+                ],
+                "weapon": {
+                    "name": "Gunblade of the Yo-kai King",
+                    "job": "GNB",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Gunblade_of_the_Yo-kai_King"
+                }
+            },
+            "Lord_Ananta": {
+                "id": 15,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Lord_Ananta",
+                "areas": [
+                    "Heavensward"
+                ],
+                "weapon": {
+                    "name": "Rapier of the Serpent Lord",
+                    "job": "RDM",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Rapier_of_the_Serpent_Lord"
+                }
+            },
+            "Zazel": {
+                "id": 16,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Zazel",
+                "areas": [
+                    "Heavensward"
+                ],
+                "weapon": {
+                    "name": "Katana of the King's Council",
+                    "job": "SAM",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Katana_of_the_King%27s_Counsel"
+                }
+            },
+            "Damona": {
+                "id": 17,
+                "url": "https://ffxiv.consolegameswiki.com/wiki/Damona",
+                "areas": [
+                    "Stormblood"
+                ],
+                "weapon": {
+                    "name": "Glaives of the Dark Princes",
+                    "job": "DNC",
+                    "url": "https://ffxiv.consolegameswiki.com/wiki/Glaives_of_the_Dark_Princess"
+                }
             }
         }
     }
