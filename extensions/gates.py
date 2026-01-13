@@ -31,9 +31,22 @@ class LeapOfFaith(Enum):
         return "https://ffxiv.consolegameswiki.com/wiki/Leap_of_Faith"
 
 
+class AirForceOne(Enum):
+    the_gold_saucer = 0
+    cieldalaes = 1
+
+    def clean(self) -> str:
+        afo_name = self.name.replace("_", "'").title()
+        return f"Air Force One [{afo_name}]"
+
+    @property
+    def url(self) -> str:
+        return "https://ffxiv.consolegameswiki.com/wiki/Air_Force_One"
+
+
 class GATE(Enum):
     cliffhanger = "https://ffxiv.consolegameswiki.com/wiki/Cliffhanger"
-    air_force_one = "https://ffxiv.consolegameswiki.com/wiki/Air_Force_One"
+    air_force_one = AirForceOne
     leap_of_faith = LeapOfFaith
     any_way_the_wind_blows = "https://ffxiv.consolegameswiki.com/wiki/Any_Way_the_Wind_Blows"
     the_slice_is_right = "https://ffxiv.consolegameswiki.com/wiki/The_Slice_Is_Right"
@@ -45,7 +58,7 @@ class GATE(Enum):
 class GATEs(BaseCog["Graha"]):
     GATES: ClassVar[dict[GateSpawnMinute, list[GATE]]] = {
         0: [GATE.cliffhanger, GATE.air_force_one, GATE.leap_of_faith],
-        20: [GATE.any_way_the_wind_blows, GATE.the_slice_is_right, GATE.leap_of_faith],
+        20: [GATE.any_way_the_wind_blows, GATE.the_slice_is_right, GATE.air_force_one],
         40: [GATE.the_slice_is_right, GATE.air_force_one, GATE.leap_of_faith],
     }
 
@@ -71,6 +84,12 @@ class GATEs(BaseCog["Graha"]):
             return LeapOfFaith.belah_dia
         return LeapOfFaith.sylphstep
 
+    @staticmethod
+    def resolve_air_force_one(minute: GateSpawnMinute) -> AirForceOne:
+        if minute == 20:
+            return AirForceOne.the_gold_saucer
+        return AirForceOne.cieldalaes
+
     def generate_gate_embed(self, when: datetime.datetime | None = None) -> discord.Embed:
         when, gates = self.resolve_next_gate(when)
 
@@ -80,7 +99,11 @@ class GATEs(BaseCog["Graha"]):
         for gate in gates:
             if gate is GATE.leap_of_faith:
                 leap_of_faith = self.resolve_leap_of_faith(when.minute)  # pyright: ignore[reportArgumentType] # resolved in earlier call
-                fmt += f"[{leap_of_faith.clean()}]({leap_of_faith.url})" + "\n"
+                fmt += f"[{leap_of_faith.clean()}]({leap_of_faith.url})\n"
+                continue
+            if gate is GATE.air_force_one:
+                air_force_one = self.resolve_air_force_one(when.minute)  # pyright: ignore[reportArgumentType] # resolved in earlier call
+                fmt += f"[{air_force_one.clean()}]({air_force_one.url})\n"
                 continue
             fmt += f"[{gate.clean()}]({gate.value})" + "\n"
 
