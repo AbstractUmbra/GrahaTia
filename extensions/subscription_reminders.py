@@ -11,7 +11,7 @@ from discord import SelectOption, app_commands
 from discord.ext import commands, tasks
 from discord.utils import MISSING
 
-from utilities.constants import DAILY_RESET_REMINDER_TIME, WEEKLY_RESET_REMINDER_TIME
+from utilities.constants import DAILY_RESET_REMINDER_TIME, WEEKLY_RESET_REMINDER_TIME, WEEKLY_RESET_TIME
 from utilities.containers.event_subscription import (
     EventSubConfig,
     MisconfiguredSubscriptionError,
@@ -699,7 +699,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):  # noqa: 
 
         await self.handle_dispatch(to_send)
 
-    @tasks.loop(time=WEEKLY_RESET_REMINDER_TIME)
+    @tasks.loop(time=WEEKLY_RESET_TIME)
     async def tt_tournament_loop(self) -> None:
         now = datetime.datetime.now(datetime.UTC)
         if now.weekday() != 1:  # tuesday
@@ -738,7 +738,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):  # noqa: 
 
         await self.handle_dispatch(to_send)
 
-    @tasks.loop(time=WEEKLY_RESET_REMINDER_TIME)
+    @tasks.loop(time=WEEKLY_RESET_TIME)
     async def island_sanctuary_loop(self) -> None:
         now = datetime.datetime.now(datetime.UTC)
 
