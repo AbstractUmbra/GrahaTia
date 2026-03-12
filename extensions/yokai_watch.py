@@ -166,7 +166,7 @@ class YokaiWatch(commands.GroupCog, name="yokai-watch"):
 
 
 async def setup(bot: Graha) -> None:
-    if not CONFIG_PATH.exists():  # noqa: ASYNC240
+    if not CONFIG_PATH.exists():
         return
 
     config: Config[YokaiConfig] = Config(CONFIG_PATH)

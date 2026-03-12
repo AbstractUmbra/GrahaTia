@@ -43,7 +43,7 @@ class CharacterCards(BaseCog["Graha"]):
     def __init__(self, bot: Graha, /) -> None:
         super().__init__(bot)
         self._cache_data()
-        _populate_choices(self.character_card._params, {"datacenter": self.datacenters})  # noqa: SLF001
+        _populate_choices(self.character_card._params, {"datacenter": self.datacenters})
 
     def _cache_data(self) -> None:
         datacenters: list[app_commands.Choice[str]] = []

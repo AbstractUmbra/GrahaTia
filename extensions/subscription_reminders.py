@@ -63,7 +63,7 @@ class EventSubView(BaseView):
         self.sub_selection.options = options
         self.cog: EventSubscriptions = cog
 
-    async def on_timeout(self) -> None:  # noqa: PLR6301 # override
+    async def on_timeout(self) -> None:
         return
 
     async def interaction_check(self, interaction: Interaction) -> bool:
@@ -407,7 +407,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):  # noqa: 
         )
 
     @select_subscriptions.error
-    async def on_subscription_select_error(self, interaction: Interaction, error: app_commands.AppCommandError) -> None:  # noqa: PLR6301
+    async def on_subscription_select_error(self, interaction: Interaction, error: app_commands.AppCommandError) -> None:
         if not interaction.response.is_done():
             await interaction.response.defer(ephemeral=True, thinking=False)
 

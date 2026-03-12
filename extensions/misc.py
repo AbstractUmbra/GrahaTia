@@ -58,7 +58,7 @@ class Misc(BaseCog["Graha"]):
             await message.reply(embed=embed, mention_author=False)
 
     @app_commands.command(name="invite")
-    async def invite_graha(self, interaction: Interaction) -> None:  # noqa: PLR6301 # required for command callbacks
+    async def invite_graha(self, interaction: Interaction) -> None:
         """Invite G'raha Tia to your server or as an installation!"""
         assert interaction.client.user
 

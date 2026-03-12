@@ -30,7 +30,7 @@ SANE_EXTENSION_REGEX = re.compile(r"(?P<prefix>extensions(?:\.|\\|\/))?(?P<exten
 
 
 class ModuleConverter(commands.Converter[str]):
-    async def convert(self, _: Context, argument: str, /) -> str:  # noqa: PLR6301 # override
+    async def convert(self, _: Context, argument: str, /) -> str:  # override
         match = SANE_EXTENSION_REGEX.search(argument)
 
         if not match:
@@ -40,7 +40,7 @@ class ModuleConverter(commands.Converter[str]):
             argument = "extensions/" + match["extension"]
 
         extension_path = pathlib.Path(argument)
-        if not extension_path.is_dir():  # noqa: ASYNC240
+        if not extension_path.is_dir():
             extension_path = extension_path.with_suffix(".py")
 
         if not extension_path.exists():
@@ -66,7 +66,7 @@ class Admin(BaseCog["Graha"]):
 
     @commands.command()
     @commands.guild_only()
-    async def leave(self, ctx: GuildContext) -> None:  # noqa: PLR6301 # required for command callbacks
+    async def leave(self, ctx: GuildContext) -> None:  # required for command callbacks
         """Leaves the current guild."""
         await ctx.guild.leave()
 
@@ -164,7 +164,7 @@ class Admin(BaseCog["Graha"]):
             await ctx.send(fmt)
 
     @sql.command(name="table")
-    async def sql_table(self, ctx: Context, *, table_name: str) -> None:  # noqa: PLR6301 # required for command callbacks
+    async def sql_table(self, ctx: Context, *, table_name: str) -> None:
         """Runs a query describing the table schema."""
         query = """SELECT column_name, data_type, column_default, is_nullable
                    FROM INFORMATION_SCHEMA.COLUMNS
@@ -188,7 +188,7 @@ class Admin(BaseCog["Graha"]):
 
     @commands.command()
     @commands.guild_only()
-    async def sync(  # noqa: PLR6301 # required for command callbacks
+    async def sync(
         self,
         ctx: GuildContext,
         guilds: Greedy[discord.Object],

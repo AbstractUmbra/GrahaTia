@@ -106,7 +106,7 @@ class RemoveNoise(logging.Filter):
     def __init__(self) -> None:
         super().__init__(name="discord.state")
 
-    def filter(self, record: logging.LogRecord) -> bool:  # noqa: PLR6301 # override
+    def filter(self, record: logging.LogRecord) -> bool:
         return not (record.levelname == "WARNING" and "referencing an unknown" in record.msg)
 
 
@@ -222,7 +222,7 @@ class Graha(commands.Bot):
         self.global_log: logging.Logger = LOGGER
         self.start_time: datetime.datetime = datetime.datetime.now(datetime.UTC)
 
-    def bot_check(self, ctx: Context) -> bool:  # noqa: PLR6301 # override
+    def bot_check(self, ctx: Context) -> bool:
         if ctx.guild and ctx.guild.id == 149998214810959872:
             return ctx.channel.id in {995124873259135067, 872379715443380295}
         return True
