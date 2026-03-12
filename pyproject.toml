@@ -78,6 +78,7 @@ unfixable = [
 
 [tool.ruff.lint.per-file-ignores]
 "utilities/flags.py" = ["PLR6301"]
+"extensions/__init__.py" = ["RUF067"] # we do magic in here for ext loading
 
 [tool.ruff.format]
 # Like Black, use double quotes for strings.

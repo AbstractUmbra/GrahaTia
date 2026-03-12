@@ -25,8 +25,7 @@ _worlds_path = pathlib.Path("configs/worlds.json")
 if not _worlds_path.exists():
     raise RuntimeError("Worlds data is not present.")
 
-with _worlds_path.open("r", encoding="utf-8") as fp:
-    WORLDS_DATA: WorldsData = from_json(fp.read())
+WORLDS_DATA: WorldsData = from_json(_worlds_path.read_text(encoding="utf-8"))
 
 
 class APIError(Exception):
