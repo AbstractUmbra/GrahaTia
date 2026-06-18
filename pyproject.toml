@@ -17,7 +17,7 @@ dependencies = [
     "pygit2",
     "python-dateutil",
     "sentry-sdk[aiohttp,asyncpg]",
-    "uvloop>=0.21.0",
+    "uvloop>=0.22.1",
     # "webserver",
 ]
 requires-python = "<4.0,>=3.13"
