@@ -9,7 +9,7 @@ webhook_url = "..."
 sentry_dsn = "..."
 
 [misc]
-mystbin_token = "..."
+paste_token = "..."
 
 [reddit]
 client_id = "..."

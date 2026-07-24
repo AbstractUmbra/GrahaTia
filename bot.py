@@ -21,7 +21,6 @@ import aiohttp
 import asyncpg
 import discord
 import jishaku
-import mystbin
 import sentry_sdk
 from discord import app_commands
 from discord.ext import commands
@@ -39,6 +38,7 @@ from utilities.exceptions import sentry_before_send
 from utilities.prefix import callable_prefix as _callable_prefix
 from utilities.shared.async_config import Config
 from utilities.shared.db import db_init
+from utilities.shared.paste import CreatePasteInput, create_paste
 from utilities.shared.reddit import RedditHandler
 from utilities.shared.timezones import TimezoneHandler
 
@@ -184,7 +184,6 @@ class Graha(commands.Bot):
     socket_stats: Counter[str]
     global_log: logging.Logger
     command_types_used: Counter[bool]
-    mb_client: mystbin.Client
     reddit: RedditHandler
     bot_app_info: discord.AppInfo
     tz_handler: TimezoneHandler
@@ -427,22 +426,21 @@ class Graha(commands.Bot):
     async def create_paste(
         self,
         *,
-        content: str | None = None,
-        files: list[tuple[str, str]] | None = None,
+        contents: list[CreatePasteInput],
+        title: str,
         password: str | None = None,
         expires: datetime.datetime | None = None,
-    ) -> str:
-        if not content and not files:
-            raise ValueError("Either `content` or `files` must be provided.")
+    ) -> tuple[str, datetime.datetime | None]:
+        paste, paste_expires = await create_paste(
+            title=title,
+            contents=contents,
+            password=password,
+            expiry=expires,
+            session=self.session,
+            api_token=self.config["misc"]["paste_token"],
+        )
 
-        if content:
-            post_files = [mystbin.File(filename="output.py", content=content)]
-        elif files:
-            post_files = [mystbin.File(filename=name, content=content) for name, content in files]
-
-        paste = await self.mb_client.create_paste(files=post_files, password=password, expires=expires)
-
-        return paste.url
+        return paste, paste_expires
 
     async def start(self) -> None:
         try:
@@ -459,7 +457,6 @@ class Graha(commands.Bot):
                         f.write(f"{last_log}\n")
 
     async def setup_hook(self) -> None:
-        self.mb_client = mystbin.Client(session=self.session)
         self.start_time: datetime.datetime = datetime.datetime.now(datetime.UTC)
         self.bot_app_info = await self.application_info()
         self.owner_id = self.bot_app_info.owner.id

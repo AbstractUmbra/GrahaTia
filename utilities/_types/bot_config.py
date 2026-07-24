@@ -31,7 +31,7 @@ class LoggingConfig(TypedDict):
 
 
 class MiscConfig(TypedDict):
-    mystbin_token: str
+    paste_token: str
 
 
 class Config(TypedDict):

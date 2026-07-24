@@ -11,14 +11,11 @@ dependencies = [
     "jishaku",
     "lru-dict",
     "lxml",
-    "mystbin-py",
     "parsedatetime",
     "psutil",
     "pygit2",
     "python-dateutil",
     "sentry-sdk[aiohttp,asyncpg]",
-    "uvloop>=0.22.1",
-    # "webserver",
 ]
 requires-python = "<4.0,>=3.13"
 readme = "README.md"
@@ -27,7 +24,7 @@ license = { text = "MPL2.0" }
 [dependency-groups]
 dev = ["ruff", "typing-extensions", "asyncpg-stubs"]
 super-dev = ["ipython", "ipykernel"]
-speed = ["orjson", "uvloop"]
+speed = ["orjson", "uvloop; sys_platform != 'win32'"]
 
 [tool.uv.workspace]
 members = ["webserver/"]

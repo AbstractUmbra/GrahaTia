@@ -23,7 +23,6 @@ from .shared.ui import BaseView, ConfirmationView
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Sequence
     from types import TracebackType
-    from typing import TypeVar  # noqa: TC004
 
     from aiohttp import ClientSession
     from asyncpg import Connection
@@ -259,14 +258,16 @@ class Context[CogT_co: commands.Cog](commands.Context["Graha"]):
         content = str(content) if content is not None else None
         if (paste and content) or (content and len(content) >= 2000):
             password = secrets.token_urlsafe(10)
-            paste_url = await create_paste(
-                content=content,
+            paste_url, _ = await create_paste(
+                title=f"GrahaTia created paste for {self.author.id}",
+                contents=("Paste1", "txt", content),  # pyright: ignore[reportArgumentType]
                 password=password,
                 expiry=(datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=2)),
-                mb_client=self.bot.mb_client,
+                session=self.bot.session,
+                api_token=self.bot.config["misc"]["paste_token"],
             )
             content = (
-                "Sorry, the output was too large but I posted it to mystb.in for you here:"
+                "Sorry, the output was too large but I posted it to paste.myst.rs for you here:"
                 f" {paste_url}.\nThe password is: `{password}`."
             )
 
