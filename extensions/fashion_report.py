@@ -162,12 +162,19 @@ class FashionReport(BaseCog["Graha"]):
 
     @cache(ignore_kwargs=True)
     async def _filter_submissions(self, *, dt: datetime.datetime) -> FashionReportSubmission:
-        try:
-            submissions: TopLevelListingResponse = await self.bot.reddit.get(
-                "https://oauth.reddit.com/user/Gottesstrafe/submitted",
-            )
-        except RedditError as err:
-            raise RedditError("[Fashion Report] -> {Submission Filtering} :: Reddit API request failed") from err
+        submissions: TopLevelListingResponse = {}  # pyright: ignore[reportAssignmentType]
+        for url in (
+            "https://oauth.reddit.com/user/Gottesstrafe/submitted",
+            "https://oauth.reddit.com/user/KaiyokoStar/submitted",
+        ):
+            try:
+                fetched: TopLevelListingResponse = await self.bot.reddit.get(
+                    url,
+                )
+            except RedditError as err:
+                raise RedditError("[Fashion Report] -> {Submission Filtering} :: Reddit API request failed") from err
+            else:
+                submissions |= fetched
 
         for submission in submissions["data"]["children"]:
             match = FASHION_REPORT_PATTERN.search(submission["data"]["title"])
