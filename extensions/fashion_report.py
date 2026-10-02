@@ -94,18 +94,11 @@ class FashionReportSubmission(NamedTuple):
         # it is Saturday or Sunday
         return wd == 1 or (wd == 2 and now.time() < reset_time) or (wd == 5 and now.time() > reset_time) or wd >= 6
 
-    def _has_new_data(self) -> bool:
-        next_window = resolve_next_window()
-        since_start = weeks_since_start(next_window)
-
-        return self.week_num == since_start
-
     def start_period(self) -> datetime.datetime:
-        next_ = self._next_event()
-        if next_.weekday() == 4:
-            return next_
-        # it will be 4
-        return resolve_next_weekday(target=Weekday.friday, source=next_, current_week_included=True)
+        next_ = self.next_event()
+        if next_.weekday() == 1:
+            return resolve_previous_weekday(target=Weekday.friday, source=next_, current_week_included=False)
+        return next_.replace(hour=8, minute=0, second=0, microsecond=0)
 
     def judging_concludes(self) -> datetime.datetime:
         start = self.start_period()
@@ -113,7 +106,7 @@ class FashionReportSubmission(NamedTuple):
             target=Weekday.tuesday, source=start, current_week_included=True, before_time=datetime.time(hour=8)
         )
 
-    def _next_event(self) -> datetime.datetime:
+    def next_event(self) -> datetime.datetime:
         now = datetime.datetime.now(datetime.UTC)
         wd = now.isoweekday()
         reset_time = datetime.time(hour=8, minute=0, second=0)
