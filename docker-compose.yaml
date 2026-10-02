@@ -1,7 +1,9 @@
 services:
   bot:
     container_name: graha
-    image: ghcr.io/abstractumbra/graha:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       database:
@@ -13,26 +15,6 @@ services:
       - ./extensions/:/app/extensions/:ro
       - ./.git/:/app/.git
       - ./.safe-gitconfig/:/root/.gitconfig
-
-  webserver:
-    container_name: graha-webserver
-    image: ghcr.io/abstractumbra/graha-webserver:latest
-    restart: unless-stopped
-    configs:
-      - webserver-config
-    depends_on:
-      database:
-        restart: true
-        condition: service_healthy
-    ports:
-      - "8080:${GRAHA_WS_PORT:-8032}"
-    environment:
-      - CONFIG_PATH=/webserver-config
-      - CSRF_SECRET_FILE=/var/run/secrets/csrf_token
-      - POSTGRES_PASSWORD_FILE=/var/run/secrets/postgres_password
-    secrets:
-      - csrf_token
-      - postgres_password
 
   database:
     container_name: graha-database
@@ -71,15 +53,9 @@ services:
       timeout: 5s
       start_period: 1m
 
-configs:
-  webserver-config:
-    file: webserver/configs/app.json
-
 volumes:
   graha_db:
 
 secrets:
-  csrf_token:
-    file: webserver/csrf_token.txt
   postgres_password:
     file: ./db_password.txt
