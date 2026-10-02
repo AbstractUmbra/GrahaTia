@@ -224,9 +224,9 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
     async def resets_summary(
         self,
         interaction: Interaction,
-        daily: bool = True,  # noqa: FBT001, FBT002 # required by dpy
-        weekly: bool = True,  # noqa: FBT001, FBT002 # required by dpy
-        ephemeral: bool = True,  # noqa: FBT001, FBT002 # required by dpy
+        daily: bool = True,  # ruff: ignore[boolean-type-hint-positional-argument, boolean-default-value-positional-argument] # required by dpy
+        weekly: bool = True,  # ruff: ignore[boolean-type-hint-positional-argument, boolean-default-value-positional-argument] # required by dpy
+        ephemeral: bool = True,  # ruff: ignore[boolean-type-hint-positional-argument, boolean-default-value-positional-argument] # required by dpy
     ) -> None:
         """Sends a summary of the daily and weekly reset information."""
 
@@ -252,7 +252,7 @@ class Resets(BaseCog["Graha"], name="Reset Information"):
         region="Choose a region to show the information for. Will show all regions if no choice is made.",
         ephemeral="Whether to show the data privately to you, or not.",
     )
-    async def cactpot(self, interaction: Interaction, region: Region | None = None, ephemeral: bool = True) -> None:  # noqa: FBT001, FBT002 # required by dpy
+    async def cactpot(self, interaction: Interaction, region: Region | None = None, ephemeral: bool = True) -> None:  # ruff: ignore[boolean-type-hint-positional-argument, boolean-default-value-positional-argument] # required by dpy
         """Shows data on when the next Jumbo Cactpot calling is!"""
         regions = [region] if region else Region
         embeds = [self.get_cactpot_embed(reg) for reg in regions]

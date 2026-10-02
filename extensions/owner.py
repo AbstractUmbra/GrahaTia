@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Literal
 
 import discord
 from discord.ext import commands
-from discord.ext.commands import Greedy  # noqa: TC002
+from discord.ext.commands import Greedy  # ruff: ignore[typing-only-third-party-import]
 
 from utilities import formats
 from utilities.shared.cog import BaseCog
@@ -78,7 +78,7 @@ class Admin(BaseCog["Graha"]):
         except commands.ExtensionError as err:
             await ctx.send(f"{err.__class__.__name__}: {err}")
         else:
-            await ctx.message.add_reaction(ctx.tick(True))  # noqa: FBT003 # quick shortcut
+            await ctx.message.add_reaction(ctx.tick(True))  # ruff: ignore[boolean-positional-value-in-call] # quick shortcut
 
     @commands.command()
     async def unload(self, ctx: Context, *, module: str = commands.param(converter=ModuleConverter)) -> None:
@@ -88,7 +88,7 @@ class Admin(BaseCog["Graha"]):
         except commands.ExtensionError as err:
             await ctx.send(f"{err.__class__.__name__}: {err}")
         else:
-            await ctx.message.add_reaction(ctx.tick(True))  # noqa: FBT003 # quick shortcut
+            await ctx.message.add_reaction(ctx.tick(True))  # ruff: ignore[boolean-positional-value-in-call] # quick shortcut
 
     @commands.group(name="reload", invoke_without_command=True)
     async def _reload(self, ctx: Context, *, module: str = commands.param(converter=ModuleConverter)) -> None:
@@ -99,10 +99,10 @@ class Admin(BaseCog["Graha"]):
             return await self.bot.load_extension(module)
         except commands.ExtensionError as err:
             await ctx.send(f"{err.__class__.__name__}: {err}")
-            await ctx.message.add_reaction(ctx.tick(False))  # noqa: FBT003 # quick shortcut
+            await ctx.message.add_reaction(ctx.tick(False))  # ruff: ignore[boolean-positional-value-in-call] # quick shortcut
             return None
 
-        await ctx.message.add_reaction(ctx.tick(True))  # noqa: FBT003 # quick shortcut
+        await ctx.message.add_reaction(ctx.tick(True))  # ruff: ignore[boolean-positional-value-in-call] # quick shortcut
 
         return None
 
@@ -124,11 +124,11 @@ class Admin(BaseCog["Graha"]):
 
         failed_exts = [ext for failed, ext in results if failed is False]
         if failed_exts:
-            await ctx.message.add_reaction(ctx.tick(False))  # noqa: FBT003 # quick shortcut
+            await ctx.message.add_reaction(ctx.tick(False))  # ruff: ignore[boolean-positional-value-in-call] # quick shortcut
             ret = "\n".join(failed_exts)
             await ctx.send(f"These extensions failed to be reloaded:\n\n{ret}")
         else:
-            await ctx.message.add_reaction(ctx.tick(True))  # noqa: FBT003 # quick shortcut
+            await ctx.message.add_reaction(ctx.tick(True))  # ruff: ignore[boolean-positional-value-in-call] # quick shortcut
 
     @commands.group(invoke_without_command=True)
     async def sql(self, ctx: Context, *, query: str) -> None:

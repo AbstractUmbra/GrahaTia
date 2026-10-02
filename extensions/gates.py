@@ -115,7 +115,7 @@ class GATEs(BaseCog["Graha"]):
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.describe(ephemeral="Whether to show the data privately to you, or not.")
-    async def gate(self, interaction: Interaction, ephemeral: bool = True) -> None:  # noqa: FBT001, FBT002 # required by dpy
+    async def gate(self, interaction: Interaction, ephemeral: bool = True) -> None:  # ruff: ignore[boolean-type-hint-positional-argument, boolean-default-value-positional-argument] # required by dpy
         """Shows data on the next possible selection for the GATE in the Golden Saucer."""
         now = datetime.datetime.now(datetime.UTC)
 

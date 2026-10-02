@@ -84,7 +84,7 @@ def object_at(addr: int) -> Any | None:
     return None
 
 
-class Stats(BaseCog["Graha"]):  # noqa: PLR0904
+class Stats(BaseCog["Graha"]):  # ruff: ignore[too-many-public-methods]
     """Bot usage statistics."""
 
     def __init__(self, bot: Graha) -> None:
@@ -732,15 +732,15 @@ class Stats(BaseCog["Graha"]):  # noqa: PLR0904
 
     @commands.command(hidden=True)
     @commands.is_owner()
-    async def bothealth(self, ctx: Context) -> None:  # noqa: PLR0914, PLR0915 # large function call
+    async def bothealth(self, ctx: Context) -> None:  # ruff: ignore[too-many-locals, too-many-statements] # large function call
         """Various bot health monitoring tools."""
 
         # This uses a lot of private methods because there is no
         # clean way of doing this otherwise.
 
-        HEALTHY = discord.Colour(value=0x43B581)  # noqa: N806
-        UNHEALTHY = discord.Colour(value=0xF04947)  # noqa: N806
-        WARNING = discord.Colour(value=0xF09E47)  # noqa: N806
+        HEALTHY = discord.Colour(value=0x43B581)  # ruff: ignore[non-lowercase-variable-in-function]
+        UNHEALTHY = discord.Colour(value=0xF04947)  # ruff: ignore[non-lowercase-variable-in-function]
+        WARNING = discord.Colour(value=0xF09E47)  # ruff: ignore[non-lowercase-variable-in-function]
 
         total_warnings = 0
 
@@ -1103,7 +1103,7 @@ async def setup(bot: Graha) -> None:
     commands.Bot.on_error = on_error  # pyright: ignore[reportAttributeAccessIssue] # monkeypatching
 
 
-async def teardown(bot: Graha) -> None:  # noqa: RUF029 # expected by the extension handler
+async def teardown(bot: Graha) -> None:  # ruff: ignore[unused-async] # expected by the extension handler
     commands.Bot.on_error = old_on_error
     logging.getLogger().removeHandler(bot._stats_cog_gateway_handler)
     del bot._stats_cog_gateway_handler

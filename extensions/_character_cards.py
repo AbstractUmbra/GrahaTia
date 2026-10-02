@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import discord
 import yarl
 from discord import app_commands
-from discord.app_commands.commands import _populate_choices  # noqa: PLC2701 # we do a little cheating
+from discord.app_commands.commands import _populate_choices  # ruff: ignore[import-private-name] # we do a little cheating
 
 from utilities import fuzzy
 from utilities.shared.cog import BaseCog

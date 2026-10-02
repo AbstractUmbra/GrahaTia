@@ -125,7 +125,7 @@ class Context[CogT_co: commands.Cog](commands.Context["Graha"]):
 
     __slots__ = ("pool",)
 
-    def __init__(self, **kwargs) -> None:  # noqa: ANN003
+    def __init__(self, **kwargs) -> None:  # ruff: ignore[missing-type-kwargs]
         super().__init__(**kwargs)
         self.pool = self.bot.pool
         self.exc_handled: bool = False
@@ -223,7 +223,7 @@ class Context[CogT_co: commands.Cog](commands.Context["Graha"]):
         return view.value
 
     @staticmethod
-    def tick(opt: bool | None, label: str | None = None) -> str:  # noqa: FBT001 # quick hack shortcut
+    def tick(opt: bool | None, label: str | None = None) -> str:  # ruff: ignore[boolean-type-hint-positional-argument] # quick hack shortcut
         lookup = {
             True: "<:TickYes:735498312861351937>",
             False: "<:CrossNo:735498453181923377>",

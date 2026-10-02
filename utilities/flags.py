@@ -8,13 +8,10 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, Self
+from typing import Self
 
 from asyncpg import BitString
 from discord.flags import BaseFlags as DpyFlags, fill_with_flags, flag_value
-
-if TYPE_CHECKING:
-    from typing import Self
 
 __all__ = (
     "SubscribedEventsFlags",

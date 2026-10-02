@@ -41,7 +41,7 @@ class NoWebhookFoundError(Exception):
         self.subscription_config = subscription_config
 
 
-class EventSubConfig:  # noqa: PLR0904
+class EventSubConfig:  # ruff: ignore[too-many-public-methods]
     patch_webhook_: discord.Webhook
     __slots__ = (
         "_bot",

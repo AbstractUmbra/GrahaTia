@@ -279,7 +279,7 @@ class OceanFishing(BaseCog["Graha"]):
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.describe(ephemeral="Whether to show the data privately to you, or not.")
-    async def ocean_fishing_times(self, interaction: Interaction, ephemeral: bool = True) -> None:  # noqa: FBT001, FBT002 # required by dpy
+    async def ocean_fishing_times(self, interaction: Interaction, ephemeral: bool = True) -> None:  # ruff: ignore[boolean-type-hint-positional-argument, boolean-default-value-positional-argument] # required by dpy
         """Shows your local time against the current ocean fishing schedule windows and their routes!"""
         now = datetime.datetime.now(datetime.UTC)
 

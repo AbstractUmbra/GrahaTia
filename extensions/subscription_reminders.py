@@ -17,11 +17,10 @@ from utilities.containers.event_subscription import (
     MisconfiguredSubscriptionError,
     NoWebhookFoundError,
 )
-from utilities.exceptions import NoSubmissionFoundError
 from utilities.flags import SubscribedEventsFlags
 from utilities.shared.cache import cache
 from utilities.shared.cog import BaseCog
-from utilities.shared.converters import WebhookTransformer  # noqa: TC001
+from utilities.shared.converters import WebhookTransformer  # ruff: ignore[typing-only-first-party-import]
 from utilities.shared.ui import BaseView
 
 if TYPE_CHECKING:
@@ -131,7 +130,7 @@ class EventSubView(BaseView):
         )
 
 
-class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):  # noqa: PLR0904
+class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):  # ruff: ignore[too-many-public-methods]
     POSSIBLE_SUBSCRIPTIONS: ClassVar[list[discord.SelectOption]] = [
         discord.SelectOption(
             label="Daily Resets",
@@ -215,7 +214,6 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):  # noqa: 
         self.avatar_url: str = "https://static.abstractumbra.dev/images/graha.png"
         self.daily_reset_loop.start()
         self.weekly_reset_loop.start()
-        self.fashion_report_loop.add_exception_type(NoSubmissionFoundError)
         self.fashion_report_loop.start()
         self.ocean_fishing_loop.start()
         self.jumbo_cactpot_loop.start()
@@ -376,7 +374,7 @@ class EventSubscriptions(BaseCog["Graha"], group_name="subscription"):  # noqa: 
     @app_commands.command(name="delete")
     @app_commands.guild_only()
     @app_commands.default_permissions(manage_channels=True, manage_webhooks=True)
-    async def delete_subscription(self, interaction: Interaction, delete_webhook: bool = False) -> None:  # noqa: FBT001, FBT002  # needed for command callback
+    async def delete_subscription(self, interaction: Interaction, delete_webhook: bool = False) -> None:  # ruff: ignore[boolean-type-hint-positional-argument, boolean-default-value-positional-argument]  # needed for command callback
         """Deletes any existing subscriptions for the command, and optionally the webhook too."""
         assert interaction.guild  # guarded by decorated check
 

@@ -21,25 +21,19 @@ import aiohttp
 import asyncpg
 import discord
 import jishaku
-import sentry_sdk
 from discord import app_commands
 from discord.ext import commands
 from discord.utils import (
-    _ColourFormatter as ColourFormatter,  # noqa: PLC2701 # we do a little cheating
+    _ColourFormatter as ColourFormatter,  # ruff: ignore[import-private-name] # we do a little cheating
     stream_supports_colour,
 )
-from sentry_sdk.integrations.aiohttp import AioHttpIntegration
-from sentry_sdk.integrations.asyncio import AsyncioIntegration
-from sentry_sdk.integrations.sys_exit import SysExitIntegration
 
 from extensions import EXTENSIONS
 from utilities.context import Context
-from utilities.exceptions import sentry_before_send
 from utilities.prefix import callable_prefix as _callable_prefix
 from utilities.shared.async_config import Config
 from utilities.shared.db import db_init
 from utilities.shared.paste import CreatePasteInput, create_paste
-from utilities.shared.reddit import RedditHandler
 from utilities.shared.timezones import TimezoneHandler
 
 if TYPE_CHECKING:
@@ -145,14 +139,6 @@ class LogHandler:
         fmt = logging.Formatter("[{asctime}] [{levelname:<7}] {name}: {message}", dt_fmt, style="{")
         handler.setFormatter(fmt)
         self.log.addHandler(handler)
-        if dsn := CONFIG["logging"].get("sentry_dsn"):
-            sentry_sdk.init(
-                dsn=dsn,
-                traces_sample_rate=1.0,
-                profiles_sample_rate=1.0,
-                integrations=[AioHttpIntegration(), AsyncioIntegration(), SysExitIntegration()],
-                before_send=sentry_before_send,
-            )
 
         if self.stream:
             stream_handler = logging.StreamHandler()
@@ -184,7 +170,6 @@ class Graha(commands.Bot):
     socket_stats: Counter[str]
     global_log: logging.Logger
     command_types_used: Counter[bool]
-    reddit: RedditHandler
     bot_app_info: discord.AppInfo
     tz_handler: TimezoneHandler
     _original_help_command: commands.HelpCommand | None  # for help command overriding
@@ -276,11 +261,11 @@ class Graha(commands.Bot):
             clean = "".join(tb_fmt)
 
             if not isinstance(origin_, discord.HTTPException):
-                LOGGER.error("in `%s` with ray id: '%s' ::\n%s", ctx.command.name, ctx.ray_id, clean, exc_info=True)  # noqa: LOG014
+                LOGGER.error("in `%s` with ray id: '%s' ::\n%s", ctx.command.name, ctx.ray_id, clean, exc_info=True)  # ruff: ignore[exc-info-outside-except-handler]
 
             ret += (
                 "There was an error in that command. My developer has been notified, "
-                "but if you're contacting `hyliantwink` directly please quote 'Ray ID: `{ctx.ray_id}`'."
+                f"but if you're contacting `hyliantwink` directly please quote 'Ray ID: `{ctx.ray_id}`'."
             )
 
         else:
@@ -311,7 +296,7 @@ class Graha(commands.Bot):
             await self._prefix_data.put(guild.id, prefixes)
 
     async def _blacklist_add(self, object_id: int) -> None:
-        await self.blacklist_data.put(object_id, True)  # noqa: FBT003
+        await self.blacklist_data.put(object_id, True)  # ruff: ignore[boolean-positional-value-in-call]
 
     async def _blacklist_remove(self, object_id: int) -> None:
         try:
@@ -447,7 +432,7 @@ class Graha(commands.Bot):
             await super().start(token=self.config["bot"]["token"], reconnect=True)
         finally:
             path = pathlib.Path("logs/prev_events.log")
-            with path.open("w+", encoding="utf-8") as f:  # noqa: ASYNC230 # very minor
+            with path.open("w+", encoding="utf-8") as f:  # ruff: ignore[blocking-open-call-in-async-function] # very minor
                 for event in self._previous_websocket_events:
                     try:
                         last_log = json.dumps(event, ensure_ascii=True, indent=2)
@@ -480,7 +465,6 @@ async def main() -> None:
         bot.log_handler.info("\n" * 5)
 
         bot.session = session
-        bot.reddit = RedditHandler(session=session, config=CONFIG["reddit"])
 
         await bot.load_extension("jishaku")
         for extension in EXTENSIONS:
