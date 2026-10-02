@@ -11,8 +11,6 @@ from typing import TYPE_CHECKING, TypedDict
 if TYPE_CHECKING:
     from typing import NotRequired
 
-    from utilities.shared.reddit import RedditConfig
-
 
 __all__ = ("Config",)
 
@@ -39,5 +37,4 @@ class Config(TypedDict):
     database: DatabaseConfig
     logging: LoggingConfig
     misc: MiscConfig
-    reddit: RedditConfig
     conditional_access: NotRequired[dict[str, list[int]]]

@@ -6,17 +6,9 @@ dsn = "..."
 
 [logging]
 webhook_url = "..."
-sentry_dsn = "..."
 
 [misc]
 paste_token = "..."
-
-[reddit]
-client_id = "..."
-client_secret = "..."
-username = "..."
-password = "..."
-user_agent = "..."
 
 [conditional_access]
 # this key is removable

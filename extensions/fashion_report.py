@@ -18,22 +18,48 @@ from discord.ext import commands, tasks
 from discord.utils import MISSING
 
 from utilities.context import Context as BaseContext, Interaction
-from utilities.exceptions import NoSubmissionFoundError
 from utilities.shared.cache import cache
 from utilities.shared.cog import BaseCog
-from utilities.shared.reddit import RedditError, RedditHandler
-from utilities.shared.time import Weekday, resolve_next_weekday
+from utilities.shared.time import Weekday, resolve_next_weekday, resolve_previous_weekday
 
 if TYPE_CHECKING:
     from bot import Graha
     from utilities.containers.event_subscription import EventSubConfig
-    from utilities.shared._types.xiv.reddit.fashion_report import TopLevelListingResponse
+    from utilities.shared._types.xiv.fashionreportxiv import ReportStateResponse
 
 FASHION_REPORT_PATTERN: re.Pattern[str] = re.compile(
     r"Fashion Report - Full Details - For Week of (?P<date>[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}) \(Week (?P<week_num>[0-9]{3})\)",
 )
+FASHION_REPORT_START: datetime.datetime = datetime.datetime(
+    year=2018,
+    month=1,
+    day=26,
+    hour=8,
+    minute=0,
+    second=0,
+    microsecond=0,
+    tzinfo=datetime.UTC,
+)
+API_BASE_URL = "https://fashionreportxiv.com"
+
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
+
+
+def resolve_next_window() -> datetime.datetime:
+    dt = datetime.datetime.now(datetime.UTC)
+
+    next_weekday = Weekday.friday if 1 < dt.weekday() <= 4 else Weekday.tuesday
+    return resolve_next_weekday(source=dt, target=next_weekday, current_week_included=True)
+
+
+def weeks_since_start(dt: datetime.datetime, /) -> int:
+    td = dt - FASHION_REPORT_START
+
+    seconds = round(td.total_seconds())
+    weeks, _ = divmod(seconds, 60 * 60 * 24 * 7)
+
+    return weeks
 
 
 class Context(BaseContext):
@@ -41,8 +67,10 @@ class Context(BaseContext):
 
 
 class FashionReportSubmission(NamedTuple):
+    title: str
     prose: str
     url: str
+    week_num: int
     created_at: datetime.datetime
 
     @staticmethod
@@ -57,7 +85,26 @@ class FashionReportSubmission(NamedTuple):
         # it is Saturday or Sunday
         return wd == 1 or (wd == 2 and now.time() < reset_time) or (wd == 5 and now.time() > reset_time) or wd >= 6
 
-    def next_event(self) -> datetime.datetime:
+    def _has_new_data(self) -> bool:
+        next_window = resolve_next_window()
+        since_start = weeks_since_start(next_window)
+
+        return self.week_num == since_start
+
+    def start_period(self) -> datetime.datetime:
+        next_ = self._next_event()
+        if next_.weekday() == 4:
+            return next_
+        # it will be 4
+        return resolve_next_weekday(target=Weekday.friday, source=next_, current_week_included=True)
+
+    def judging_concludes(self) -> datetime.datetime:
+        start = self.start_period()
+        return resolve_next_weekday(
+            target=Weekday.tuesday, source=start, current_week_included=True, before_time=datetime.time(hour=8)
+        )
+
+    def _next_event(self) -> datetime.datetime:
         now = datetime.datetime.now(datetime.UTC)
         wd = now.isoweekday()
         reset_time = datetime.time(hour=8, minute=0, second=0)
@@ -74,18 +121,6 @@ class FashionReportSubmission(NamedTuple):
 
 
 class FashionReport(BaseCog["Graha"]):
-    AuthHandler: RedditHandler
-    FASHION_REPORT_START: datetime.datetime = datetime.datetime(
-        year=2018,
-        month=1,
-        day=26,
-        hour=8,
-        minute=0,
-        second=0,
-        microsecond=0,
-        tzinfo=datetime.UTC,
-    )
-
     def __init__(self, bot: Graha) -> None:
         super().__init__(bot)
         self.reset_cache.start()
@@ -113,14 +148,7 @@ class FashionReport(BaseCog["Graha"]):
             LOGGER.warning("[FashionReport] -> {Reset State} :: Task was in error state.")
 
         self.report_task = asyncio.create_task(self._wait_for_report())
-        return self._filter_submissions.invalidate(self)
-
-    @staticmethod
-    def resolve_next_window() -> datetime.datetime:
-        dt = datetime.datetime.now(datetime.UTC)
-
-        next_weekday = Weekday.friday if 1 < dt.weekday() <= 4 else Weekday.tuesday
-        return resolve_next_weekday(source=dt, target=next_weekday, current_week_included=True)
+        return self._fetch_report.invalidate(self)
 
     async def _wait_for_report(self) -> None:
         await self._ready.wait()
@@ -132,13 +160,13 @@ class FashionReport(BaseCog["Graha"]):
         LOGGER.info("[FashionReport] :: Starting loop to gain report.")
 
         while True:
-            dt = self.resolve_next_window()
+            dt = resolve_next_window()
             try:
-                submission = await self._filter_submissions(dt=dt)
+                submission = await self._fetch_report(dt=dt)
             except ValueError:
                 LOGGER.warning("[FashionReport] :: Submission not found, sleeping for 5m.")
-                LOGGER.debug("[FashionReport] :: Next window would be %r", dt.isoformat())
-                self._filter_submissions.invalidate(self)
+                LOGGER.debug("[FashionReport] :: Next window would be %r (week #%s)", dt.isoformat(), weeks_since_start(dt))
+                self._fetch_report.invalidate(self)
                 await asyncio.sleep(300)
                 continue
             else:
@@ -152,64 +180,31 @@ class FashionReport(BaseCog["Graha"]):
             submission.created_at.isoformat(),
         )
 
-    def weeks_since_start(self, dt: datetime.datetime) -> int:
-        td = dt - self.FASHION_REPORT_START
-
-        seconds = round(td.total_seconds())
-        weeks, _ = divmod(seconds, 60 * 60 * 24 * 7)
-
-        return weeks
-
     @cache(ignore_kwargs=True)
-    async def _filter_submissions(self, *, dt: datetime.datetime) -> FashionReportSubmission:
-        submissions: TopLevelListingResponse = {}  # pyright: ignore[reportAssignmentType]
-        for url in (
-            "https://oauth.reddit.com/user/Gottesstrafe/submitted",
-            "https://oauth.reddit.com/user/KaiyokoStar/submitted",
-        ):
-            try:
-                fetched: TopLevelListingResponse = await self.bot.reddit.get(
-                    url,
-                )
-            except RedditError as err:
-                raise RedditError("[Fashion Report] -> {Submission Filtering} :: Reddit API request failed") from err
-            else:
-                submissions |= fetched
+    async def _fetch_report(self, *, dt: datetime.datetime) -> FashionReportSubmission:
+        week_num = weeks_since_start(dt)
+        this_window = resolve_previous_weekday(target=Weekday.tuesday, source=dt, current_week_included=True)
 
-        for submission in submissions["data"]["children"]:
-            match = FASHION_REPORT_PATTERN.search(submission["data"]["title"])
-            if not match:
-                LOGGER.debug(
-                    "[FashionReport] :: FashionReport author entry found but is not a fashion report: %r",
-                    submission["data"]["title"],
-                )
-                continue
+        async with self.bot.session.get(f"{API_BASE_URL}/api/report-state") as resp:
+            resp.raise_for_status()
+            data: ReportStateResponse = await resp.json()
 
-            if self.weeks_since_start(dt) != int(match["week_num"]):
-                LOGGER.debug(
-                    (
-                        "[FashionReport] -> {Submission Filtering} :: Found a submission, "
-                        "but doesn't match the expected week (wanted %s but got %s)"
-                    ),
-                    self.weeks_since_start(dt),
-                    match["week_num"],
-                )
-                continue
+        response_num = int(data["lastOptions"]["week"])
 
-            created = datetime.datetime.fromtimestamp(submission["data"]["created_utc"], tz=datetime.UTC)
-            if (dt - created) < datetime.timedelta(days=7):
-                LOGGER.debug(
-                    "[FashionReport] -> {Submission Filtering} :: Found fashion report entry, current: %r",
-                    created.isoformat(),
-                )
-                break
-        else:
-            raise NoSubmissionFoundError("No submissions matches")
+        if week_num != int(data["lastOptions"]["week"]):
+            LOGGER.warning(
+                "[FashionReport] -> [API] :: Found a response but for bad week #%s (should be #%s)", response_num, week_num
+            )
+            raise ValueError("No report found for the current week")
+
+        LOGGER.info("[FashionReport] -> [API] :: Found report for week #%s", week_num)
 
         return FashionReportSubmission(
-            f"Fashion Report details for week of {match['date']} (Week {match['week_num']})",
-            submission["data"]["url"],
-            created,
+            data["lastOptions"]["reportTitle"],
+            f"Fashion Report details for the week of {this_window:%m/%d/%Y} (Week {week_num})",
+            data["links"]["results"],
+            week_num,
+            datetime.datetime.fromtimestamp(data["easy80"]["_updatedAt"] / 1000, tz=datetime.UTC),
         )
 
     def generate_fashion_embed(self) -> discord.Embed:
@@ -217,20 +212,30 @@ class FashionReport(BaseCog["Graha"]):
         submission = self.current_report
 
         embed = discord.Embed(title=submission.prose, url=submission.url)
-        dt_string = (
-            f"{discord.utils.format_dt(submission.next_event(), 'F')} "
-            f"({discord.utils.format_dt(submission.next_event(), 'R')})"
+        submission_start_string = (
+            f"{discord.utils.format_dt(submission.start_period(), 'F')} "
+            f"({discord.utils.format_dt(submission.start_period(), 'R')})"
+        )
+        submission_end_string = (
+            f"{discord.utils.format_dt(submission.judging_concludes(), 'F')} "
+            f"({discord.utils.format_dt(submission.judging_concludes(), 'R')})"
         )
 
-        if submission.is_available():
-            embed.description = f"Judging ends at {dt_string}"
+        embed.description = (
+            f"### {submission.title}\n\n"
+            f"Judging period starts at {submission_start_string}.\n"
+            f"Judging period ends at {submission_end_string}."
+        )
+        embed.set_footer(text="If the title and image title do not match, it means the new image is not created yet!")
+
+        if submission.is_available() or submission._has_new_data():
             embed.colour = discord.Colour.green()
         else:
-            embed.description = f"Judging becomes available at {dt_string}"
             embed.colour = discord.Colour.dark_orange()
-            embed.set_footer(text="The above image is for the previous Friday's Fashion Report!")
+            embed.set_footer(text="The above image may be for the previous Friday's Fashion Report!")
 
-        embed.set_image(url=submission.url)
+        # Discord caching is stupid so now I add the query param of week num to help
+        embed.set_image(url=f"{API_BASE_URL}/hint.png?v={submission.week_num}")
 
         return embed
 
@@ -238,12 +243,12 @@ class FashionReport(BaseCog["Graha"]):
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.describe(ephemeral="Whether to show the data privately to you, or not.")
-    async def fashion_report_app_cmd(self, interaction: Interaction, ephemeral: bool = True) -> None:  # noqa: FBT001, FBT002 # required by dpy
+    async def fashion_report_app_cmd(self, interaction: Interaction, ephemeral: bool = True) -> None:  # ruff: ignore[boolean-type-hint-positional-argument, boolean-default-value-positional-argument] # required by dpy
         """Get the latest available Fashion Report information from /u/Gottesstrafe!"""
 
         if not self.current_report:
             await interaction.response.send_message(
-                "Sorry, but I haven't found the post from Gottesstrafe yet, try again later?",
+                "Sorry, but I haven't found the post from Kaiyoko/Gottesstrafe yet, try again later?",
                 ephemeral=ephemeral,
             )
             return
@@ -253,7 +258,7 @@ class FashionReport(BaseCog["Graha"]):
 
     @commands.group(name="fashionreport", aliases=["fr", "fashion-report"], invoke_without_command=True)
     async def fashion_report(self, ctx: Context) -> None:
-        """Fetch the latest fashion report data from /u/Gottesstrafe."""
+        """Fetch the latest fashion report data from /u/KaiyokoStar or /u/Gottesstrafe."""
 
         if self.current_report:
             embed = self.generate_fashion_embed()
