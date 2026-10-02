@@ -45,10 +45,16 @@ FASHION_REPORT_START: datetime.datetime = datetime.datetime(
 )
 API_BASE_URL = "https://fashionreportxiv.com"
 
-IMAGE_SHA_CONFIG_PATH = pathlib.Path().parent.parent / "config" / "fashion_report_image_sha.json"
-
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
+
+IMAGE_SHA_CONFIG_PATH = pathlib.Path().parent.parent / "configs" / "fashion_report_image_shas.json"
+if not IMAGE_SHA_CONFIG_PATH.exists():
+    LOGGER.warning("[FashionReport] :: SHA config file doesn't exist, attempting to create.")
+    try:
+        IMAGE_SHA_CONFIG_PATH.touch(exist_ok=True)
+    except OSError as err:
+        raise RuntimeError("Cannot create SHA256 config file in Fashion Report.") from err
 
 
 def resolve_next_window() -> datetime.datetime:
@@ -128,7 +134,9 @@ class FashionReport(BaseCog["Graha"]):
         self.image_sha_config: Config[str] = image_sha_config
         self.reset_cache.start()
         self.current_report: FashionReportSubmission = MISSING
+        self.image_found: bool = False
         self.report_task: asyncio.Task[None] = asyncio.create_task(self._wait_for_report())
+        self.image_task: asyncio.Task[None] = asyncio.create_task(self._wait_for_image())
         self._ready: asyncio.Event = asyncio.Event()
 
     async def cog_load(self) -> None:
@@ -138,50 +146,99 @@ class FashionReport(BaseCog["Graha"]):
 
     def cog_unload(self) -> None:
         self.report_task.cancel("Unloading FashionReport cog.")
+        self.image_task.cancel("Unloading FashionReport cog.")
         self.reset_cache.cancel()
         self._ready.clear()
 
     def reset_state(self) -> bool:
         self.current_report = MISSING
+        self.image_found = False
         self.report_task.cancel("Manual cache reset.")
+        self.image_task.cancel("Manual cache reset.")
 
         try:
             self.report_task.exception()
         except (asyncio.CancelledError, asyncio.InvalidStateError):
-            LOGGER.warning("[FashionReport] -> {Reset State} :: Task was in error state.")
+            LOGGER.warning("[FashionReport] -> {Reset State} :: Report task was in error state.")
+
+        try:
+            self.image_task.exception()
+        except (asyncio.CancelledError, asyncio.InvalidStateError):
+            LOGGER.warning("[FashionReport] -> {Reset State} :: Image task was in error state.")
 
         self.report_task = asyncio.create_task(self._wait_for_report())
+        self.image_task = asyncio.create_task(self._wait_for_image())
         return self._fetch_report.invalidate(self)
 
     async def _wait_for_report(self) -> None:
         await self._ready.wait()
 
         if self.current_report is not MISSING:
-            LOGGER.warning("[FashionReport] :: Report already cached, is the cache stale?")
+            LOGGER.warning("[FashionReport] -> {Report} :: Report already cached, is the cache stale?")
             return
 
-        LOGGER.info("[FashionReport] :: Starting loop to gain report.")
+        LOGGER.info("[FashionReport] -> {Report} :: Starting loop to gain report.")
 
         while True:
             dt = resolve_next_window()
             try:
                 submission = await self._fetch_report(dt=dt)
             except ValueError:
-                LOGGER.warning("[FashionReport] :: Submission not found, sleeping for 5m.")
-                LOGGER.debug("[FashionReport] :: Next window would be %r (week #%s)", dt.isoformat(), weeks_since_start(dt))
+                LOGGER.warning("[FashionReport] -> {Report} :: Submission not found, sleeping for 5m.")
+                LOGGER.debug(
+                    "[FashionReport] -> {Report} :: Next window would be %r (week #%s)",
+                    (dt + datetime.timedelta(seconds=300)).isoformat(),
+                    weeks_since_start(dt),
+                )
                 self._fetch_report.invalidate(self)
                 await asyncio.sleep(300)
                 continue
             else:
-                LOGGER.info("[FashionReport] :: Found report, setting attribute.")
+                LOGGER.info("[FashionReport] -> {Report} :: Found report, setting attribute.")
                 self.current_report = submission
                 break
 
         LOGGER.info(
-            "[FashionReport] :: gotten report at %r (report created at %r)",
+            "[FashionReport] -> {Report} :: gotten report at %r (report created at %r)",
             datetime.datetime.now(datetime.UTC).isoformat(),
             submission.created_at.isoformat(),
         )
+
+    async def _wait_for_image(self) -> None:
+        await self._ready.wait()
+
+        now = datetime.datetime.now(datetime.UTC)
+
+        current_week = weeks_since_start(now)
+
+        if self.image_sha_config.get(current_week):
+            LOGGER.warning(
+                "[FashionReport] -> {Image} :: Image already cached for this week (#%s). Is the cache stale?", current_week
+            )
+            return
+
+        LOGGER.info("[FashionReport] -> {Image} :: Starting loop to wait for report image.")
+
+        while True:
+            dt = resolve_next_window()
+            current_week = weeks_since_start(dt)
+            try:
+                await self._fetch_and_compute_image(week_num=current_week)
+            except NoNewImageError:
+                LOGGER.warning("[FashionReport] -> {Image} :: Image not found, sleeping for 5m.")
+                LOGGER.debug(
+                    "[FashionReport] -> {Image} :: Next window would be %r (week #%s)",
+                    (dt + datetime.timedelta(seconds=300)).isoformat(),
+                    current_week,
+                )
+                await asyncio.sleep(300)
+                continue
+            else:
+                LOGGER.info("[FashionReport] -> {Image} :: Found image, setting cache.")
+                self.image_found = True
+                break
+
+        LOGGER.info("[FashionReport] -> {Image} :: gotten image at %r", datetime.datetime.now(datetime.UTC))
 
     @cache(ignore_kwargs=True)
     async def _fetch_report(self, *, dt: datetime.datetime) -> FashionReportSubmission:
@@ -196,11 +253,11 @@ class FashionReport(BaseCog["Graha"]):
 
         if week_num != int(data["lastOptions"]["week"]):
             LOGGER.warning(
-                "[FashionReport] -> [API] :: Found a response but for bad week #%s (should be #%s)", response_num, week_num
+                "[FashionReport] -> {API} :: Found a response but for bad week #%s (should be #%s)", response_num, week_num
             )
             raise ValueError("No report found for the current week")
 
-        LOGGER.info("[FashionReport] -> [API] :: Found report for week #%s", week_num)
+        LOGGER.info("[FashionReport] -> {API} :: Found report for week #%s", week_num)
 
         return FashionReportSubmission(
             data["lastOptions"]["reportTitle"],
@@ -211,23 +268,40 @@ class FashionReport(BaseCog["Graha"]):
         )
 
     def _compare_digest(self, incoming: str, /, week_num: int) -> bool:
-        previous = self.image_sha_config[week_num - 1]
+        previous = self.image_sha_config.get(week_num - 1)
+        if not previous:
+            LOGGER.debug("[FashionReport] -> {Digest Comparison} :: No previous week (for week #%s)", week_num - 1)
+            return True
+
         current = self.image_sha_config.get(week_num)
 
+        LOGGER.debug("[FashionReport] -> {Digest Comparison} :: Previous vs Current (%s / %s)", previous, current)
+
         if current:
+            LOGGER.debug("[FashionReport] -> {Digest Comparison} :: Found current image.")
             return current == incoming and previous != incoming
 
-        return previous != incoming
+        LOGGER.debug("[FashionReport] -> {Digest Comparison} :: No current image.")
+        return False
 
     async def _fetch_and_compute_image(self, *, week_num: int) -> None:
+        LOGGER.debug("[FashionReport] -> {Fetching Image} :: Starting")
+        sha256 = hashlib.sha256(usedforsecurity=False)
         async with self.bot.session.get(f"{API_BASE_URL}/hint.png") as resp:
             resp.raise_for_status()
-            data = await resp.read()
+            async for block in resp.content.iter_chunked(256 * 1024):
+                LOGGER.debug("[FashionReport] -> {Fetching Image} :: Fetched chunk of size %s", len(block))
+                sha256.update(block)
 
-        sha256 = hashlib.sha256(data).hexdigest()
-        if self._compare_digest(sha256, week_num=week_num):
-            return await self.image_sha_config.put(week_num, sha256)
+        LOGGER.debug("[FashionReport] -> {Fetching Image} :: Fetched, now computing SHA.")
+        digest = sha256.hexdigest()
+        LOGGER.debug("[FashionReport] -> {Fetching Image} :: SHA is %s", digest)
 
+        if self._compare_digest(digest, week_num=week_num):
+            LOGGER.debug("[FashionReport] -> {Fetching Image} :: SHA computed: %r", digest)
+            return await self.image_sha_config.put(week_num, digest)
+
+        LOGGER.debug("[FashionReport] -> {Fetching Image} :: Image found but appears to be a previous week!")
         raise NoNewImageError(sha256)
 
     def generate_fashion_embed(self) -> discord.Embed:
@@ -250,7 +324,7 @@ class FashionReport(BaseCog["Graha"]):
             f"Judging period ends at {submission_end_string}."
         )
 
-        if self.image_sha_config.get(submission.week_num):
+        if self.image_sha_config.get(submission.week_num) and self.image_found:
             # Discord caching is stupid so now I add the query param of week num to help
             embed.set_image(url=f"{API_BASE_URL}/hint.png?v={submission.week_num}")
         else:
