@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import hashlib
 import logging
+import pathlib
 import re
 from typing import TYPE_CHECKING, NamedTuple
 
@@ -18,6 +20,7 @@ from discord.ext import commands, tasks
 from discord.utils import MISSING
 
 from utilities.context import Context as BaseContext, Interaction
+from utilities.shared.async_config import Config
 from utilities.shared.cache import cache
 from utilities.shared.cog import BaseCog
 from utilities.shared.time import Weekday, resolve_next_weekday, resolve_previous_weekday
@@ -42,6 +45,8 @@ FASHION_REPORT_START: datetime.datetime = datetime.datetime(
 )
 API_BASE_URL = "https://fashionreportxiv.com"
 
+IMAGE_SHA_CONFIG_PATH = pathlib.Path().parent.parent / "config" / "fashion_report_image_sha.json"
+
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
@@ -60,6 +65,10 @@ def weeks_since_start(dt: datetime.datetime, /) -> int:
     weeks, _ = divmod(seconds, 60 * 60 * 24 * 7)
 
     return weeks
+
+
+class NoNewImageError(ValueError):
+    """An error for when the incoming fashion report hint image does not match"""
 
 
 class Context(BaseContext):
@@ -121,8 +130,9 @@ class FashionReportSubmission(NamedTuple):
 
 
 class FashionReport(BaseCog["Graha"]):
-    def __init__(self, bot: Graha) -> None:
+    def __init__(self, bot: Graha, *, image_sha_config: Config[str]) -> None:
         super().__init__(bot)
+        self.image_sha_config: Config[str] = image_sha_config
         self.reset_cache.start()
         self.current_report: FashionReportSubmission = MISSING
         self.report_task: asyncio.Task[None] = asyncio.create_task(self._wait_for_report())
@@ -207,6 +217,26 @@ class FashionReport(BaseCog["Graha"]):
             datetime.datetime.fromtimestamp(data["easy80"]["_updatedAt"] / 1000, tz=datetime.UTC),
         )
 
+    def _compare_digest(self, incoming: str, /, week_num: int) -> bool:
+        previous = self.image_sha_config[week_num - 1]
+        current = self.image_sha_config.get(week_num)
+
+        if current:
+            return current == incoming and previous != incoming
+
+        return previous != incoming
+
+    async def _fetch_and_compute_image(self, *, week_num: int) -> None:
+        async with self.bot.session.get(f"{API_BASE_URL}/hint.png") as resp:
+            resp.raise_for_status()
+            data = await resp.read()
+
+        sha256 = hashlib.sha256(data).hexdigest()
+        if self._compare_digest(sha256, week_num=week_num):
+            return await self.image_sha_config.put(week_num, sha256)
+
+        raise NoNewImageError(sha256)
+
     def generate_fashion_embed(self) -> discord.Embed:
         # guarded
         submission = self.current_report
@@ -226,16 +256,20 @@ class FashionReport(BaseCog["Graha"]):
             f"Judging period starts at {submission_start_string}.\n"
             f"Judging period ends at {submission_end_string}."
         )
-        embed.set_footer(text="If the title and image title do not match, it means the new image is not created yet!")
 
-        if submission.is_available() or submission._has_new_data():
+        if self.image_sha_config.get(submission.week_num):
+            # Discord caching is stupid so now I add the query param of week num to help
+            embed.set_image(url=f"{API_BASE_URL}/hint.png?v={submission.week_num}")
+        else:
+            embed.description += f"\n\n[Try the data on the site if you need it urgently!]({API_BASE_URL})"
+            embed.set_footer(
+                text="No image has been generated for this week's report just yet, but the site may have the pieces needed!"
+            )
+
+        if submission.is_available():
             embed.colour = discord.Colour.green()
         else:
             embed.colour = discord.Colour.dark_orange()
-            embed.set_footer(text="The above image may be for the previous Friday's Fashion Report!")
-
-        # Discord caching is stupid so now I add the query param of week num to help
-        embed.set_image(url=f"{API_BASE_URL}/hint.png?v={submission.week_num}")
 
         return embed
 
@@ -288,4 +322,4 @@ class FashionReport(BaseCog["Graha"]):
 
 
 async def setup(bot: Graha) -> None:
-    await bot.add_cog(FashionReport(bot))
+    await bot.add_cog(FashionReport(bot, image_sha_config=Config(IMAGE_SHA_CONFIG_PATH)))
