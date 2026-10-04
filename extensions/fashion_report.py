@@ -12,6 +12,7 @@ import hashlib
 import logging
 import pathlib
 import re
+import secrets
 from typing import TYPE_CHECKING, NamedTuple
 
 import discord
@@ -212,9 +213,8 @@ class FashionReport(BaseCog["Graha"]):
         current_week = weeks_since_start(now)
 
         if self.image_sha_config.get(current_week):
-            LOGGER.warning(
-                "[FashionReport] -> {Image} :: Image already cached for this week (#%s). Is the cache stale?", current_week
-            )
+            LOGGER.warning("[FashionReport] -> {Image} :: Image already cached for this week (#%s)", current_week)
+            self.image_found = True
             return
 
         LOGGER.info("[FashionReport] -> {Image} :: Starting loop to wait for report image.")
@@ -278,10 +278,10 @@ class FashionReport(BaseCog["Graha"]):
         LOGGER.debug("[FashionReport] -> {Digest Comparison} :: Previous vs Current (%s / %s)", previous, current)
 
         if current:
-            LOGGER.debug("[FashionReport] -> {Digest Comparison} :: Found current image.")
+            LOGGER.debug("[FashionReport] -> {Digest Comparison} :: Current image already exists for week #%s.", week_num)
             return current == incoming and previous != incoming
 
-        LOGGER.debug("[FashionReport] -> {Digest Comparison} :: No current image.")
+        LOGGER.debug("[FashionReport] -> {Digest Comparison} :: No current image for week #%s.", week_num)
         return False
 
     async def _fetch_and_compute_image(self, *, week_num: int) -> None:
@@ -326,7 +326,7 @@ class FashionReport(BaseCog["Graha"]):
 
         if self.image_sha_config.get(submission.week_num) and self.image_found:
             # Discord caching is stupid so now I add the query param of week num to help
-            embed.set_image(url=f"{API_BASE_URL}/hint.png?v={submission.week_num}")
+            embed.set_image(url=f"{API_BASE_URL}/hint.png?v={submission.week_num}&rng={secrets.token_urlsafe(8)}")
         else:
             embed.description += f"\n\n[Try the data on the site if you need it urgently!]({API_BASE_URL})"
             embed.set_footer(
