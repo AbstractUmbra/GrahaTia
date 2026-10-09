@@ -273,13 +273,11 @@ class FashionReport(BaseCog["Graha"]):
             LOGGER.debug("[FashionReport] -> {Digest Comparison} :: No previous week (for week #%s)", week_num - 1)
             return True
 
-        current = self.image_sha_config.get(week_num)
+        LOGGER.debug("[FashionReport] -> {Digest Comparison} :: Previous vs Current (%s / %s)", previous, incoming)
 
-        LOGGER.debug("[FashionReport] -> {Digest Comparison} :: Previous vs Current (%s / %s)", previous, current)
-
-        if current:
-            LOGGER.debug("[FashionReport] -> {Digest Comparison} :: Current image already exists for week #%s.", week_num)
-            return current == incoming and previous != incoming
+        if incoming != previous:
+            LOGGER.debug("[FashionReport] -> {Digest Comparison} :: Previous doesn't match incoming. New week.")
+            return True
 
         LOGGER.debug("[FashionReport] -> {Digest Comparison} :: No current image for week #%s.", week_num)
         return False
