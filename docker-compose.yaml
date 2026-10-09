@@ -10,7 +10,7 @@ services:
         restart: true
         condition: service_healthy
     volumes:
-      - ./configs/:/app/configs/:ro
+      - ./configs/:/app/configs/:rw
       - ./logs/:/app/logs/:rw
       - ./extensions/:/app/extensions/:ro
       - ./.git/:/app/.git
